@@ -62,17 +62,17 @@ Here are some example tool calls:
 ```typescript
 // Search for tracks
 await client.useMcpTool("audius", "search-tracks", {
-  query: "electronic"
+  query: "Jungle"
 });
 
 // Get trending tracks
 await client.useMcpTool("audius", "get-trending-tracks", {
-  genre: "Electronic"
+  genre: "Glitch Hop"
 });
 
 // Get user details
 await client.useMcpTool("audius", "get-user-by-handle", {
-  handle: "username"
+  handle: "Whaskii"
 });
 ```
 
