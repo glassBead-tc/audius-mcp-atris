@@ -10,18 +10,18 @@ An MCP (Model Context Protocol) server for interacting with the Audius API. This
 To install Audius MCP Server for Claude Desktop automatically via [Smithery](https://smithery.ai/server/@glassBead-tc/audius-mcp):
 
 ```bash
-npx -y @smithery/cli install @glassBead-tc/audius-mcp --client claude
+npx -y @smithery/cli install @glassBead/audius-mcp --client claude
 ```
 
 ### Manual Installation
 ```bash
-npm install -g @modelcontextprotocol/audius-mcp
+npm install -g @glassbead/audius-mcp
 ```
 
 Or use directly with npx:
 
 ```bash
-npx @modelcontextprotocol/audius-mcp
+npx @glassbead/audius-mcp
 ```
 
 ## Features

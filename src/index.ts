@@ -11,8 +11,15 @@ import { z } from "zod";
 import {
   fetchFromAudius,
   AudiusAPIError,
+  cleanResponse,
   type PaginationParams
 } from "./utils.js";
+import {
+  authInputSchema,
+  getAuthFromArgs,
+  fetchFromAudiusWithAuth,
+  AuthError
+} from './auth.js';
 
 // Input schemas for tools
 const GetUserSchema = z.object({
