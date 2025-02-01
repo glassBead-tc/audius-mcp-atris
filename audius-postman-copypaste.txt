@@ -1,0 +1,4907 @@
+Audius API Documentation
+Audius V1 API
+users
+This folder doesn't have a description.﻿
+GET
+Get User
+https://discoveryprovider.audius.co/v1/users/:id
+Gets a single user by their user ID
+Path Variables
+id
+<string>
+(Required) A User ID
+Example
+Success
+
+Request
+cURL
+curl --location 'https://discoveryprovider.audius.co/v1/users/:id' \
+--header 'Accept: application/json'
+200 OK
+Response
+Body
+Headers (1)
+View More
+json
+{
+  "data": {
+    "album_count": "<integer>",
+    "erc_wallet": "<string>",
+    "followee_count": "<integer>",
+    "follower_count": "<integer>",
+    "handle": "<string>",
+    "id": "<string>",
+    "is_available": "<boolean>",
+    "is_deactivated": "<boolean>",
+    "is_verified": "<boolean>",
+    "name": "<string>",
+    "playlist_count": "<integer>",
+    "repost_count": "<integer>",
+    "spl_wallet": "<string>",
+    "supporter_count": "<integer>",
+    "supporting_count": "<integer>",
+    "total_audio_balance": "<integer>",
+    "track_count": "<integer>",
+    "verified_with_instagram": "<boolean>",
+    "verified_with_tiktok": "<boolean>",
+    "verified_with_twitter": "<boolean>",
+    "wallet": "<string>",
+    "artist_pick_track_id": "<string>",
+    "bio": "<string>",
+    "cover_photo": {
+      "640x": "<string>",
+      "2000x": "<string>"
+    },
+    "twitter_handle": "<string>",
+    "instagram_handle": "<string>",
+    "tiktok_handle": "<string>",
+    "website": "<string>",
+    "donation": "<string>",
+    "location": "<string>",
+    "profile_picture": {
+      "150x150": "<string>",
+      "480x480": "<string>",
+      "1000x1000": "<string>"
+    },
+    "spl_usdc_payout_wallet": "<string>"
+  }
+}
+GET
+Get User by Handle
+https://discoveryprovider.audius.co/v1/users/handle/:handle?user_id=<string>
+Gets a single user by their handle
+Query Params
+user_id
+<string>
+The user ID of the user making the request
+Path Variables
+handle
+<string>
+(Required) A User handle
+Example
+Success
+
+Request
+View More
+cURL
+curl --location 'https://discoveryprovider.audius.co/v1/users/handle/:handle?user_id=%3Cstring%3E' \
+--header 'Accept: application/json'
+200 OK
+Response
+Body
+Headers (1)
+View More
+json
+{
+  "data": {
+    "album_count": "<integer>",
+    "erc_wallet": "<string>",
+    "followee_count": "<integer>",
+    "follower_count": "<integer>",
+    "handle": "<string>",
+    "id": "<string>",
+    "is_available": "<boolean>",
+    "is_deactivated": "<boolean>",
+    "is_verified": "<boolean>",
+    "name": "<string>",
+    "playlist_count": "<integer>",
+    "repost_count": "<integer>",
+    "spl_wallet": "<string>",
+    "supporter_count": "<integer>",
+    "supporting_count": "<integer>",
+    "total_audio_balance": "<integer>",
+    "track_count": "<integer>",
+    "verified_with_instagram": "<boolean>",
+    "verified_with_tiktok": "<boolean>",
+    "verified_with_twitter": "<boolean>",
+    "wallet": "<string>",
+    "artist_pick_track_id": "<string>",
+    "bio": "<string>",
+    "cover_photo": {
+      "640x": "<string>",
+      "2000x": "<string>"
+    },
+    "twitter_handle": "<string>",
+    "instagram_handle": "<string>",
+    "tiktok_handle": "<string>",
+    "website": "<string>",
+    "donation": "<string>",
+    "location": "<string>",
+    "profile_picture": {
+      "150x150": "<string>",
+      "480x480": "<string>",
+      "1000x1000": "<string>"
+    },
+    "spl_usdc_payout_wallet": "<string>"
+  }
+}
+GET
+Get User by Wallet
+https://discoveryprovider.audius.co/v1/users/id?associated_wallet=<string>
+Gets a User ID from an associated wallet address
+Query Params
+associated_wallet
+<string>
+(Required) Wallet address
+Example
+Success
+
+Request
+View More
+cURL
+curl --location 'https://discoveryprovider.audius.co/v1/users/id?associated_wallet=%3Cstring%3E' \
+--header 'Accept: application/json'
+200 OK
+Response
+Body
+Headers (1)
+json
+{
+  "data": {
+    "user_id": "<string>"
+  }
+}
+GET
+Get Bulk Users
+https://discoveryprovider.audius.co/v1/users?user_id=<string>&id=<string>&id=<string>
+Gets a list of users by ID
+Query Params
+user_id
+<string>
+The user ID of the user making the request
+id
+<string>
+The ID of the user(s)
+id
+<string>
+The ID of the user(s)
+Example
+Success
+
+Request
+View More
+cURL
+curl --location 'https://discoveryprovider.audius.co/v1/users?user_id=%3Cstring%3E&id=%3Cstring%3E' \
+--header 'Accept: application/json'
+200 OK
+Response
+Body
+Headers (1)
+View More
+json
+{
+  "data": [
+    {
+      "album_count": "<integer>",
+      "erc_wallet": "<string>",
+      "followee_count": "<integer>",
+      "follower_count": "<integer>",
+      "handle": "<string>",
+      "id": "<string>",
+      "is_available": "<boolean>",
+      "is_deactivated": "<boolean>",
+      "is_verified": "<boolean>",
+      "name": "<string>",
+      "playlist_count": "<integer>",
+      "repost_count": "<integer>",
+      "spl_wallet": "<string>",
+      "supporter_count": "<integer>",
+      "supporting_count": "<integer>",
+      "total_audio_balance": "<integer>",
+      "track_count": "<integer>",
+      "verified_with_instagram": "<boolean>",
+      "verified_with_tiktok": "<boolean>",
+      "verified_with_twitter": "<boolean>",
+      "wallet": "<string>",
+      "artist_pick_track_id": "<string>",
+      "bio": "<string>",
+      "cover_photo": {
+        "640x": "<string>",
+        "2000x": "<string>"
+      },
+      "twitter_handle": "<string>",
+      "instagram_handle": "<string>",
+      "tiktok_handle": "<string>",
+      "website": "<string>",
+      "donation": "<string>",
+      "location": "<string>",
+      "profile_picture": {
+        "150x150": "<string>",
+        "480x480": "<string>",
+        "1000x1000": "<string>"
+      },
+      "spl_usdc_payout_wallet": "<string>"
+    },
+    {
+      "album_count": "<integer>",
+      "erc_wallet": "<string>",
+      "followee_count": "<integer>",
+      "follower_count": "<integer>",
+      "handle": "<string>",
+      "id": "<string>",
+      "is_available": "<boolean>",
+      "is_deactivated": "<boolean>",
+      "is_verified": "<boolean>",
+      "name": "<string>",
+      "playlist_count": "<integer>",
+      "repost_count": "<integer>",
+      "spl_wallet": "<string>",
+      "supporter_count": "<integer>",
+      "supporting_count": "<integer>",
+      "total_audio_balance": "<integer>",
+      "track_count": "<integer>",
+      "verified_with_instagram": "<boolean>",
+      "verified_with_tiktok": "<boolean>",
+      "verified_with_twitter": "<boolean>",
+      "wallet": "<string>",
+      "artist_pick_track_id": "<string>",
+      "bio": "<string>",
+      "cover_photo": {
+        "640x": "<string>",
+        "2000x": "<string>"
+      },
+      "twitter_handle": "<string>",
+      "instagram_handle": "<string>",
+      "tiktok_handle": "<string>",
+      "website": "<string>",
+      "donation": "<string>",
+      "location": "<string>",
+      "profile_picture": {
+        "150x150": "<string>",
+        "480x480": "<string>",
+        "1000x1000": "<string>"
+      },
+      "spl_usdc_payout_wallet": "<string>"
+    }
+  ]
+}
+GET
+Search Users
+https://discoveryprovider.audius.co/v1/users/search?query=<string>&genre=<string>&genre=<string>&sort_method=popular&is_verified=<string>
+Search for users that match the given query
+Query Params
+query
+<string>
+The search query
+genre
+<string>
+The genres to filter by
+genre
+<string>
+The genres to filter by
+sort_method
+popular
+The sort method
+is_verified
+<string>
+Only include verified users in the user results
+Example
+Success
+
+Request
+View More
+cURL
+curl --location 'https://discoveryprovider.audius.co/v1/users/search?query=%3Cstring%3E&genre=%3Cstring%3E&sort_method=popular&is_verified=%3Cstring%3E' \
+--header 'Accept: application/json'
+200 OK
+Response
+Body
+Headers (1)
+View More
+json
+{
+  "data": [
+    {
+      "album_count": "<integer>",
+      "erc_wallet": "<string>",
+      "followee_count": "<integer>",
+      "follower_count": "<integer>",
+      "handle": "<string>",
+      "id": "<string>",
+      "is_available": "<boolean>",
+      "is_deactivated": "<boolean>",
+      "is_verified": "<boolean>",
+      "name": "<string>",
+      "playlist_count": "<integer>",
+      "repost_count": "<integer>",
+      "spl_wallet": "<string>",
+      "supporter_count": "<integer>",
+      "supporting_count": "<integer>",
+      "total_audio_balance": "<integer>",
+      "track_count": "<integer>",
+      "verified_with_instagram": "<boolean>",
+      "verified_with_tiktok": "<boolean>",
+      "verified_with_twitter": "<boolean>",
+      "wallet": "<string>",
+      "artist_pick_track_id": "<string>",
+      "bio": "<string>",
+      "cover_photo": {
+        "640x": "<string>",
+        "2000x": "<string>"
+      },
+      "twitter_handle": "<string>",
+      "instagram_handle": "<string>",
+      "tiktok_handle": "<string>",
+      "website": "<string>",
+      "donation": "<string>",
+      "location": "<string>",
+      "profile_picture": {
+        "150x150": "<string>",
+        "480x480": "<string>",
+        "1000x1000": "<string>"
+      },
+      "spl_usdc_payout_wallet": "<string>"
+    },
+    {
+      "album_count": "<integer>",
+      "erc_wallet": "<string>",
+      "followee_count": "<integer>",
+      "follower_count": "<integer>",
+      "handle": "<string>",
+      "id": "<string>",
+      "is_available": "<boolean>",
+      "is_deactivated": "<boolean>",
+      "is_verified": "<boolean>",
+      "name": "<string>",
+      "playlist_count": "<integer>",
+      "repost_count": "<integer>",
+      "spl_wallet": "<string>",
+      "supporter_count": "<integer>",
+      "supporting_count": "<integer>",
+      "total_audio_balance": "<integer>",
+      "track_count": "<integer>",
+      "verified_with_instagram": "<boolean>",
+      "verified_with_tiktok": "<boolean>",
+      "verified_with_twitter": "<boolean>",
+      "wallet": "<string>",
+      "artist_pick_track_id": "<string>",
+      "bio": "<string>",
+      "cover_photo": {
+        "640x": "<string>",
+        "2000x": "<string>"
+      },
+      "twitter_handle": "<string>",
+      "instagram_handle": "<string>",
+      "tiktok_handle": "<string>",
+      "website": "<string>",
+      "donation": "<string>",
+      "location": "<string>",
+      "profile_picture": {
+        "150x150": "<string>",
+        "480x480": "<string>",
+        "1000x1000": "<string>"
+      },
+      "spl_usdc_payout_wallet": "<string>"
+    }
+  ]
+}
+GET
+Get Tracks by User
+https://discoveryprovider.audius.co/v1/users/:id/tracks?offset=<integer>&limit=<integer>&user_id=<string>&sort=date&query=<string>&sort_method=plays&sort_direction=asc&filter_tracks=all
+Gets the tracks created by a user using their user ID
+Request Headers
+Encoded-Data-Message
+<string>
+The data that was signed by the user for signature recovery
+Encoded-Data-Signature
+<string>
+The signature of data, used for signature recovery
+Query Params
+offset
+<integer>
+The number of items to skip. Useful for pagination (page number * limit)
+limit
+<integer>
+The number of items to fetch
+user_id
+<string>
+The user ID of the user making the request
+sort
+date
+[Deprecated] Field to sort by
+query
+<string>
+The filter query
+sort_method
+plays
+The sort method
+sort_direction
+asc
+The sort direction
+filter_tracks
+all
+Filter by unlisted or public tracks
+Path Variables
+id
+<string>
+(Required) A User ID
+Example
+Success
+
+Request
+View More
+cURL
+curl --location 'https://discoveryprovider.audius.co/v1/users/:id/tracks?offset=%3Cinteger%3E&limit=%3Cinteger%3E&user_id=%3Cstring%3E&sort=date&query=%3Cstring%3E&sort_method=plays&sort_direction=asc&filter_tracks=all' \
+--header 'Encoded-Data-Message: <string>' \
+--header 'Encoded-Data-Signature: <string>' \
+--header 'Accept: application/json'
+200 OK
+Response
+Body
+Headers (1)
+View More
+json
+{
+  "data": [
+    {
+      "artwork": {
+        "150x150": "<string>",
+        "480x480": "<string>",
+        "1000x1000": "<string>"
+      },
+      "comment_count": "<integer>",
+      "duration": "<integer>",
+      "favorite_count": "<integer>",
+      "genre": "<string>",
+      "id": "<string>",
+      "is_downloadable": "<boolean>",
+      "is_original_available": "<boolean>",
+      "permalink": "<string>",
+      "play_count": "<integer>",
+      "repost_count": "<integer>",
+      "title": "<string>",
+      "user": {
+        "album_count": "<integer>",
+        "erc_wallet": "<string>",
+        "followee_count": "<integer>",
+        "follower_count": "<integer>",
+        "handle": "<string>",
+        "id": "<string>",
+        "is_available": "<boolean>",
+        "is_deactivated": "<boolean>",
+        "is_verified": "<boolean>",
+        "name": "<string>",
+        "playlist_count": "<integer>",
+        "repost_count": "<integer>",
+        "spl_wallet": "<string>",
+        "supporter_count": "<integer>",
+        "supporting_count": "<integer>",
+        "total_audio_balance": "<integer>",
+        "track_count": "<integer>",
+        "verified_with_instagram": "<boolean>",
+        "verified_with_tiktok": "<boolean>",
+        "verified_with_twitter": "<boolean>",
+        "wallet": "<string>",
+        "artist_pick_track_id": "<string>",
+        "bio": "<string>",
+        "cover_photo": {
+          "640x": "<string>",
+          "2000x": "<string>"
+        },
+        "twitter_handle": "<string>",
+        "instagram_handle": "<string>",
+        "tiktok_handle": "<string>",
+        "website": "<string>",
+        "donation": "<string>",
+        "location": "<string>",
+        "profile_picture": {
+          "150x150": "<string>",
+          "480x480": "<string>",
+          "1000x1000": "<string>"
+        },
+        "spl_usdc_payout_wallet": "<string>"
+      },
+      "description": "<string>",
+      "track_cid": "<string>",
+      "preview_cid": "<string>",
+      "orig_file_cid": "<string>",
+      "orig_filename": "<string>",
+      "mood": "<string>",
+      "release_date": "<string>",
+      "remix_of": {
+        "tracks": [
+          {
+            "parent_track_id": "<string>"
+          },
+          {
+            "parent_track_id": "<string>"
+          }
+        ]
+      },
+      "tags": "<string>",
+      "is_streamable": "<boolean>",
+      "ddex_app": "<string>",
+      "playlists_containing_track": [
+        "<integer>",
+        "<integer>"
+      ]
+    },
+    {
+      "artwork": {
+        "150x150": "<string>",
+        "480x480": "<string>",
+        "1000x1000": "<string>"
+      },
+      "comment_count": "<integer>",
+      "duration": "<integer>",
+      "favorite_count": "<integer>",
+      "genre": "<string>",
+      "id": "<string>",
+      "is_downloadable": "<boolean>",
+      "is_original_available": "<boolean>",
+      "permalink": "<string>",
+      "play_count": "<integer>",
+      "repost_count": "<integer>",
+      "title": "<string>",
+      "user": {
+        "album_count": "<integer>",
+        "erc_wallet": "<string>",
+        "followee_count": "<integer>",
+        "follower_count": "<integer>",
+        "handle": "<string>",
+        "id": "<string>",
+        "is_available": "<boolean>",
+        "is_deactivated": "<boolean>",
+        "is_verified": "<boolean>",
+        "name": "<string>",
+        "playlist_count": "<integer>",
+        "repost_count": "<integer>",
+        "spl_wallet": "<string>",
+        "supporter_count": "<integer>",
+        "supporting_count": "<integer>",
+        "total_audio_balance": "<integer>",
+        "track_count": "<integer>",
+        "verified_with_instagram": "<boolean>",
+        "verified_with_tiktok": "<boolean>",
+        "verified_with_twitter": "<boolean>",
+        "wallet": "<string>",
+        "artist_pick_track_id": "<string>",
+        "bio": "<string>",
+        "cover_photo": {
+          "640x": "<string>",
+          "2000x": "<string>"
+        },
+        "twitter_handle": "<string>",
+        "instagram_handle": "<string>",
+        "tiktok_handle": "<string>",
+        "website": "<string>",
+        "donation": "<string>",
+        "location": "<string>",
+        "profile_picture": {
+          "150x150": "<string>",
+          "480x480": "<string>",
+          "1000x1000": "<string>"
+        },
+        "spl_usdc_payout_wallet": "<string>"
+      },
+      "description": "<string>",
+      "track_cid": "<string>",
+      "preview_cid": "<string>",
+      "orig_file_cid": "<string>",
+      "orig_filename": "<string>",
+      "mood": "<string>",
+      "release_date": "<string>",
+      "remix_of": {
+        "tracks": [
+          {
+            "parent_track_id": "<string>"
+          },
+          {
+            "parent_track_id": "<string>"
+          }
+        ]
+      },
+      "tags": "<string>",
+      "is_streamable": "<boolean>",
+      "ddex_app": "<string>",
+      "playlists_containing_track": [
+        "<integer>",
+        "<integer>"
+      ]
+    }
+  ]
+}
+GET
+Get Favorites
+https://discoveryprovider.audius.co/v1/users/:id/favorites
+Gets a user's favorite tracks
+Path Variables
+id
+<string>
+(Required) A User ID
+Example
+Success
+
+Request
+cURL
+curl --location 'https://discoveryprovider.audius.co/v1/users/:id/favorites' \
+--header 'Accept: application/json'
+200 OK
+Response
+Body
+Headers (1)
+View More
+json
+{
+  "data": [
+    {
+      "created_at": "<string>",
+      "favorite_item_id": "<string>",
+      "favorite_type": "<string>",
+      "user_id": "<string>"
+    },
+    {
+      "created_at": "<string>",
+      "favorite_item_id": "<string>",
+      "favorite_type": "<string>",
+      "user_id": "<string>"
+    }
+  ]
+}
+GET
+Get Reposts
+https://discoveryprovider.audius.co/v1/users/:id/reposts?offset=<integer>&limit=<integer>&user_id=<string>
+Gets the given user's reposts
+Query Params
+offset
+<integer>
+The number of items to skip. Useful for pagination (page number * limit)
+limit
+<integer>
+The number of items to fetch
+user_id
+<string>
+The user ID of the user making the request
+Path Variables
+id
+<string>
+(Required) A User ID
+Example
+Success
+
+Request
+View More
+cURL
+curl --location 'https://discoveryprovider.audius.co/v1/users/:id/reposts?offset=%3Cinteger%3E&limit=%3Cinteger%3E&user_id=%3Cstring%3E' \
+--header 'Accept: application/json'
+200 OK
+Response
+Body
+Headers (1)
+View More
+json
+{
+  "data": [
+    {
+      "class": "<string>",
+      "item": {},
+      "item_type": "track",
+      "timestamp": "<string>"
+    },
+    {
+      "class": "<string>",
+      "item": {},
+      "item_type": "playlist",
+      "timestamp": "<string>"
+    }
+  ]
+}
+GET
+Get Followers
+https://discoveryprovider.audius.co/v1/users/:id/followers?offset=<integer>&limit=<integer>&user_id=<string>
+All users that follow the provided user
+Query Params
+offset
+<integer>
+The number of items to skip. Useful for pagination (page number * limit)
+limit
+<integer>
+The number of items to fetch
+user_id
+<string>
+The user ID of the user making the request
+Path Variables
+id
+<string>
+(Required) A User ID
+Example
+Success
+
+Request
+View More
+cURL
+curl --location 'https://discoveryprovider.audius.co/v1/users/:id/followers?offset=%3Cinteger%3E&limit=%3Cinteger%3E&user_id=%3Cstring%3E' \
+--header 'Accept: application/json'
+200 OK
+Response
+Body
+Headers (1)
+View More
+json
+{
+  "data": [
+    {
+      "album_count": "<integer>",
+      "erc_wallet": "<string>",
+      "followee_count": "<integer>",
+      "follower_count": "<integer>",
+      "handle": "<string>",
+      "id": "<string>",
+      "is_available": "<boolean>",
+      "is_deactivated": "<boolean>",
+      "is_verified": "<boolean>",
+      "name": "<string>",
+      "playlist_count": "<integer>",
+      "repost_count": "<integer>",
+      "spl_wallet": "<string>",
+      "supporter_count": "<integer>",
+      "supporting_count": "<integer>",
+      "total_audio_balance": "<integer>",
+      "track_count": "<integer>",
+      "verified_with_instagram": "<boolean>",
+      "verified_with_tiktok": "<boolean>",
+      "verified_with_twitter": "<boolean>",
+      "wallet": "<string>",
+      "artist_pick_track_id": "<string>",
+      "bio": "<string>",
+      "cover_photo": {
+        "640x": "<string>",
+        "2000x": "<string>"
+      },
+      "twitter_handle": "<string>",
+      "instagram_handle": "<string>",
+      "tiktok_handle": "<string>",
+      "website": "<string>",
+      "donation": "<string>",
+      "location": "<string>",
+      "profile_picture": {
+        "150x150": "<string>",
+        "480x480": "<string>",
+        "1000x1000": "<string>"
+      },
+      "spl_usdc_payout_wallet": "<string>"
+    },
+    {
+      "album_count": "<integer>",
+      "erc_wallet": "<string>",
+      "followee_count": "<integer>",
+      "follower_count": "<integer>",
+      "handle": "<string>",
+      "id": "<string>",
+      "is_available": "<boolean>",
+      "is_deactivated": "<boolean>",
+      "is_verified": "<boolean>",
+      "name": "<string>",
+      "playlist_count": "<integer>",
+      "repost_count": "<integer>",
+      "spl_wallet": "<string>",
+      "supporter_count": "<integer>",
+      "supporting_count": "<integer>",
+      "total_audio_balance": "<integer>",
+      "track_count": "<integer>",
+      "verified_with_instagram": "<boolean>",
+      "verified_with_tiktok": "<boolean>",
+      "verified_with_twitter": "<boolean>",
+      "wallet": "<string>",
+      "artist_pick_track_id": "<string>",
+      "bio": "<string>",
+      "cover_photo": {
+        "640x": "<string>",
+        "2000x": "<string>"
+      },
+      "twitter_handle": "<string>",
+      "instagram_handle": "<string>",
+      "tiktok_handle": "<string>",
+      "website": "<string>",
+      "donation": "<string>",
+      "location": "<string>",
+      "profile_picture": {
+        "150x150": "<string>",
+        "480x480": "<string>",
+        "1000x1000": "<string>"
+      },
+      "spl_usdc_payout_wallet": "<string>"
+    }
+  ]
+}
+GET
+Get Following
+https://discoveryprovider.audius.co/v1/users/:id/following?offset=<integer>&limit=<integer>&user_id=<string>
+All users that the provided user follows
+Query Params
+offset
+<integer>
+The number of items to skip. Useful for pagination (page number * limit)
+limit
+<integer>
+The number of items to fetch
+user_id
+<string>
+The user ID of the user making the request
+Path Variables
+id
+<string>
+(Required) A User ID
+Example
+Success
+
+Request
+View More
+cURL
+curl --location 'https://discoveryprovider.audius.co/v1/users/:id/following?offset=%3Cinteger%3E&limit=%3Cinteger%3E&user_id=%3Cstring%3E' \
+--header 'Accept: application/json'
+200 OK
+Response
+Body
+Headers (1)
+View More
+json
+{
+  "data": [
+    {
+      "album_count": "<integer>",
+      "erc_wallet": "<string>",
+      "followee_count": "<integer>",
+      "follower_count": "<integer>",
+      "handle": "<string>",
+      "id": "<string>",
+      "is_available": "<boolean>",
+      "is_deactivated": "<boolean>",
+      "is_verified": "<boolean>",
+      "name": "<string>",
+      "playlist_count": "<integer>",
+      "repost_count": "<integer>",
+      "spl_wallet": "<string>",
+      "supporter_count": "<integer>",
+      "supporting_count": "<integer>",
+      "total_audio_balance": "<integer>",
+      "track_count": "<integer>",
+      "verified_with_instagram": "<boolean>",
+      "verified_with_tiktok": "<boolean>",
+      "verified_with_twitter": "<boolean>",
+      "wallet": "<string>",
+      "artist_pick_track_id": "<string>",
+      "bio": "<string>",
+      "cover_photo": {
+        "640x": "<string>",
+        "2000x": "<string>"
+      },
+      "twitter_handle": "<string>",
+      "instagram_handle": "<string>",
+      "tiktok_handle": "<string>",
+      "website": "<string>",
+      "donation": "<string>",
+      "location": "<string>",
+      "profile_picture": {
+        "150x150": "<string>",
+        "480x480": "<string>",
+        "1000x1000": "<string>"
+      },
+      "spl_usdc_payout_wallet": "<string>"
+    },
+    {
+      "album_count": "<integer>",
+      "erc_wallet": "<string>",
+      "followee_count": "<integer>",
+      "follower_count": "<integer>",
+      "handle": "<string>",
+      "id": "<string>",
+      "is_available": "<boolean>",
+      "is_deactivated": "<boolean>",
+      "is_verified": "<boolean>",
+      "name": "<string>",
+      "playlist_count": "<integer>",
+      "repost_count": "<integer>",
+      "spl_wallet": "<string>",
+      "supporter_count": "<integer>",
+      "supporting_count": "<integer>",
+      "total_audio_balance": "<integer>",
+      "track_count": "<integer>",
+      "verified_with_instagram": "<boolean>",
+      "verified_with_tiktok": "<boolean>",
+      "verified_with_twitter": "<boolean>",
+      "wallet": "<string>",
+      "artist_pick_track_id": "<string>",
+      "bio": "<string>",
+      "cover_photo": {
+        "640x": "<string>",
+        "2000x": "<string>"
+      },
+      "twitter_handle": "<string>",
+      "instagram_handle": "<string>",
+      "tiktok_handle": "<string>",
+      "website": "<string>",
+      "donation": "<string>",
+      "location": "<string>",
+      "profile_picture": {
+        "150x150": "<string>",
+        "480x480": "<string>",
+        "1000x1000": "<string>"
+      },
+      "spl_usdc_payout_wallet": "<string>"
+    }
+  ]
+}
+GET
+Get Subscribers
+https://discoveryprovider.audius.co/v1/users/:id/subscribers?offset=<integer>&limit=<integer>&user_id=<string>
+All users that subscribe to the provided user
+Query Params
+offset
+<integer>
+The number of items to skip. Useful for pagination (page number * limit)
+limit
+<integer>
+The number of items to fetch
+user_id
+<string>
+The user ID of the user making the request
+Path Variables
+id
+<string>
+(Required) A User ID
+Example
+Success
+
+Request
+View More
+cURL
+curl --location 'https://discoveryprovider.audius.co/v1/users/:id/subscribers?offset=%3Cinteger%3E&limit=%3Cinteger%3E&user_id=%3Cstring%3E' \
+--header 'Accept: application/json'
+200 OK
+Response
+Body
+Headers (1)
+View More
+json
+{
+  "data": [
+    {
+      "album_count": "<integer>",
+      "erc_wallet": "<string>",
+      "followee_count": "<integer>",
+      "follower_count": "<integer>",
+      "handle": "<string>",
+      "id": "<string>",
+      "is_available": "<boolean>",
+      "is_deactivated": "<boolean>",
+      "is_verified": "<boolean>",
+      "name": "<string>",
+      "playlist_count": "<integer>",
+      "repost_count": "<integer>",
+      "spl_wallet": "<string>",
+      "supporter_count": "<integer>",
+      "supporting_count": "<integer>",
+      "total_audio_balance": "<integer>",
+      "track_count": "<integer>",
+      "verified_with_instagram": "<boolean>",
+      "verified_with_tiktok": "<boolean>",
+      "verified_with_twitter": "<boolean>",
+      "wallet": "<string>",
+      "artist_pick_track_id": "<string>",
+      "bio": "<string>",
+      "cover_photo": {
+        "640x": "<string>",
+        "2000x": "<string>"
+      },
+      "twitter_handle": "<string>",
+      "instagram_handle": "<string>",
+      "tiktok_handle": "<string>",
+      "website": "<string>",
+      "donation": "<string>",
+      "location": "<string>",
+      "profile_picture": {
+        "150x150": "<string>",
+        "480x480": "<string>",
+        "1000x1000": "<string>"
+      },
+      "spl_usdc_payout_wallet": "<string>"
+    },
+    {
+      "album_count": "<integer>",
+      "erc_wallet": "<string>",
+      "followee_count": "<integer>",
+      "follower_count": "<integer>",
+      "handle": "<string>",
+      "id": "<string>",
+      "is_available": "<boolean>",
+      "is_deactivated": "<boolean>",
+      "is_verified": "<boolean>",
+      "name": "<string>",
+      "playlist_count": "<integer>",
+      "repost_count": "<integer>",
+      "spl_wallet": "<string>",
+      "supporter_count": "<integer>",
+      "supporting_count": "<integer>",
+      "total_audio_balance": "<integer>",
+      "track_count": "<integer>",
+      "verified_with_instagram": "<boolean>",
+      "verified_with_tiktok": "<boolean>",
+      "verified_with_twitter": "<boolean>",
+      "wallet": "<string>",
+      "artist_pick_track_id": "<string>",
+      "bio": "<string>",
+      "cover_photo": {
+        "640x": "<string>",
+        "2000x": "<string>"
+      },
+      "twitter_handle": "<string>",
+      "instagram_handle": "<string>",
+      "tiktok_handle": "<string>",
+      "website": "<string>",
+      "donation": "<string>",
+      "location": "<string>",
+      "profile_picture": {
+        "150x150": "<string>",
+        "480x480": "<string>",
+        "1000x1000": "<string>"
+      },
+      "spl_usdc_payout_wallet": "<string>"
+    }
+  ]
+}
+GET
+Get Supporters
+https://discoveryprovider.audius.co/v1/users/:id/supporters?offset=<integer>&limit=<integer>
+Gets the supporters of the given user
+Query Params
+offset
+<integer>
+The number of items to skip. Useful for pagination (page number * limit)
+limit
+<integer>
+The number of items to fetch
+Path Variables
+id
+<string>
+(Required) A User ID
+Example
+Success
+
+Request
+View More
+cURL
+curl --location 'https://discoveryprovider.audius.co/v1/users/:id/supporters?offset=%3Cinteger%3E&limit=%3Cinteger%3E' \
+--header 'Accept: application/json'
+200 OK
+Response
+Body
+Headers (1)
+View More
+json
+{
+  "data": [
+    {
+      "amount": "<string>",
+      "rank": "<integer>",
+      "sender": {
+        "album_count": "<integer>",
+        "erc_wallet": "<string>",
+        "followee_count": "<integer>",
+        "follower_count": "<integer>",
+        "handle": "<string>",
+        "id": "<string>",
+        "is_available": "<boolean>",
+        "is_deactivated": "<boolean>",
+        "is_verified": "<boolean>",
+        "name": "<string>",
+        "playlist_count": "<integer>",
+        "repost_count": "<integer>",
+        "spl_wallet": "<string>",
+        "supporter_count": "<integer>",
+        "supporting_count": "<integer>",
+        "total_audio_balance": "<integer>",
+        "track_count": "<integer>",
+        "verified_with_instagram": "<boolean>",
+        "verified_with_tiktok": "<boolean>",
+        "verified_with_twitter": "<boolean>",
+        "wallet": "<string>",
+        "artist_pick_track_id": "<string>",
+        "bio": "<string>",
+        "cover_photo": {
+          "640x": "<string>",
+          "2000x": "<string>"
+        },
+        "twitter_handle": "<string>",
+        "instagram_handle": "<string>",
+        "tiktok_handle": "<string>",
+        "website": "<string>",
+        "donation": "<string>",
+        "location": "<string>",
+        "profile_picture": {
+          "150x150": "<string>",
+          "480x480": "<string>",
+          "1000x1000": "<string>"
+        },
+        "spl_usdc_payout_wallet": "<string>"
+      }
+    },
+    {
+      "amount": "<string>",
+      "rank": "<integer>",
+      "sender": {
+        "album_count": "<integer>",
+        "erc_wallet": "<string>",
+        "followee_count": "<integer>",
+        "follower_count": "<integer>",
+        "handle": "<string>",
+        "id": "<string>",
+        "is_available": "<boolean>",
+        "is_deactivated": "<boolean>",
+        "is_verified": "<boolean>",
+        "name": "<string>",
+        "playlist_count": "<integer>",
+        "repost_count": "<integer>",
+        "spl_wallet": "<string>",
+        "supporter_count": "<integer>",
+        "supporting_count": "<integer>",
+        "total_audio_balance": "<integer>",
+        "track_count": "<integer>",
+        "verified_with_instagram": "<boolean>",
+        "verified_with_tiktok": "<boolean>",
+        "verified_with_twitter": "<boolean>",
+        "wallet": "<string>",
+        "artist_pick_track_id": "<string>",
+        "bio": "<string>",
+        "cover_photo": {
+          "640x": "<string>",
+          "2000x": "<string>"
+        },
+        "twitter_handle": "<string>",
+        "instagram_handle": "<string>",
+        "tiktok_handle": "<string>",
+        "website": "<string>",
+        "donation": "<string>",
+        "location": "<string>",
+        "profile_picture": {
+          "150x150": "<string>",
+          "480x480": "<string>",
+          "1000x1000": "<string>"
+        },
+        "spl_usdc_payout_wallet": "<string>"
+      }
+    }
+  ]
+}
+GET
+Get Most Used Tags
+https://discoveryprovider.audius.co/v1/users/:id/tags?limit=<integer>&user_id=<string>
+Gets the most used track tags by a user.
+Query Params
+limit
+<integer>
+The number of items to fetch
+user_id
+<string>
+The user ID of the user making the request
+Path Variables
+id
+<string>
+(Required) A User ID
+Example
+Success
+
+Request
+View More
+cURL
+curl --location 'https://discoveryprovider.audius.co/v1/users/:id/tags?limit=%3Cinteger%3E&user_id=%3Cstring%3E' \
+--header 'Accept: application/json'
+200 OK
+Response
+Body
+Headers (1)
+json
+{
+  "data": [
+    "<string>",
+    "<string>"
+  ]
+}
+GET
+Get AI Tracks by Handle
+https://discoveryprovider.audius.co/v1/users/handle/:handle/tracks/ai_attributed?offset=<integer>&limit=<integer>&user_id=<string>&sort=date&query=<string>&sort_method=plays&sort_direction=asc&filter_tracks=all
+Gets the AI generated tracks attributed to a user using the user's handle
+Request Headers
+Encoded-Data-Message
+<string>
+The data that was signed by the user for signature recovery
+Encoded-Data-Signature
+<string>
+The signature of data, used for signature recovery
+Query Params
+offset
+<integer>
+The number of items to skip. Useful for pagination (page number * limit)
+limit
+<integer>
+The number of items to fetch
+user_id
+<string>
+The user ID of the user making the request
+sort
+date
+[Deprecated] Field to sort by
+query
+<string>
+The filter query
+sort_method
+plays
+The sort method
+sort_direction
+asc
+The sort direction
+filter_tracks
+all
+Filter by unlisted or public tracks
+Path Variables
+handle
+<string>
+(Required) A User handle
+Example
+Success
+
+Request
+View More
+cURL
+curl --location 'https://discoveryprovider.audius.co/v1/users/handle/:handle/tracks/ai_attributed?offset=%3Cinteger%3E&limit=%3Cinteger%3E&user_id=%3Cstring%3E&sort=date&query=%3Cstring%3E&sort_method=plays&sort_direction=asc&filter_tracks=all' \
+--header 'Encoded-Data-Message: <string>' \
+--header 'Encoded-Data-Signature: <string>' \
+--header 'Accept: application/json'
+200 OK
+Response
+Body
+Headers (1)
+View More
+json
+{
+  "data": [
+    {
+      "artwork": {
+        "150x150": "<string>",
+        "480x480": "<string>",
+        "1000x1000": "<string>"
+      },
+      "comment_count": "<integer>",
+      "duration": "<integer>",
+      "favorite_count": "<integer>",
+      "genre": "<string>",
+      "id": "<string>",
+      "is_downloadable": "<boolean>",
+      "is_original_available": "<boolean>",
+      "permalink": "<string>",
+      "play_count": "<integer>",
+      "repost_count": "<integer>",
+      "title": "<string>",
+      "user": {
+        "album_count": "<integer>",
+        "erc_wallet": "<string>",
+        "followee_count": "<integer>",
+        "follower_count": "<integer>",
+        "handle": "<string>",
+        "id": "<string>",
+        "is_available": "<boolean>",
+        "is_deactivated": "<boolean>",
+        "is_verified": "<boolean>",
+        "name": "<string>",
+        "playlist_count": "<integer>",
+        "repost_count": "<integer>",
+        "spl_wallet": "<string>",
+        "supporter_count": "<integer>",
+        "supporting_count": "<integer>",
+        "total_audio_balance": "<integer>",
+        "track_count": "<integer>",
+        "verified_with_instagram": "<boolean>",
+        "verified_with_tiktok": "<boolean>",
+        "verified_with_twitter": "<boolean>",
+        "wallet": "<string>",
+        "artist_pick_track_id": "<string>",
+        "bio": "<string>",
+        "cover_photo": {
+          "640x": "<string>",
+          "2000x": "<string>"
+        },
+        "twitter_handle": "<string>",
+        "instagram_handle": "<string>",
+        "tiktok_handle": "<string>",
+        "website": "<string>",
+        "donation": "<string>",
+        "location": "<string>",
+        "profile_picture": {
+          "150x150": "<string>",
+          "480x480": "<string>",
+          "1000x1000": "<string>"
+        },
+        "spl_usdc_payout_wallet": "<string>"
+      },
+      "description": "<string>",
+      "track_cid": "<string>",
+      "preview_cid": "<string>",
+      "orig_file_cid": "<string>",
+      "orig_filename": "<string>",
+      "mood": "<string>",
+      "release_date": "<string>",
+      "remix_of": {
+        "tracks": [
+          {
+            "parent_track_id": "<string>"
+          },
+          {
+            "parent_track_id": "<string>"
+          }
+        ]
+      },
+      "tags": "<string>",
+      "is_streamable": "<boolean>",
+      "ddex_app": "<string>",
+      "playlists_containing_track": [
+        "<integer>",
+        "<integer>"
+      ]
+    },
+    {
+      "artwork": {
+        "150x150": "<string>",
+        "480x480": "<string>",
+        "1000x1000": "<string>"
+      },
+      "comment_count": "<integer>",
+      "duration": "<integer>",
+      "favorite_count": "<integer>",
+      "genre": "<string>",
+      "id": "<string>",
+      "is_downloadable": "<boolean>",
+      "is_original_available": "<boolean>",
+      "permalink": "<string>",
+      "play_count": "<integer>",
+      "repost_count": "<integer>",
+      "title": "<string>",
+      "user": {
+        "album_count": "<integer>",
+        "erc_wallet": "<string>",
+        "followee_count": "<integer>",
+        "follower_count": "<integer>",
+        "handle": "<string>",
+        "id": "<string>",
+        "is_available": "<boolean>",
+        "is_deactivated": "<boolean>",
+        "is_verified": "<boolean>",
+        "name": "<string>",
+        "playlist_count": "<integer>",
+        "repost_count": "<integer>",
+        "spl_wallet": "<string>",
+        "supporter_count": "<integer>",
+        "supporting_count": "<integer>",
+        "total_audio_balance": "<integer>",
+        "track_count": "<integer>",
+        "verified_with_instagram": "<boolean>",
+        "verified_with_tiktok": "<boolean>",
+        "verified_with_twitter": "<boolean>",
+        "wallet": "<string>",
+        "artist_pick_track_id": "<string>",
+        "bio": "<string>",
+        "cover_photo": {
+          "640x": "<string>",
+          "2000x": "<string>"
+        },
+        "twitter_handle": "<string>",
+        "instagram_handle": "<string>",
+        "tiktok_handle": "<string>",
+        "website": "<string>",
+        "donation": "<string>",
+        "location": "<string>",
+        "profile_picture": {
+          "150x150": "<string>",
+          "480x480": "<string>",
+          "1000x1000": "<string>"
+        },
+        "spl_usdc_payout_wallet": "<string>"
+      },
+      "description": "<string>",
+      "track_cid": "<string>",
+      "preview_cid": "<string>",
+      "orig_file_cid": "<string>",
+      "orig_filename": "<string>",
+      "mood": "<string>",
+      "release_date": "<string>",
+      "remix_of": {
+        "tracks": [
+          {
+            "parent_track_id": "<string>"
+          },
+          {
+            "parent_track_id": "<string>"
+          }
+        ]
+      },
+      "tags": "<string>",
+      "is_streamable": "<boolean>",
+      "ddex_app": "<string>",
+      "playlists_containing_track": [
+        "<integer>",
+        "<integer>"
+      ]
+    }
+  ]
+}
+GET
+Get Related Users
+https://discoveryprovider.audius.co/v1/users/:id/related?offset=<integer>&limit=<integer>&user_id=<string>
+Gets a list of users that might be of interest to followers of this user.
+Query Params
+offset
+<integer>
+The number of items to skip. Useful for pagination (page number * limit)
+limit
+<integer>
+The number of items to fetch
+user_id
+<string>
+The user ID of the user making the request
+Path Variables
+id
+<string>
+(Required) A User ID
+Example
+Success
+
+Request
+View More
+cURL
+curl --location 'https://discoveryprovider.audius.co/v1/users/:id/related?offset=%3Cinteger%3E&limit=%3Cinteger%3E&user_id=%3Cstring%3E' \
+--header 'Accept: application/json'
+200 OK
+Response
+Body
+Headers (1)
+View More
+json
+{
+  "data": [
+    {
+      "album_count": "<integer>",
+      "erc_wallet": "<string>",
+      "followee_count": "<integer>",
+      "follower_count": "<integer>",
+      "handle": "<string>",
+      "id": "<string>",
+      "is_available": "<boolean>",
+      "is_deactivated": "<boolean>",
+      "is_verified": "<boolean>",
+      "name": "<string>",
+      "playlist_count": "<integer>",
+      "repost_count": "<integer>",
+      "spl_wallet": "<string>",
+      "supporter_count": "<integer>",
+      "supporting_count": "<integer>",
+      "total_audio_balance": "<integer>",
+      "track_count": "<integer>",
+      "verified_with_instagram": "<boolean>",
+      "verified_with_tiktok": "<boolean>",
+      "verified_with_twitter": "<boolean>",
+      "wallet": "<string>",
+      "artist_pick_track_id": "<string>",
+      "bio": "<string>",
+      "cover_photo": {
+        "640x": "<string>",
+        "2000x": "<string>"
+      },
+      "twitter_handle": "<string>",
+      "instagram_handle": "<string>",
+      "tiktok_handle": "<string>",
+      "website": "<string>",
+      "donation": "<string>",
+      "location": "<string>",
+      "profile_picture": {
+        "150x150": "<string>",
+        "480x480": "<string>",
+        "1000x1000": "<string>"
+      },
+      "spl_usdc_payout_wallet": "<string>"
+    },
+    {
+      "album_count": "<integer>",
+      "erc_wallet": "<string>",
+      "followee_count": "<integer>",
+      "follower_count": "<integer>",
+      "handle": "<string>",
+      "id": "<string>",
+      "is_available": "<boolean>",
+      "is_deactivated": "<boolean>",
+      "is_verified": "<boolean>",
+      "name": "<string>",
+      "playlist_count": "<integer>",
+      "repost_count": "<integer>",
+      "spl_wallet": "<string>",
+      "supporter_count": "<integer>",
+      "supporting_count": "<integer>",
+      "total_audio_balance": "<integer>",
+      "track_count": "<integer>",
+      "verified_with_instagram": "<boolean>",
+      "verified_with_tiktok": "<boolean>",
+      "verified_with_twitter": "<boolean>",
+      "wallet": "<string>",
+      "artist_pick_track_id": "<string>",
+      "bio": "<string>",
+      "cover_photo": {
+        "640x": "<string>",
+        "2000x": "<string>"
+      },
+      "twitter_handle": "<string>",
+      "instagram_handle": "<string>",
+      "tiktok_handle": "<string>",
+      "website": "<string>",
+      "donation": "<string>",
+      "location": "<string>",
+      "profile_picture": {
+        "150x150": "<string>",
+        "480x480": "<string>",
+        "1000x1000": "<string>"
+      },
+      "spl_usdc_payout_wallet": "<string>"
+    }
+  ]
+}
+GET
+Verify OAuth Token
+https://discoveryprovider.audius.co/v1/users/verify_token?token=<string>
+Verify if the given jwt ID token was signed by the subject (user) in the payload
+Query Params
+token
+<string>
+(Required) JWT to verify
+Example
+Success
+
+Request
+View More
+cURL
+curl --location 'https://discoveryprovider.audius.co/v1/users/verify_token?token=%3Cstring%3E' \
+--header 'Accept: application/json'
+200 OK
+Response
+Body
+Headers (1)
+View More
+json
+{
+  "data": {
+    "email": "<string>",
+    "handle": "<string>",
+    "iat": "<string>",
+    "name": "<string>",
+    "sub": "<string>",
+    "userId": "<string>",
+    "verified": "<boolean>",
+    "profilePicture": {
+      "150x150": "<string>",
+      "480x480": "<string>",
+      "1000x1000": "<string>"
+    }
+  }
+}
+GET
+Get Authorized Apps
+https://discoveryprovider.audius.co/v1/users/:id/authorized_apps
+Get the apps that user has authorized to write to their account
+Path Variables
+id
+<string>
+(Required) A User ID
+Example
+Success
+
+Request
+cURL
+curl --location 'https://discoveryprovider.audius.co/v1/users/:id/authorized_apps' \
+--header 'Accept: application/json'
+200 OK
+Response
+Body
+Headers (1)
+View More
+json
+{
+  "data": [
+    {
+      "address": "<string>",
+      "grant_created_at": "<string>",
+      "grant_updated_at": "<string>",
+      "grantor_user_id": "<string>",
+      "name": "<string>",
+      "description": "<string>",
+      "image_url": "<string>"
+    },
+    {
+      "address": "<string>",
+      "grant_created_at": "<string>",
+      "grant_updated_at": "<string>",
+      "grantor_user_id": "<string>",
+      "name": "<string>",
+      "description": "<string>",
+      "image_url": "<string>"
+    }
+  ]
+}
+GET
+Get Connected Wallets
+https://discoveryprovider.audius.co/v1/users/:id/connected_wallets
+Get the User's ERC and SPL connected wallets
+Path Variables
+id
+<string>
+(Required) A User ID
+Example
+Success
+
+Request
+cURL
+curl --location 'https://discoveryprovider.audius.co/v1/users/:id/connected_wallets' \
+--header 'Accept: application/json'
+200 OK
+Response
+Body
+Headers (1)
+View More
+json
+{
+  "data": {
+    "erc_wallets": [
+      "<string>",
+      "<string>"
+    ],
+    "spl_wallets": [
+      "<string>",
+      "<string>"
+    ]
+  }
+}
+GET
+Get Purchasers
+https://discoveryprovider.audius.co/v1/users/:id/purchasers?offset=<integer>&limit=<integer>&user_id=<string>&content_type=<string>&content_id=<string>
+Gets the list of unique users who have purchased content by the given user
+Query Params
+offset
+<integer>
+The number of items to skip. Useful for pagination (page number * limit)
+limit
+<integer>
+The number of items to fetch
+user_id
+<string>
+The user ID of the user making the request
+content_type
+<string>
+Type of content to filter by (track or album)
+content_id
+<string>
+Filters for users who have purchased the given track or album ID
+Path Variables
+id
+<string>
+(Required) A User ID
+Example
+Success
+
+Request
+View More
+cURL
+curl --location 'https://discoveryprovider.audius.co/v1/users/:id/purchasers?offset=%3Cinteger%3E&limit=%3Cinteger%3E&user_id=%3Cstring%3E&content_type=%3Cstring%3E&content_id=%3Cstring%3E' \
+--header 'Accept: application/json'
+200 OK
+Response
+Body
+Headers (1)
+View More
+json
+{
+  "data": [
+    {
+      "album_count": "<integer>",
+      "erc_wallet": "<string>",
+      "followee_count": "<integer>",
+      "follower_count": "<integer>",
+      "handle": "<string>",
+      "id": "<string>",
+      "is_available": "<boolean>",
+      "is_deactivated": "<boolean>",
+      "is_verified": "<boolean>",
+      "name": "<string>",
+      "playlist_count": "<integer>",
+      "repost_count": "<integer>",
+      "spl_wallet": "<string>",
+      "supporter_count": "<integer>",
+      "supporting_count": "<integer>",
+      "total_audio_balance": "<integer>",
+      "track_count": "<integer>",
+      "verified_with_instagram": "<boolean>",
+      "verified_with_tiktok": "<boolean>",
+      "verified_with_twitter": "<boolean>",
+      "wallet": "<string>",
+      "artist_pick_track_id": "<string>",
+      "bio": "<string>",
+      "cover_photo": {
+        "640x": "<string>",
+        "2000x": "<string>"
+      },
+      "twitter_handle": "<string>",
+      "instagram_handle": "<string>",
+      "tiktok_handle": "<string>",
+      "website": "<string>",
+      "donation": "<string>",
+      "location": "<string>",
+      "profile_picture": {
+        "150x150": "<string>",
+        "480x480": "<string>",
+        "1000x1000": "<string>"
+      },
+      "spl_usdc_payout_wallet": "<string>"
+    },
+    {
+      "album_count": "<integer>",
+      "erc_wallet": "<string>",
+      "followee_count": "<integer>",
+      "follower_count": "<integer>",
+      "handle": "<string>",
+      "id": "<string>",
+      "is_available": "<boolean>",
+      "is_deactivated": "<boolean>",
+      "is_verified": "<boolean>",
+      "name": "<string>",
+      "playlist_count": "<integer>",
+      "repost_count": "<integer>",
+      "spl_wallet": "<string>",
+      "supporter_count": "<integer>",
+      "supporting_count": "<integer>",
+      "total_audio_balance": "<integer>",
+      "track_count": "<integer>",
+      "verified_with_instagram": "<boolean>",
+      "verified_with_tiktok": "<boolean>",
+      "verified_with_twitter": "<boolean>",
+      "wallet": "<string>",
+      "artist_pick_track_id": "<string>",
+      "bio": "<string>",
+      "cover_photo": {
+        "640x": "<string>",
+        "2000x": "<string>"
+      },
+      "twitter_handle": "<string>",
+      "instagram_handle": "<string>",
+      "tiktok_handle": "<string>",
+      "website": "<string>",
+      "donation": "<string>",
+      "location": "<string>",
+      "profile_picture": {
+        "150x150": "<string>",
+        "480x480": "<string>",
+        "1000x1000": "<string>"
+      },
+      "spl_usdc_payout_wallet": "<string>"
+    }
+  ]
+}
+GET
+Get Remixers
+https://discoveryprovider.audius.co/v1/users/:id/remixers?offset=<integer>&limit=<integer>&user_id=<string>&track_id=<string>
+Gets the list of unique users who have remixed tracks by the given user, or a specific track by that user if provided
+Query Params
+offset
+<integer>
+The number of items to skip. Useful for pagination (page number * limit)
+limit
+<integer>
+The number of items to fetch
+user_id
+<string>
+The user ID of the user making the request
+track_id
+<string>
+Filters for remixers who have remixed the given track ID
+Path Variables
+id
+<string>
+(Required) A User ID
+Example
+Success
+
+Request
+View More
+cURL
+curl --location 'https://discoveryprovider.audius.co/v1/users/:id/remixers?offset=%3Cinteger%3E&limit=%3Cinteger%3E&user_id=%3Cstring%3E&track_id=%3Cstring%3E' \
+--header 'Accept: application/json'
+200 OK
+Response
+Body
+Headers (1)
+View More
+json
+{
+  "data": [
+    {
+      "album_count": "<integer>",
+      "erc_wallet": "<string>",
+      "followee_count": "<integer>",
+      "follower_count": "<integer>",
+      "handle": "<string>",
+      "id": "<string>",
+      "is_available": "<boolean>",
+      "is_deactivated": "<boolean>",
+      "is_verified": "<boolean>",
+      "name": "<string>",
+      "playlist_count": "<integer>",
+      "repost_count": "<integer>",
+      "spl_wallet": "<string>",
+      "supporter_count": "<integer>",
+      "supporting_count": "<integer>",
+      "total_audio_balance": "<integer>",
+      "track_count": "<integer>",
+      "verified_with_instagram": "<boolean>",
+      "verified_with_tiktok": "<boolean>",
+      "verified_with_twitter": "<boolean>",
+      "wallet": "<string>",
+      "artist_pick_track_id": "<string>",
+      "bio": "<string>",
+      "cover_photo": {
+        "640x": "<string>",
+        "2000x": "<string>"
+      },
+      "twitter_handle": "<string>",
+      "instagram_handle": "<string>",
+      "tiktok_handle": "<string>",
+      "website": "<string>",
+      "donation": "<string>",
+      "location": "<string>",
+      "profile_picture": {
+        "150x150": "<string>",
+        "480x480": "<string>",
+        "1000x1000": "<string>"
+      },
+      "spl_usdc_payout_wallet": "<string>"
+    },
+    {
+      "album_count": "<integer>",
+      "erc_wallet": "<string>",
+      "followee_count": "<integer>",
+      "follower_count": "<integer>",
+      "handle": "<string>",
+      "id": "<string>",
+      "is_available": "<boolean>",
+      "is_deactivated": "<boolean>",
+      "is_verified": "<boolean>",
+      "name": "<string>",
+      "playlist_count": "<integer>",
+      "repost_count": "<integer>",
+      "spl_wallet": "<string>",
+      "supporter_count": "<integer>",
+      "supporting_count": "<integer>",
+      "total_audio_balance": "<integer>",
+      "track_count": "<integer>",
+      "verified_with_instagram": "<boolean>",
+      "verified_with_tiktok": "<boolean>",
+      "verified_with_twitter": "<boolean>",
+      "wallet": "<string>",
+      "artist_pick_track_id": "<string>",
+      "bio": "<string>",
+      "cover_photo": {
+        "640x": "<string>",
+        "2000x": "<string>"
+      },
+      "twitter_handle": "<string>",
+      "instagram_handle": "<string>",
+      "tiktok_handle": "<string>",
+      "website": "<string>",
+      "donation": "<string>",
+      "location": "<string>",
+      "profile_picture": {
+        "150x150": "<string>",
+        "480x480": "<string>",
+        "1000x1000": "<string>"
+      },
+      "spl_usdc_payout_wallet": "<string>"
+    }
+  ]
+}
+GET
+Get Supported Users
+https://discoveryprovider.audius.co/v1/users/:id/supporting?offset=<integer>&limit=<integer>
+Gets the users that the given user supports
+Query Params
+offset
+<integer>
+The number of items to skip. Useful for pagination (page number * limit)
+limit
+<integer>
+The number of items to fetch
+Path Variables
+id
+<string>
+(Required) A User ID
+Example
+Success
+
+Request
+View More
+cURL
+curl --location 'https://discoveryprovider.audius.co/v1/users/:id/supporting?offset=%3Cinteger%3E&limit=%3Cinteger%3E' \
+--header 'Accept: application/json'
+200 OK
+Response
+Body
+Headers (1)
+View More
+json
+{
+  "data": [
+    {
+      "amount": "<string>",
+      "rank": "<integer>",
+      "receiver": {
+        "album_count": "<integer>",
+        "erc_wallet": "<string>",
+        "followee_count": "<integer>",
+        "follower_count": "<integer>",
+        "handle": "<string>",
+        "id": "<string>",
+        "is_available": "<boolean>",
+        "is_deactivated": "<boolean>",
+        "is_verified": "<boolean>",
+        "name": "<string>",
+        "playlist_count": "<integer>",
+        "repost_count": "<integer>",
+        "spl_wallet": "<string>",
+        "supporter_count": "<integer>",
+        "supporting_count": "<integer>",
+        "total_audio_balance": "<integer>",
+        "track_count": "<integer>",
+        "verified_with_instagram": "<boolean>",
+        "verified_with_tiktok": "<boolean>",
+        "verified_with_twitter": "<boolean>",
+        "wallet": "<string>",
+        "artist_pick_track_id": "<string>",
+        "bio": "<string>",
+        "cover_photo": {
+          "640x": "<string>",
+          "2000x": "<string>"
+        },
+        "twitter_handle": "<string>",
+        "instagram_handle": "<string>",
+        "tiktok_handle": "<string>",
+        "website": "<string>",
+        "donation": "<string>",
+        "location": "<string>",
+        "profile_picture": {
+          "150x150": "<string>",
+          "480x480": "<string>",
+          "1000x1000": "<string>"
+        },
+        "spl_usdc_payout_wallet": "<string>"
+      }
+    },
+    {
+      "amount": "<string>",
+      "rank": "<integer>",
+      "receiver": {
+        "album_count": "<integer>",
+        "erc_wallet": "<string>",
+        "followee_count": "<integer>",
+        "follower_count": "<integer>",
+        "handle": "<string>",
+        "id": "<string>",
+        "is_available": "<boolean>",
+        "is_deactivated": "<boolean>",
+        "is_verified": "<boolean>",
+        "name": "<string>",
+        "playlist_count": "<integer>",
+        "repost_count": "<integer>",
+        "spl_wallet": "<string>",
+        "supporter_count": "<integer>",
+        "supporting_count": "<integer>",
+        "total_audio_balance": "<integer>",
+        "track_count": "<integer>",
+        "verified_with_instagram": "<boolean>",
+        "verified_with_tiktok": "<boolean>",
+        "verified_with_twitter": "<boolean>",
+        "wallet": "<string>",
+        "artist_pick_track_id": "<string>",
+        "bio": "<string>",
+        "cover_photo": {
+          "640x": "<string>",
+          "2000x": "<string>"
+        },
+        "twitter_handle": "<string>",
+        "instagram_handle": "<string>",
+        "tiktok_handle": "<string>",
+        "website": "<string>",
+        "donation": "<string>",
+        "location": "<string>",
+        "profile_picture": {
+          "150x150": "<string>",
+          "480x480": "<string>",
+          "1000x1000": "<string>"
+        },
+        "spl_usdc_payout_wallet": "<string>"
+      }
+    }
+  ]
+}
+GET
+Get User Tracks Remixed
+https://discoveryprovider.audius.co/v1/users/:id/tracks/remixed?offset=<integer>&limit=<integer>&user_id=<string>
+Gets tracks owned by the user which have been remixed by another track
+Query Params
+offset
+<integer>
+The number of items to skip. Useful for pagination (page number * limit)
+limit
+<integer>
+The number of items to fetch
+user_id
+<string>
+The user ID of the user making the request
+Path Variables
+id
+<string>
+(Required) A User ID
+Example
+Success
+
+Request
+View More
+cURL
+curl --location 'https://discoveryprovider.audius.co/v1/users/:id/tracks/remixed?offset=%3Cinteger%3E&limit=%3Cinteger%3E&user_id=%3Cstring%3E' \
+--header 'Accept: application/json'
+200 OK
+Response
+Body
+Headers (1)
+View More
+json
+{
+  "data": [
+    {
+      "artwork": {
+        "150x150": "<string>",
+        "480x480": "<string>",
+        "1000x1000": "<string>"
+      },
+      "comment_count": "<integer>",
+      "duration": "<integer>",
+      "favorite_count": "<integer>",
+      "genre": "<string>",
+      "id": "<string>",
+      "is_downloadable": "<boolean>",
+      "is_original_available": "<boolean>",
+      "permalink": "<string>",
+      "play_count": "<integer>",
+      "repost_count": "<integer>",
+      "title": "<string>",
+      "user": {
+        "album_count": "<integer>",
+        "erc_wallet": "<string>",
+        "followee_count": "<integer>",
+        "follower_count": "<integer>",
+        "handle": "<string>",
+        "id": "<string>",
+        "is_available": "<boolean>",
+        "is_deactivated": "<boolean>",
+        "is_verified": "<boolean>",
+        "name": "<string>",
+        "playlist_count": "<integer>",
+        "repost_count": "<integer>",
+        "spl_wallet": "<string>",
+        "supporter_count": "<integer>",
+        "supporting_count": "<integer>",
+        "total_audio_balance": "<integer>",
+        "track_count": "<integer>",
+        "verified_with_instagram": "<boolean>",
+        "verified_with_tiktok": "<boolean>",
+        "verified_with_twitter": "<boolean>",
+        "wallet": "<string>",
+        "artist_pick_track_id": "<string>",
+        "bio": "<string>",
+        "cover_photo": {
+          "640x": "<string>",
+          "2000x": "<string>"
+        },
+        "twitter_handle": "<string>",
+        "instagram_handle": "<string>",
+        "tiktok_handle": "<string>",
+        "website": "<string>",
+        "donation": "<string>",
+        "location": "<string>",
+        "profile_picture": {
+          "150x150": "<string>",
+          "480x480": "<string>",
+          "1000x1000": "<string>"
+        },
+        "spl_usdc_payout_wallet": "<string>"
+      },
+      "description": "<string>",
+      "track_cid": "<string>",
+      "preview_cid": "<string>",
+      "orig_file_cid": "<string>",
+      "orig_filename": "<string>",
+      "mood": "<string>",
+      "release_date": "<string>",
+      "remix_of": {
+        "tracks": [
+          {
+            "parent_track_id": "<string>"
+          },
+          {
+            "parent_track_id": "<string>"
+          }
+        ]
+      },
+      "tags": "<string>",
+      "is_streamable": "<boolean>",
+      "ddex_app": "<string>",
+      "playlists_containing_track": [
+        "<integer>",
+        "<integer>"
+      ]
+    },
+    {
+      "artwork": {
+        "150x150": "<string>",
+        "480x480": "<string>",
+        "1000x1000": "<string>"
+      },
+      "comment_count": "<integer>",
+      "duration": "<integer>",
+      "favorite_count": "<integer>",
+      "genre": "<string>",
+      "id": "<string>",
+      "is_downloadable": "<boolean>",
+      "is_original_available": "<boolean>",
+      "permalink": "<string>",
+      "play_count": "<integer>",
+      "repost_count": "<integer>",
+      "title": "<string>",
+      "user": {
+        "album_count": "<integer>",
+        "erc_wallet": "<string>",
+        "followee_count": "<integer>",
+        "follower_count": "<integer>",
+        "handle": "<string>",
+        "id": "<string>",
+        "is_available": "<boolean>",
+        "is_deactivated": "<boolean>",
+        "is_verified": "<boolean>",
+        "name": "<string>",
+        "playlist_count": "<integer>",
+        "repost_count": "<integer>",
+        "spl_wallet": "<string>",
+        "supporter_count": "<integer>",
+        "supporting_count": "<integer>",
+        "total_audio_balance": "<integer>",
+        "track_count": "<integer>",
+        "verified_with_instagram": "<boolean>",
+        "verified_with_tiktok": "<boolean>",
+        "verified_with_twitter": "<boolean>",
+        "wallet": "<string>",
+        "artist_pick_track_id": "<string>",
+        "bio": "<string>",
+        "cover_photo": {
+          "640x": "<string>",
+          "2000x": "<string>"
+        },
+        "twitter_handle": "<string>",
+        "instagram_handle": "<string>",
+        "tiktok_handle": "<string>",
+        "website": "<string>",
+        "donation": "<string>",
+        "location": "<string>",
+        "profile_picture": {
+          "150x150": "<string>",
+          "480x480": "<string>",
+          "1000x1000": "<string>"
+        },
+        "spl_usdc_payout_wallet": "<string>"
+      },
+      "description": "<string>",
+      "track_cid": "<string>",
+      "preview_cid": "<string>",
+      "orig_file_cid": "<string>",
+      "orig_filename": "<string>",
+      "mood": "<string>",
+      "release_date": "<string>",
+      "remix_of": {
+        "tracks": [
+          {
+            "parent_track_id": "<string>"
+          },
+          {
+            "parent_track_id": "<string>"
+          }
+        ]
+      },
+      "tags": "<string>",
+      "is_streamable": "<boolean>",
+      "ddex_app": "<string>",
+      "playlists_containing_track": [
+        "<integer>",
+        "<integer>"
+      ]
+    }
+  ]
+}
+tracks
+This folder doesn't have a description.﻿
+GET
+Get Track
+https://discoveryprovider.audius.co/v1/tracks/:track_id
+Gets a track by ID
+Path Variables
+track_id
+<string>
+(Required) A Track ID
+Example
+Success
+
+Request
+cURL
+curl --location 'https://discoveryprovider.audius.co/v1/tracks/:track_id' \
+--header 'Accept: application/json'
+200 OK
+Response
+Body
+Headers (1)
+View More
+json
+{
+  "data": {
+    "artwork": {
+      "150x150": "<string>",
+      "480x480": "<string>",
+      "1000x1000": "<string>"
+    },
+    "comment_count": "<integer>",
+    "duration": "<integer>",
+    "favorite_count": "<integer>",
+    "genre": "<string>",
+    "id": "<string>",
+    "is_downloadable": "<boolean>",
+    "is_original_available": "<boolean>",
+    "permalink": "<string>",
+    "play_count": "<integer>",
+    "repost_count": "<integer>",
+    "title": "<string>",
+    "user": {
+      "album_count": "<integer>",
+      "erc_wallet": "<string>",
+      "followee_count": "<integer>",
+      "follower_count": "<integer>",
+      "handle": "<string>",
+      "id": "<string>",
+      "is_available": "<boolean>",
+      "is_deactivated": "<boolean>",
+      "is_verified": "<boolean>",
+      "name": "<string>",
+      "playlist_count": "<integer>",
+      "repost_count": "<integer>",
+      "spl_wallet": "<string>",
+      "supporter_count": "<integer>",
+      "supporting_count": "<integer>",
+      "total_audio_balance": "<integer>",
+      "track_count": "<integer>",
+      "verified_with_instagram": "<boolean>",
+      "verified_with_tiktok": "<boolean>",
+      "verified_with_twitter": "<boolean>",
+      "wallet": "<string>",
+      "artist_pick_track_id": "<string>",
+      "bio": "<string>",
+      "cover_photo": {
+        "640x": "<string>",
+        "2000x": "<string>"
+      },
+      "twitter_handle": "<string>",
+      "instagram_handle": "<string>",
+      "tiktok_handle": "<string>",
+      "website": "<string>",
+      "donation": "<string>",
+      "location": "<string>",
+      "profile_picture": {
+        "150x150": "<string>",
+        "480x480": "<string>",
+        "1000x1000": "<string>"
+      },
+      "spl_usdc_payout_wallet": "<string>"
+    },
+    "description": "<string>",
+    "track_cid": "<string>",
+    "preview_cid": "<string>",
+    "orig_file_cid": "<string>",
+    "orig_filename": "<string>",
+    "mood": "<string>",
+    "release_date": "<string>",
+    "remix_of": {
+      "tracks": [
+        {
+          "parent_track_id": "<string>"
+        },
+        {
+          "parent_track_id": "<string>"
+        }
+      ]
+    },
+    "tags": "<string>",
+    "is_streamable": "<boolean>",
+    "ddex_app": "<string>",
+    "playlists_containing_track": [
+      "<integer>",
+      "<integer>"
+    ]
+  }
+}
+GET
+Get Bulk Tracks
+https://discoveryprovider.audius.co/v1/tracks?permalink=<string>&permalink=<string>&id=<string>&id=<string>
+Gets a list of tracks using their IDs or permalinks
+Query Params
+permalink
+<string>
+The permalink of the track(s)
+permalink
+<string>
+The permalink of the track(s)
+id
+<string>
+The ID of the track(s)
+id
+<string>
+The ID of the track(s)
+Example
+Success
+
+Request
+View More
+cURL
+curl --location 'https://discoveryprovider.audius.co/v1/tracks?permalink=%3Cstring%3E&id=%3Cstring%3E' \
+--header 'Accept: application/json'
+200 OK
+Response
+Body
+Headers (1)
+View More
+json
+{
+  "data": [
+    {
+      "artwork": {
+        "150x150": "<string>",
+        "480x480": "<string>",
+        "1000x1000": "<string>"
+      },
+      "comment_count": "<integer>",
+      "duration": "<integer>",
+      "favorite_count": "<integer>",
+      "genre": "<string>",
+      "id": "<string>",
+      "is_downloadable": "<boolean>",
+      "is_original_available": "<boolean>",
+      "permalink": "<string>",
+      "play_count": "<integer>",
+      "repost_count": "<integer>",
+      "title": "<string>",
+      "user": {
+        "album_count": "<integer>",
+        "erc_wallet": "<string>",
+        "followee_count": "<integer>",
+        "follower_count": "<integer>",
+        "handle": "<string>",
+        "id": "<string>",
+        "is_available": "<boolean>",
+        "is_deactivated": "<boolean>",
+        "is_verified": "<boolean>",
+        "name": "<string>",
+        "playlist_count": "<integer>",
+        "repost_count": "<integer>",
+        "spl_wallet": "<string>",
+        "supporter_count": "<integer>",
+        "supporting_count": "<integer>",
+        "total_audio_balance": "<integer>",
+        "track_count": "<integer>",
+        "verified_with_instagram": "<boolean>",
+        "verified_with_tiktok": "<boolean>",
+        "verified_with_twitter": "<boolean>",
+        "wallet": "<string>",
+        "artist_pick_track_id": "<string>",
+        "bio": "<string>",
+        "cover_photo": {
+          "640x": "<string>",
+          "2000x": "<string>"
+        },
+        "twitter_handle": "<string>",
+        "instagram_handle": "<string>",
+        "tiktok_handle": "<string>",
+        "website": "<string>",
+        "donation": "<string>",
+        "location": "<string>",
+        "profile_picture": {
+          "150x150": "<string>",
+          "480x480": "<string>",
+          "1000x1000": "<string>"
+        },
+        "spl_usdc_payout_wallet": "<string>"
+      },
+      "description": "<string>",
+      "track_cid": "<string>",
+      "preview_cid": "<string>",
+      "orig_file_cid": "<string>",
+      "orig_filename": "<string>",
+      "mood": "<string>",
+      "release_date": "<string>",
+      "remix_of": {
+        "tracks": [
+          {
+            "parent_track_id": "<string>"
+          },
+          {
+            "parent_track_id": "<string>"
+          }
+        ]
+      },
+      "tags": "<string>",
+      "is_streamable": "<boolean>",
+      "ddex_app": "<string>",
+      "playlists_containing_track": [
+        "<integer>",
+        "<integer>"
+      ]
+    },
+    {
+      "artwork": {
+        "150x150": "<string>",
+        "480x480": "<string>",
+        "1000x1000": "<string>"
+      },
+      "comment_count": "<integer>",
+      "duration": "<integer>",
+      "favorite_count": "<integer>",
+      "genre": "<string>",
+      "id": "<string>",
+      "is_downloadable": "<boolean>",
+      "is_original_available": "<boolean>",
+      "permalink": "<string>",
+      "play_count": "<integer>",
+      "repost_count": "<integer>",
+      "title": "<string>",
+      "user": {
+        "album_count": "<integer>",
+        "erc_wallet": "<string>",
+        "followee_count": "<integer>",
+        "follower_count": "<integer>",
+        "handle": "<string>",
+        "id": "<string>",
+        "is_available": "<boolean>",
+        "is_deactivated": "<boolean>",
+        "is_verified": "<boolean>",
+        "name": "<string>",
+        "playlist_count": "<integer>",
+        "repost_count": "<integer>",
+        "spl_wallet": "<string>",
+        "supporter_count": "<integer>",
+        "supporting_count": "<integer>",
+        "total_audio_balance": "<integer>",
+        "track_count": "<integer>",
+        "verified_with_instagram": "<boolean>",
+        "verified_with_tiktok": "<boolean>",
+        "verified_with_twitter": "<boolean>",
+        "wallet": "<string>",
+        "artist_pick_track_id": "<string>",
+        "bio": "<string>",
+        "cover_photo": {
+          "640x": "<string>",
+          "2000x": "<string>"
+        },
+        "twitter_handle": "<string>",
+        "instagram_handle": "<string>",
+        "tiktok_handle": "<string>",
+        "website": "<string>",
+        "donation": "<string>",
+        "location": "<string>",
+        "profile_picture": {
+          "150x150": "<string>",
+          "480x480": "<string>",
+          "1000x1000": "<string>"
+        },
+        "spl_usdc_payout_wallet": "<string>"
+      },
+      "description": "<string>",
+      "track_cid": "<string>",
+      "preview_cid": "<string>",
+      "orig_file_cid": "<string>",
+      "orig_filename": "<string>",
+      "mood": "<string>",
+      "release_date": "<string>",
+      "remix_of": {
+        "tracks": [
+          {
+            "parent_track_id": "<string>"
+          },
+          {
+            "parent_track_id": "<string>"
+          }
+        ]
+      },
+      "tags": "<string>",
+      "is_streamable": "<boolean>",
+      "ddex_app": "<string>",
+      "playlists_containing_track": [
+        "<integer>",
+        "<integer>"
+      ]
+    }
+  ]
+}
+GET
+Search Tracks
+https://discoveryprovider.audius.co/v1/tracks/search?query=<string>&genre=<string>&genre=<string>&sort_method=popular&mood=<string>&mood=<string>&only_downloadable=false&includePurchaseable=<string>&is_purchaseable=<string>&has_downloads=<string>&key=<string>&key=<string>&bpm_min=<string>&bpm_max=<string>
+Search for a track or tracks
+Query Params
+query
+<string>
+The search query
+genre
+<string>
+The genres to filter by
+genre
+<string>
+The genres to filter by
+sort_method
+popular
+The sort method
+mood
+<string>
+The moods to filter by
+mood
+<string>
+The moods to filter by
+only_downloadable
+false
+Return only downloadable tracks
+includePurchaseable
+<string>
+Whether or not to include purchaseable content
+is_purchaseable
+<string>
+Only include purchaseable tracks and albums in the track and album results
+has_downloads
+<string>
+Only include tracks that have downloads in the track results
+key
+<string>
+Only include tracks that match the musical key
+key
+<string>
+Only include tracks that match the musical key
+bpm_min
+<string>
+Only include tracks that have a bpm greater than or equal to
+bpm_max
+<string>
+Only include tracks that have a bpm less than or equal to
+Example
+Success
+
+Request
+View More
+cURL
+curl --location 'https://discoveryprovider.audius.co/v1/tracks/search?query=%3Cstring%3E&genre=%3Cstring%3E&sort_method=popular&mood=%3Cstring%3E&only_downloadable=false&includePurchaseable=%3Cstring%3E&is_purchaseable=%3Cstring%3E&has_downloads=%3Cstring%3E&key=%3Cstring%3E&bpm_min=%3Cstring%3E&bpm_max=%3Cstring%3E' \
+--header 'Accept: application/json'
+200 OK
+Response
+Body
+Headers (1)
+View More
+json
+{
+  "data": [
+    {
+      "artwork": {
+        "150x150": "<string>",
+        "480x480": "<string>",
+        "1000x1000": "<string>"
+      },
+      "comment_count": "<integer>",
+      "duration": "<integer>",
+      "favorite_count": "<integer>",
+      "genre": "<string>",
+      "id": "<string>",
+      "is_downloadable": "<boolean>",
+      "is_original_available": "<boolean>",
+      "permalink": "<string>",
+      "play_count": "<integer>",
+      "repost_count": "<integer>",
+      "title": "<string>",
+      "user": {
+        "album_count": "<integer>",
+        "erc_wallet": "<string>",
+        "followee_count": "<integer>",
+        "follower_count": "<integer>",
+        "handle": "<string>",
+        "id": "<string>",
+        "is_available": "<boolean>",
+        "is_deactivated": "<boolean>",
+        "is_verified": "<boolean>",
+        "name": "<string>",
+        "playlist_count": "<integer>",
+        "repost_count": "<integer>",
+        "spl_wallet": "<string>",
+        "supporter_count": "<integer>",
+        "supporting_count": "<integer>",
+        "total_audio_balance": "<integer>",
+        "track_count": "<integer>",
+        "verified_with_instagram": "<boolean>",
+        "verified_with_tiktok": "<boolean>",
+        "verified_with_twitter": "<boolean>",
+        "wallet": "<string>",
+        "artist_pick_track_id": "<string>",
+        "bio": "<string>",
+        "cover_photo": {
+          "640x": "<string>",
+          "2000x": "<string>"
+        },
+        "twitter_handle": "<string>",
+        "instagram_handle": "<string>",
+        "tiktok_handle": "<string>",
+        "website": "<string>",
+        "donation": "<string>",
+        "location": "<string>",
+        "profile_picture": {
+          "150x150": "<string>",
+          "480x480": "<string>",
+          "1000x1000": "<string>"
+        },
+        "spl_usdc_payout_wallet": "<string>"
+      },
+      "description": "<string>",
+      "track_cid": "<string>",
+      "preview_cid": "<string>",
+      "orig_file_cid": "<string>",
+      "orig_filename": "<string>",
+      "mood": "<string>",
+      "release_date": "<string>",
+      "remix_of": {
+        "tracks": [
+          {
+            "parent_track_id": "<string>"
+          },
+          {
+            "parent_track_id": "<string>"
+          }
+        ]
+      },
+      "tags": "<string>",
+      "is_streamable": "<boolean>",
+      "ddex_app": "<string>",
+      "playlists_containing_track": [
+        "<integer>",
+        "<integer>"
+      ]
+    },
+    {
+      "artwork": {
+        "150x150": "<string>",
+        "480x480": "<string>",
+        "1000x1000": "<string>"
+      },
+      "comment_count": "<integer>",
+      "duration": "<integer>",
+      "favorite_count": "<integer>",
+      "genre": "<string>",
+      "id": "<string>",
+      "is_downloadable": "<boolean>",
+      "is_original_available": "<boolean>",
+      "permalink": "<string>",
+      "play_count": "<integer>",
+      "repost_count": "<integer>",
+      "title": "<string>",
+      "user": {
+        "album_count": "<integer>",
+        "erc_wallet": "<string>",
+        "followee_count": "<integer>",
+        "follower_count": "<integer>",
+        "handle": "<string>",
+        "id": "<string>",
+        "is_available": "<boolean>",
+        "is_deactivated": "<boolean>",
+        "is_verified": "<boolean>",
+        "name": "<string>",
+        "playlist_count": "<integer>",
+        "repost_count": "<integer>",
+        "spl_wallet": "<string>",
+        "supporter_count": "<integer>",
+        "supporting_count": "<integer>",
+        "total_audio_balance": "<integer>",
+        "track_count": "<integer>",
+        "verified_with_instagram": "<boolean>",
+        "verified_with_tiktok": "<boolean>",
+        "verified_with_twitter": "<boolean>",
+        "wallet": "<string>",
+        "artist_pick_track_id": "<string>",
+        "bio": "<string>",
+        "cover_photo": {
+          "640x": "<string>",
+          "2000x": "<string>"
+        },
+        "twitter_handle": "<string>",
+        "instagram_handle": "<string>",
+        "tiktok_handle": "<string>",
+        "website": "<string>",
+        "donation": "<string>",
+        "location": "<string>",
+        "profile_picture": {
+          "150x150": "<string>",
+          "480x480": "<string>",
+          "1000x1000": "<string>"
+        },
+        "spl_usdc_payout_wallet": "<string>"
+      },
+      "description": "<string>",
+      "track_cid": "<string>",
+      "preview_cid": "<string>",
+      "orig_file_cid": "<string>",
+      "orig_filename": "<string>",
+      "mood": "<string>",
+      "release_date": "<string>",
+      "remix_of": {
+        "tracks": [
+          {
+            "parent_track_id": "<string>"
+          },
+          {
+            "parent_track_id": "<string>"
+          }
+        ]
+      },
+      "tags": "<string>",
+      "is_streamable": "<boolean>",
+      "ddex_app": "<string>",
+      "playlists_containing_track": [
+        "<integer>",
+        "<integer>"
+      ]
+    }
+  ]
+}
+GET
+Get Trending Tracks
+https://discoveryprovider.audius.co/v1/tracks/trending?genre=<string>&time=week
+Gets the top 100 trending (most popular) tracks on Audius
+Query Params
+genre
+<string>
+Filter trending to a specified genre
+time
+week
+Calculate trending over a specified time range
+Example
+Success
+
+Request
+View More
+cURL
+curl --location 'https://discoveryprovider.audius.co/v1/tracks/trending?genre=%3Cstring%3E&time=week' \
+--header 'Accept: application/json'
+200 OK
+Response
+Body
+Headers (1)
+View More
+json
+{
+  "data": [
+    {
+      "artwork": {
+        "150x150": "<string>",
+        "480x480": "<string>",
+        "1000x1000": "<string>"
+      },
+      "comment_count": "<integer>",
+      "duration": "<integer>",
+      "favorite_count": "<integer>",
+      "genre": "<string>",
+      "id": "<string>",
+      "is_downloadable": "<boolean>",
+      "is_original_available": "<boolean>",
+      "permalink": "<string>",
+      "play_count": "<integer>",
+      "repost_count": "<integer>",
+      "title": "<string>",
+      "user": {
+        "album_count": "<integer>",
+        "erc_wallet": "<string>",
+        "followee_count": "<integer>",
+        "follower_count": "<integer>",
+        "handle": "<string>",
+        "id": "<string>",
+        "is_available": "<boolean>",
+        "is_deactivated": "<boolean>",
+        "is_verified": "<boolean>",
+        "name": "<string>",
+        "playlist_count": "<integer>",
+        "repost_count": "<integer>",
+        "spl_wallet": "<string>",
+        "supporter_count": "<integer>",
+        "supporting_count": "<integer>",
+        "total_audio_balance": "<integer>",
+        "track_count": "<integer>",
+        "verified_with_instagram": "<boolean>",
+        "verified_with_tiktok": "<boolean>",
+        "verified_with_twitter": "<boolean>",
+        "wallet": "<string>",
+        "artist_pick_track_id": "<string>",
+        "bio": "<string>",
+        "cover_photo": {
+          "640x": "<string>",
+          "2000x": "<string>"
+        },
+        "twitter_handle": "<string>",
+        "instagram_handle": "<string>",
+        "tiktok_handle": "<string>",
+        "website": "<string>",
+        "donation": "<string>",
+        "location": "<string>",
+        "profile_picture": {
+          "150x150": "<string>",
+          "480x480": "<string>",
+          "1000x1000": "<string>"
+        },
+        "spl_usdc_payout_wallet": "<string>"
+      },
+      "description": "<string>",
+      "track_cid": "<string>",
+      "preview_cid": "<string>",
+      "orig_file_cid": "<string>",
+      "orig_filename": "<string>",
+      "mood": "<string>",
+      "release_date": "<string>",
+      "remix_of": {
+        "tracks": [
+          {
+            "parent_track_id": "<string>"
+          },
+          {
+            "parent_track_id": "<string>"
+          }
+        ]
+      },
+      "tags": "<string>",
+      "is_streamable": "<boolean>",
+      "ddex_app": "<string>",
+      "playlists_containing_track": [
+        "<integer>",
+        "<integer>"
+      ]
+    },
+    {
+      "artwork": {
+        "150x150": "<string>",
+        "480x480": "<string>",
+        "1000x1000": "<string>"
+      },
+      "comment_count": "<integer>",
+      "duration": "<integer>",
+      "favorite_count": "<integer>",
+      "genre": "<string>",
+      "id": "<string>",
+      "is_downloadable": "<boolean>",
+      "is_original_available": "<boolean>",
+      "permalink": "<string>",
+      "play_count": "<integer>",
+      "repost_count": "<integer>",
+      "title": "<string>",
+      "user": {
+        "album_count": "<integer>",
+        "erc_wallet": "<string>",
+        "followee_count": "<integer>",
+        "follower_count": "<integer>",
+        "handle": "<string>",
+        "id": "<string>",
+        "is_available": "<boolean>",
+        "is_deactivated": "<boolean>",
+        "is_verified": "<boolean>",
+        "name": "<string>",
+        "playlist_count": "<integer>",
+        "repost_count": "<integer>",
+        "spl_wallet": "<string>",
+        "supporter_count": "<integer>",
+        "supporting_count": "<integer>",
+        "total_audio_balance": "<integer>",
+        "track_count": "<integer>",
+        "verified_with_instagram": "<boolean>",
+        "verified_with_tiktok": "<boolean>",
+        "verified_with_twitter": "<boolean>",
+        "wallet": "<string>",
+        "artist_pick_track_id": "<string>",
+        "bio": "<string>",
+        "cover_photo": {
+          "640x": "<string>",
+          "2000x": "<string>"
+        },
+        "twitter_handle": "<string>",
+        "instagram_handle": "<string>",
+        "tiktok_handle": "<string>",
+        "website": "<string>",
+        "donation": "<string>",
+        "location": "<string>",
+        "profile_picture": {
+          "150x150": "<string>",
+          "480x480": "<string>",
+          "1000x1000": "<string>"
+        },
+        "spl_usdc_payout_wallet": "<string>"
+      },
+      "description": "<string>",
+      "track_cid": "<string>",
+      "preview_cid": "<string>",
+      "orig_file_cid": "<string>",
+      "orig_filename": "<string>",
+      "mood": "<string>",
+      "release_date": "<string>",
+      "remix_of": {
+        "tracks": [
+          {
+            "parent_track_id": "<string>"
+          },
+          {
+            "parent_track_id": "<string>"
+          }
+        ]
+      },
+      "tags": "<string>",
+      "is_streamable": "<boolean>",
+      "ddex_app": "<string>",
+      "playlists_containing_track": [
+        "<integer>",
+        "<integer>"
+      ]
+    }
+  ]
+}
+GET
+Get Underground Trending Tracks
+https://discoveryprovider.audius.co/v1/tracks/trending/underground?offset=<integer>&limit=<integer>
+Gets the top 100 trending underground tracks on Audius
+Query Params
+offset
+<integer>
+The number of items to skip. Useful for pagination (page number * limit)
+limit
+<integer>
+The number of items to fetch
+Example
+Success
+
+Request
+View More
+cURL
+curl --location 'https://discoveryprovider.audius.co/v1/tracks/trending/underground?offset=%3Cinteger%3E&limit=%3Cinteger%3E' \
+--header 'Accept: application/json'
+200 OK
+Response
+Body
+Headers (1)
+View More
+json
+{
+  "data": [
+    {
+      "artwork": {
+        "150x150": "<string>",
+        "480x480": "<string>",
+        "1000x1000": "<string>"
+      },
+      "comment_count": "<integer>",
+      "duration": "<integer>",
+      "favorite_count": "<integer>",
+      "genre": "<string>",
+      "id": "<string>",
+      "is_downloadable": "<boolean>",
+      "is_original_available": "<boolean>",
+      "permalink": "<string>",
+      "play_count": "<integer>",
+      "repost_count": "<integer>",
+      "title": "<string>",
+      "user": {
+        "album_count": "<integer>",
+        "erc_wallet": "<string>",
+        "followee_count": "<integer>",
+        "follower_count": "<integer>",
+        "handle": "<string>",
+        "id": "<string>",
+        "is_available": "<boolean>",
+        "is_deactivated": "<boolean>",
+        "is_verified": "<boolean>",
+        "name": "<string>",
+        "playlist_count": "<integer>",
+        "repost_count": "<integer>",
+        "spl_wallet": "<string>",
+        "supporter_count": "<integer>",
+        "supporting_count": "<integer>",
+        "total_audio_balance": "<integer>",
+        "track_count": "<integer>",
+        "verified_with_instagram": "<boolean>",
+        "verified_with_tiktok": "<boolean>",
+        "verified_with_twitter": "<boolean>",
+        "wallet": "<string>",
+        "artist_pick_track_id": "<string>",
+        "bio": "<string>",
+        "cover_photo": {
+          "640x": "<string>",
+          "2000x": "<string>"
+        },
+        "twitter_handle": "<string>",
+        "instagram_handle": "<string>",
+        "tiktok_handle": "<string>",
+        "website": "<string>",
+        "donation": "<string>",
+        "location": "<string>",
+        "profile_picture": {
+          "150x150": "<string>",
+          "480x480": "<string>",
+          "1000x1000": "<string>"
+        },
+        "spl_usdc_payout_wallet": "<string>"
+      },
+      "description": "<string>",
+      "track_cid": "<string>",
+      "preview_cid": "<string>",
+      "orig_file_cid": "<string>",
+      "orig_filename": "<string>",
+      "mood": "<string>",
+      "release_date": "<string>",
+      "remix_of": {
+        "tracks": [
+          {
+            "parent_track_id": "<string>"
+          },
+          {
+            "parent_track_id": "<string>"
+          }
+        ]
+      },
+      "tags": "<string>",
+      "is_streamable": "<boolean>",
+      "ddex_app": "<string>",
+      "playlists_containing_track": [
+        "<integer>",
+        "<integer>"
+      ]
+    },
+    {
+      "artwork": {
+        "150x150": "<string>",
+        "480x480": "<string>",
+        "1000x1000": "<string>"
+      },
+      "comment_count": "<integer>",
+      "duration": "<integer>",
+      "favorite_count": "<integer>",
+      "genre": "<string>",
+      "id": "<string>",
+      "is_downloadable": "<boolean>",
+      "is_original_available": "<boolean>",
+      "permalink": "<string>",
+      "play_count": "<integer>",
+      "repost_count": "<integer>",
+      "title": "<string>",
+      "user": {
+        "album_count": "<integer>",
+        "erc_wallet": "<string>",
+        "followee_count": "<integer>",
+        "follower_count": "<integer>",
+        "handle": "<string>",
+        "id": "<string>",
+        "is_available": "<boolean>",
+        "is_deactivated": "<boolean>",
+        "is_verified": "<boolean>",
+        "name": "<string>",
+        "playlist_count": "<integer>",
+        "repost_count": "<integer>",
+        "spl_wallet": "<string>",
+        "supporter_count": "<integer>",
+        "supporting_count": "<integer>",
+        "total_audio_balance": "<integer>",
+        "track_count": "<integer>",
+        "verified_with_instagram": "<boolean>",
+        "verified_with_tiktok": "<boolean>",
+        "verified_with_twitter": "<boolean>",
+        "wallet": "<string>",
+        "artist_pick_track_id": "<string>",
+        "bio": "<string>",
+        "cover_photo": {
+          "640x": "<string>",
+          "2000x": "<string>"
+        },
+        "twitter_handle": "<string>",
+        "instagram_handle": "<string>",
+        "tiktok_handle": "<string>",
+        "website": "<string>",
+        "donation": "<string>",
+        "location": "<string>",
+        "profile_picture": {
+          "150x150": "<string>",
+          "480x480": "<string>",
+          "1000x1000": "<string>"
+        },
+        "spl_usdc_payout_wallet": "<string>"
+      },
+      "description": "<string>",
+      "track_cid": "<string>",
+      "preview_cid": "<string>",
+      "orig_file_cid": "<string>",
+      "orig_filename": "<string>",
+      "mood": "<string>",
+      "release_date": "<string>",
+      "remix_of": {
+        "tracks": [
+          {
+            "parent_track_id": "<string>"
+          },
+          {
+            "parent_track_id": "<string>"
+          }
+        ]
+      },
+      "tags": "<string>",
+      "is_streamable": "<boolean>",
+      "ddex_app": "<string>",
+      "playlists_containing_track": [
+        "<integer>",
+        "<integer>"
+      ]
+    }
+  ]
+}
+GET
+Get Track Access Info
+https://discoveryprovider.audius.co/v1/tracks/:track_id/access-info?user_id=<string>&include_network_cut=<boolean>
+Gets the information necessary to access the track and what access the given user has.
+Query Params
+user_id
+<string>
+The user ID of the user making the request
+include_network_cut
+<boolean>
+Whether to include the staking system as a recipient
+Path Variables
+track_id
+<string>
+(Required) A Track ID
+Example
+Success
+
+Request
+View More
+cURL
+curl --location 'https://discoveryprovider.audius.co/v1/tracks/:track_id/access-info?user_id=%3Cstring%3E&include_network_cut=%3Cboolean%3E' \
+--header 'Accept: application/json'
+200 OK
+Response
+Body
+Headers (1)
+View More
+json
+{
+  "data": {
+    "blocknumber": "<integer>",
+    "user_id": "<string>",
+    "access": {
+      "download": "<boolean>",
+      "stream": "<boolean>"
+    },
+    "is_stream_gated": "<boolean>",
+    "stream_conditions": {
+      "tip_user_id": "<integer>"
+    },
+    "is_download_gated": "<boolean>",
+    "download_conditions": {
+      "tip_user_id": "<integer>"
+    }
+  }
+}
+GET
+Stream Track
+https://discoveryprovider.audius.co/v1/tracks/:track_id/stream?user_id=<string>&preview=false&user_signature=<string>&user_data=<string>&nft_access_signature=<string>&skip_play_count=false&api_key=<string>&skip_check=<boolean>&no_redirect=<boolean>
+Stream an mp3 track
+This endpoint accepts the Range header for streaming.
+https://developer.mozilla.org/en-US/docs/Web/HTTP/Range_requests﻿
+Query Params
+user_id
+<string>
+The user ID of the user making the request
+preview
+false
+Optional - true if streaming track preview
+user_signature
+<string>
+Optional - signature from the requesting user's wallet.
+This is needed to authenticate the user and verify access in case the track is gated.
+user_data
+<string>
+Optional - data which was used to generate the optional signature argument.
+nft_access_signature
+<string>
+Optional - gated content signature for this track which was previously generated by a registered DN.
+We perform checks on it and pass it through to CN.
+skip_play_count
+false
+Optional - boolean that disables tracking of play counts.
+api_key
+<string>
+Optional - API key for third party apps. This is required for tracks that only allow specific API keys.
+skip_check
+<boolean>
+Optional - POC to skip node 'double dip' health check
+no_redirect
+<boolean>
+Optional - If true will not return a 302 and instead will return the stream url in JSON
+Path Variables
+track_id
+<string>
+(Required) A Track ID
+Example
+Success
+
+Request
+View More
+cURL
+curl --location 'https://discoveryprovider.audius.co/v1/tracks/:track_id/stream?user_id=%3Cstring%3E&preview=false&user_signature=%3Cstring%3E&user_data=%3Cstring%3E&nft_access_signature=%3Cstring%3E&skip_play_count=false&api_key=%3Cstring%3E&skip_check=%3Cboolean%3E&no_redirect=%3Cboolean%3E' \
+--header 'Accept: application/json'
+200 OK
+Response
+Body
+Headers (1)
+json
+{
+  "data": "<string>"
+}
+GET
+Download Track
+https://discoveryprovider.audius.co/v1/tracks/:track_id/download?user_id=<string>&user_signature=<string>&user_data=<string>&nft_access_signature=<string>&original=false&filename=<string>
+Download an original or mp3 track
+Query Params
+user_id
+<string>
+The user ID of the user making the request
+user_signature
+<string>
+Optional - signature from the requesting user's wallet.
+This is needed to authenticate the user and verify access in case the track is gated.
+user_data
+<string>
+Optional - data which was used to generate the optional signature argument.
+nft_access_signature
+<string>
+Optional - nft access signature for this track which was previously generated by a registered DN.
+We perform checks on it and pass it through to CN.
+original
+false
+Optional - true if downloading original file
+filename
+<string>
+Optional - name of file to download. If not provided, defaults to track original filename or title.
+Path Variables
+track_id
+<string>
+(Required) A Track ID
+Example
+Success
+
+Request
+View More
+cURL
+curl --location 'https://discoveryprovider.audius.co/v1/tracks/:track_id/download?user_id=%3Cstring%3E&user_signature=%3Cstring%3E&user_data=%3Cstring%3E&nft_access_signature=%3Cstring%3E&original=false&filename=%3Cstring%3E'
+200 OK
+Response
+Body
+Headers (0)
+No response body
+This request doesn't return any response body.
+GET
+Get Track Details
+https://discoveryprovider.audius.co/v1/tracks/:track_id/inspect?original=false
+Inspect a track
+Query Params
+original
+false
+Optional - if set to true inspects the original quality file
+Path Variables
+track_id
+<string>
+(Required) A Track ID
+Example
+Success
+
+Request
+View More
+cURL
+curl --location 'https://discoveryprovider.audius.co/v1/tracks/:track_id/inspect?original=false' \
+--header 'Accept: application/json'
+200 OK
+Response
+Body
+Headers (1)
+json
+{
+  "data": {
+    "content_type": "<string>",
+    "size": "<integer>"
+  }
+}
+GET
+Get Track Top Listeners
+https://discoveryprovider.audius.co/v1/tracks/:track_id/top_listeners?offset=<integer>&limit=<integer>&user_id=<string>
+Get the users that have listened to a track the most
+Query Params
+offset
+<integer>
+The number of items to skip. Useful for pagination (page number * limit)
+limit
+<integer>
+The number of items to fetch
+user_id
+<string>
+The user ID of the user making the request
+Path Variables
+track_id
+<string>
+(Required) A Track ID
+Example
+Success
+
+Request
+View More
+cURL
+curl --location 'https://discoveryprovider.audius.co/v1/tracks/:track_id/top_listeners?offset=%3Cinteger%3E&limit=%3Cinteger%3E&user_id=%3Cstring%3E' \
+--header 'Accept: application/json'
+200 OK
+Response
+Body
+Headers (1)
+json
+{
+  "data": [
+    {
+      "value": "<Circular reference to #/components/schemas/top_listener detected>"
+    },
+    {
+      "value": "<Circular reference to #/components/schemas/top_listener detected>"
+    }
+  ]
+}
+GET
+Get Track Stems
+https://discoveryprovider.audius.co/v1/tracks/:track_id/stems
+Get the remixable stems of a track
+Path Variables
+track_id
+<string>
+(Required) A Track ID
+Example
+Success
+
+Request
+cURL
+curl --location 'https://discoveryprovider.audius.co/v1/tracks/:track_id/stems' \
+--header 'Accept: application/json'
+200 OK
+Response
+Body
+Headers (1)
+View More
+json
+{
+  "data": [
+    {
+      "blocknumber": "<integer>",
+      "category": "<string>",
+      "cid": "<string>",
+      "id": "<string>",
+      "orig_filename": "<string>",
+      "parent_id": "<string>",
+      "user_id": "<string>"
+    },
+    {
+      "blocknumber": "<integer>",
+      "category": "<string>",
+      "cid": "<string>",
+      "id": "<string>",
+      "orig_filename": "<string>",
+      "parent_id": "<string>",
+      "user_id": "<string>"
+    }
+  ]
+}
+playlists
+This folder doesn't have a description.﻿
+GET
+Get Playlist
+https://discoveryprovider.audius.co/v1/playlists/:playlist_id?user_id=<string>
+Get a playlist by ID
+Query Params
+user_id
+<string>
+The user ID of the user making the request
+Path Variables
+playlist_id
+<string>
+(Required) A Playlist ID
+Example
+Success
+
+Request
+View More
+cURL
+curl --location 'https://discoveryprovider.audius.co/v1/playlists/:playlist_id?user_id=%3Cstring%3E' \
+--header 'Accept: application/json'
+200 OK
+Response
+Body
+Headers (1)
+View More
+json
+{
+  "data": [
+    {
+      "access": {
+        "download": "<boolean>",
+        "stream": "<boolean>"
+      },
+      "favorite_count": "<integer>",
+      "id": "<string>",
+      "is_album": "<boolean>",
+      "is_image_autogenerated": "<boolean>",
+      "permalink": "<string>",
+      "playlist_contents": [
+        {
+          "metadata_timestamp": "<integer>",
+          "timestamp": "<integer>",
+          "track_id": "<string>"
+        },
+        {
+          "metadata_timestamp": "<integer>",
+          "timestamp": "<integer>",
+          "track_id": "<string>"
+        }
+      ],
+      "playlist_name": "<string>",
+      "repost_count": "<integer>",
+      "total_play_count": "<integer>",
+      "track_count": "<integer>",
+      "user": {
+        "album_count": "<integer>",
+        "erc_wallet": "<string>",
+        "followee_count": "<integer>",
+        "follower_count": "<integer>",
+        "handle": "<string>",
+        "id": "<string>",
+        "is_available": "<boolean>",
+        "is_deactivated": "<boolean>",
+        "is_verified": "<boolean>",
+        "name": "<string>",
+        "playlist_count": "<integer>",
+        "repost_count": "<integer>",
+        "spl_wallet": "<string>",
+        "supporter_count": "<integer>",
+        "supporting_count": "<integer>",
+        "total_audio_balance": "<integer>",
+        "track_count": "<integer>",
+        "verified_with_instagram": "<boolean>",
+        "verified_with_tiktok": "<boolean>",
+        "verified_with_twitter": "<boolean>",
+        "wallet": "<string>",
+        "artist_pick_track_id": "<string>",
+        "bio": "<string>",
+        "cover_photo": {
+          "640x": "<string>",
+          "2000x": "<string>"
+        },
+        "twitter_handle": "<string>",
+        "instagram_handle": "<string>",
+        "tiktok_handle": "<string>",
+        "website": "<string>",
+        "donation": "<string>",
+        "location": "<string>",
+        "profile_picture": {
+          "150x150": "<string>",
+          "480x480": "<string>",
+          "1000x1000": "<string>"
+        },
+        "spl_usdc_payout_wallet": "<string>"
+      },
+      "artwork": {
+        "150x150": "<string>",
+        "480x480": "<string>",
+        "1000x1000": "<string>"
+      },
+      "description": "<string>",
+      "ddex_app": "<string>",
+      "upc": "<string>"
+    },
+    {
+      "access": {
+        "download": "<boolean>",
+        "stream": "<boolean>"
+      },
+      "favorite_count": "<integer>",
+      "id": "<string>",
+      "is_album": "<boolean>",
+      "is_image_autogenerated": "<boolean>",
+      "permalink": "<string>",
+      "playlist_contents": [
+        {
+          "metadata_timestamp": "<integer>",
+          "timestamp": "<integer>",
+          "track_id": "<string>"
+        },
+        {
+          "metadata_timestamp": "<integer>",
+          "timestamp": "<integer>",
+          "track_id": "<string>"
+        }
+      ],
+      "playlist_name": "<string>",
+      "repost_count": "<integer>",
+      "total_play_count": "<integer>",
+      "track_count": "<integer>",
+      "user": {
+        "album_count": "<integer>",
+        "erc_wallet": "<string>",
+        "followee_count": "<integer>",
+        "follower_count": "<integer>",
+        "handle": "<string>",
+        "id": "<string>",
+        "is_available": "<boolean>",
+        "is_deactivated": "<boolean>",
+        "is_verified": "<boolean>",
+        "name": "<string>",
+        "playlist_count": "<integer>",
+        "repost_count": "<integer>",
+        "spl_wallet": "<string>",
+        "supporter_count": "<integer>",
+        "supporting_count": "<integer>",
+        "total_audio_balance": "<integer>",
+        "track_count": "<integer>",
+        "verified_with_instagram": "<boolean>",
+        "verified_with_tiktok": "<boolean>",
+        "verified_with_twitter": "<boolean>",
+        "wallet": "<string>",
+        "artist_pick_track_id": "<string>",
+        "bio": "<string>",
+        "cover_photo": {
+          "640x": "<string>",
+          "2000x": "<string>"
+        },
+        "twitter_handle": "<string>",
+        "instagram_handle": "<string>",
+        "tiktok_handle": "<string>",
+        "website": "<string>",
+        "donation": "<string>",
+        "location": "<string>",
+        "profile_picture": {
+          "150x150": "<string>",
+          "480x480": "<string>",
+          "1000x1000": "<string>"
+        },
+        "spl_usdc_payout_wallet": "<string>"
+      },
+      "artwork": {
+        "150x150": "<string>",
+        "480x480": "<string>",
+        "1000x1000": "<string>"
+      },
+      "description": "<string>",
+      "ddex_app": "<string>",
+      "upc": "<string>"
+    }
+  ]
+}
+GET
+Get Bulk Playlists
+https://discoveryprovider.audius.co/v1/playlists?user_id=<string>&id=<string>&id=<string>
+Gets a list of playlists by ID
+Query Params
+user_id
+<string>
+The user ID of the user making the request
+id
+<string>
+The ID of the playlist(s)
+id
+<string>
+The ID of the playlist(s)
+Example
+Success
+
+Request
+View More
+cURL
+curl --location 'https://discoveryprovider.audius.co/v1/playlists?user_id=%3Cstring%3E&id=%3Cstring%3E' \
+--header 'Accept: application/json'
+200 OK
+Response
+Body
+Headers (1)
+View More
+json
+{
+  "data": [
+    {
+      "access": {
+        "download": "<boolean>",
+        "stream": "<boolean>"
+      },
+      "favorite_count": "<integer>",
+      "id": "<string>",
+      "is_album": "<boolean>",
+      "is_image_autogenerated": "<boolean>",
+      "permalink": "<string>",
+      "playlist_contents": [
+        {
+          "metadata_timestamp": "<integer>",
+          "timestamp": "<integer>",
+          "track_id": "<string>"
+        },
+        {
+          "metadata_timestamp": "<integer>",
+          "timestamp": "<integer>",
+          "track_id": "<string>"
+        }
+      ],
+      "playlist_name": "<string>",
+      "repost_count": "<integer>",
+      "total_play_count": "<integer>",
+      "track_count": "<integer>",
+      "user": {
+        "album_count": "<integer>",
+        "erc_wallet": "<string>",
+        "followee_count": "<integer>",
+        "follower_count": "<integer>",
+        "handle": "<string>",
+        "id": "<string>",
+        "is_available": "<boolean>",
+        "is_deactivated": "<boolean>",
+        "is_verified": "<boolean>",
+        "name": "<string>",
+        "playlist_count": "<integer>",
+        "repost_count": "<integer>",
+        "spl_wallet": "<string>",
+        "supporter_count": "<integer>",
+        "supporting_count": "<integer>",
+        "total_audio_balance": "<integer>",
+        "track_count": "<integer>",
+        "verified_with_instagram": "<boolean>",
+        "verified_with_tiktok": "<boolean>",
+        "verified_with_twitter": "<boolean>",
+        "wallet": "<string>",
+        "artist_pick_track_id": "<string>",
+        "bio": "<string>",
+        "cover_photo": {
+          "640x": "<string>",
+          "2000x": "<string>"
+        },
+        "twitter_handle": "<string>",
+        "instagram_handle": "<string>",
+        "tiktok_handle": "<string>",
+        "website": "<string>",
+        "donation": "<string>",
+        "location": "<string>",
+        "profile_picture": {
+          "150x150": "<string>",
+          "480x480": "<string>",
+          "1000x1000": "<string>"
+        },
+        "spl_usdc_payout_wallet": "<string>"
+      },
+      "artwork": {
+        "150x150": "<string>",
+        "480x480": "<string>",
+        "1000x1000": "<string>"
+      },
+      "description": "<string>",
+      "ddex_app": "<string>",
+      "upc": "<string>"
+    },
+    {
+      "access": {
+        "download": "<boolean>",
+        "stream": "<boolean>"
+      },
+      "favorite_count": "<integer>",
+      "id": "<string>",
+      "is_album": "<boolean>",
+      "is_image_autogenerated": "<boolean>",
+      "permalink": "<string>",
+      "playlist_contents": [
+        {
+          "metadata_timestamp": "<integer>",
+          "timestamp": "<integer>",
+          "track_id": "<string>"
+        },
+        {
+          "metadata_timestamp": "<integer>",
+          "timestamp": "<integer>",
+          "track_id": "<string>"
+        }
+      ],
+      "playlist_name": "<string>",
+      "repost_count": "<integer>",
+      "total_play_count": "<integer>",
+      "track_count": "<integer>",
+      "user": {
+        "album_count": "<integer>",
+        "erc_wallet": "<string>",
+        "followee_count": "<integer>",
+        "follower_count": "<integer>",
+        "handle": "<string>",
+        "id": "<string>",
+        "is_available": "<boolean>",
+        "is_deactivated": "<boolean>",
+        "is_verified": "<boolean>",
+        "name": "<string>",
+        "playlist_count": "<integer>",
+        "repost_count": "<integer>",
+        "spl_wallet": "<string>",
+        "supporter_count": "<integer>",
+        "supporting_count": "<integer>",
+        "total_audio_balance": "<integer>",
+        "track_count": "<integer>",
+        "verified_with_instagram": "<boolean>",
+        "verified_with_tiktok": "<boolean>",
+        "verified_with_twitter": "<boolean>",
+        "wallet": "<string>",
+        "artist_pick_track_id": "<string>",
+        "bio": "<string>",
+        "cover_photo": {
+          "640x": "<string>",
+          "2000x": "<string>"
+        },
+        "twitter_handle": "<string>",
+        "instagram_handle": "<string>",
+        "tiktok_handle": "<string>",
+        "website": "<string>",
+        "donation": "<string>",
+        "location": "<string>",
+        "profile_picture": {
+          "150x150": "<string>",
+          "480x480": "<string>",
+          "1000x1000": "<string>"
+        },
+        "spl_usdc_payout_wallet": "<string>"
+      },
+      "artwork": {
+        "150x150": "<string>",
+        "480x480": "<string>",
+        "1000x1000": "<string>"
+      },
+      "description": "<string>",
+      "ddex_app": "<string>",
+      "upc": "<string>"
+    }
+  ]
+}
+GET
+Search Playlists
+https://discoveryprovider.audius.co/v1/playlists/search?query=<string>&genre=<string>&genre=<string>&sort_method=popular&mood=<string>&mood=<string>&includePurchaseable=<string>&has_downloads=<string>
+Search for a playlist
+Query Params
+query
+<string>
+The search query
+genre
+<string>
+The genres to filter by
+genre
+<string>
+The genres to filter by
+sort_method
+popular
+The sort method
+mood
+<string>
+The moods to filter by
+mood
+<string>
+The moods to filter by
+includePurchaseable
+<string>
+Whether or not to include purchaseable content
+has_downloads
+<string>
+Only include tracks that have downloads in the track results
+Example
+Success
+
+Request
+View More
+cURL
+curl --location 'https://discoveryprovider.audius.co/v1/playlists/search?query=%3Cstring%3E&genre=%3Cstring%3E&sort_method=popular&mood=%3Cstring%3E&includePurchaseable=%3Cstring%3E&has_downloads=%3Cstring%3E' \
+--header 'Accept: application/json'
+200 OK
+Response
+Body
+Headers (1)
+View More
+json
+{
+  "data": [
+    {
+      "access": {
+        "download": "<boolean>",
+        "stream": "<boolean>"
+      },
+      "favorite_count": "<integer>",
+      "id": "<string>",
+      "is_album": "<boolean>",
+      "is_image_autogenerated": "<boolean>",
+      "permalink": "<string>",
+      "playlist_contents": [
+        {
+          "metadata_timestamp": "<integer>",
+          "timestamp": "<integer>",
+          "track_id": "<string>"
+        },
+        {
+          "metadata_timestamp": "<integer>",
+          "timestamp": "<integer>",
+          "track_id": "<string>"
+        }
+      ],
+      "playlist_name": "<string>",
+      "repost_count": "<integer>",
+      "total_play_count": "<integer>",
+      "track_count": "<integer>",
+      "user": {
+        "album_count": "<integer>",
+        "erc_wallet": "<string>",
+        "followee_count": "<integer>",
+        "follower_count": "<integer>",
+        "handle": "<string>",
+        "id": "<string>",
+        "is_available": "<boolean>",
+        "is_deactivated": "<boolean>",
+        "is_verified": "<boolean>",
+        "name": "<string>",
+        "playlist_count": "<integer>",
+        "repost_count": "<integer>",
+        "spl_wallet": "<string>",
+        "supporter_count": "<integer>",
+        "supporting_count": "<integer>",
+        "total_audio_balance": "<integer>",
+        "track_count": "<integer>",
+        "verified_with_instagram": "<boolean>",
+        "verified_with_tiktok": "<boolean>",
+        "verified_with_twitter": "<boolean>",
+        "wallet": "<string>",
+        "artist_pick_track_id": "<string>",
+        "bio": "<string>",
+        "cover_photo": {
+          "640x": "<string>",
+          "2000x": "<string>"
+        },
+        "twitter_handle": "<string>",
+        "instagram_handle": "<string>",
+        "tiktok_handle": "<string>",
+        "website": "<string>",
+        "donation": "<string>",
+        "location": "<string>",
+        "profile_picture": {
+          "150x150": "<string>",
+          "480x480": "<string>",
+          "1000x1000": "<string>"
+        },
+        "spl_usdc_payout_wallet": "<string>"
+      },
+      "artwork": {
+        "150x150": "<string>",
+        "480x480": "<string>",
+        "1000x1000": "<string>"
+      },
+      "description": "<string>",
+      "ddex_app": "<string>",
+      "upc": "<string>"
+    },
+    {
+      "access": {
+        "download": "<boolean>",
+        "stream": "<boolean>"
+      },
+      "favorite_count": "<integer>",
+      "id": "<string>",
+      "is_album": "<boolean>",
+      "is_image_autogenerated": "<boolean>",
+      "permalink": "<string>",
+      "playlist_contents": [
+        {
+          "metadata_timestamp": "<integer>",
+          "timestamp": "<integer>",
+          "track_id": "<string>"
+        },
+        {
+          "metadata_timestamp": "<integer>",
+          "timestamp": "<integer>",
+          "track_id": "<string>"
+        }
+      ],
+      "playlist_name": "<string>",
+      "repost_count": "<integer>",
+      "total_play_count": "<integer>",
+      "track_count": "<integer>",
+      "user": {
+        "album_count": "<integer>",
+        "erc_wallet": "<string>",
+        "followee_count": "<integer>",
+        "follower_count": "<integer>",
+        "handle": "<string>",
+        "id": "<string>",
+        "is_available": "<boolean>",
+        "is_deactivated": "<boolean>",
+        "is_verified": "<boolean>",
+        "name": "<string>",
+        "playlist_count": "<integer>",
+        "repost_count": "<integer>",
+        "spl_wallet": "<string>",
+        "supporter_count": "<integer>",
+        "supporting_count": "<integer>",
+        "total_audio_balance": "<integer>",
+        "track_count": "<integer>",
+        "verified_with_instagram": "<boolean>",
+        "verified_with_tiktok": "<boolean>",
+        "verified_with_twitter": "<boolean>",
+        "wallet": "<string>",
+        "artist_pick_track_id": "<string>",
+        "bio": "<string>",
+        "cover_photo": {
+          "640x": "<string>",
+          "2000x": "<string>"
+        },
+        "twitter_handle": "<string>",
+        "instagram_handle": "<string>",
+        "tiktok_handle": "<string>",
+        "website": "<string>",
+        "donation": "<string>",
+        "location": "<string>",
+        "profile_picture": {
+          "150x150": "<string>",
+          "480x480": "<string>",
+          "1000x1000": "<string>"
+        },
+        "spl_usdc_payout_wallet": "<string>"
+      },
+      "artwork": {
+        "150x150": "<string>",
+        "480x480": "<string>",
+        "1000x1000": "<string>"
+      },
+      "description": "<string>",
+      "ddex_app": "<string>",
+      "upc": "<string>"
+    }
+  ]
+}
+GET
+Get Playlist By Handle and Slug
+https://discoveryprovider.audius.co/v1/playlists/by_permalink/:handle/:slug?user_id=<string>
+Get a playlist by handle and slug
+Query Params
+user_id
+<string>
+The user ID of the user making the request
+Path Variables
+handle
+<string>
+(Required) playlist owner handle
+slug
+<string>
+(Required) playlist slug
+Example
+Success
+
+Request
+View More
+cURL
+curl --location 'https://discoveryprovider.audius.co/v1/playlists/by_permalink/:handle/:slug?user_id=%3Cstring%3E' \
+--header 'Accept: application/json'
+200 OK
+Response
+Body
+Headers (1)
+View More
+json
+{
+  "data": [
+    {
+      "access": {
+        "download": "<boolean>",
+        "stream": "<boolean>"
+      },
+      "favorite_count": "<integer>",
+      "id": "<string>",
+      "is_album": "<boolean>",
+      "is_image_autogenerated": "<boolean>",
+      "permalink": "<string>",
+      "playlist_contents": [
+        {
+          "metadata_timestamp": "<integer>",
+          "timestamp": "<integer>",
+          "track_id": "<string>"
+        },
+        {
+          "metadata_timestamp": "<integer>",
+          "timestamp": "<integer>",
+          "track_id": "<string>"
+        }
+      ],
+      "playlist_name": "<string>",
+      "repost_count": "<integer>",
+      "total_play_count": "<integer>",
+      "track_count": "<integer>",
+      "user": {
+        "album_count": "<integer>",
+        "erc_wallet": "<string>",
+        "followee_count": "<integer>",
+        "follower_count": "<integer>",
+        "handle": "<string>",
+        "id": "<string>",
+        "is_available": "<boolean>",
+        "is_deactivated": "<boolean>",
+        "is_verified": "<boolean>",
+        "name": "<string>",
+        "playlist_count": "<integer>",
+        "repost_count": "<integer>",
+        "spl_wallet": "<string>",
+        "supporter_count": "<integer>",
+        "supporting_count": "<integer>",
+        "total_audio_balance": "<integer>",
+        "track_count": "<integer>",
+        "verified_with_instagram": "<boolean>",
+        "verified_with_tiktok": "<boolean>",
+        "verified_with_twitter": "<boolean>",
+        "wallet": "<string>",
+        "artist_pick_track_id": "<string>",
+        "bio": "<string>",
+        "cover_photo": {
+          "640x": "<string>",
+          "2000x": "<string>"
+        },
+        "twitter_handle": "<string>",
+        "instagram_handle": "<string>",
+        "tiktok_handle": "<string>",
+        "website": "<string>",
+        "donation": "<string>",
+        "location": "<string>",
+        "profile_picture": {
+          "150x150": "<string>",
+          "480x480": "<string>",
+          "1000x1000": "<string>"
+        },
+        "spl_usdc_payout_wallet": "<string>"
+      },
+      "artwork": {
+        "150x150": "<string>",
+        "480x480": "<string>",
+        "1000x1000": "<string>"
+      },
+      "description": "<string>",
+      "ddex_app": "<string>",
+      "upc": "<string>"
+    },
+    {
+      "access": {
+        "download": "<boolean>",
+        "stream": "<boolean>"
+      },
+      "favorite_count": "<integer>",
+      "id": "<string>",
+      "is_album": "<boolean>",
+      "is_image_autogenerated": "<boolean>",
+      "permalink": "<string>",
+      "playlist_contents": [
+        {
+          "metadata_timestamp": "<integer>",
+          "timestamp": "<integer>",
+          "track_id": "<string>"
+        },
+        {
+          "metadata_timestamp": "<integer>",
+          "timestamp": "<integer>",
+          "track_id": "<string>"
+        }
+      ],
+      "playlist_name": "<string>",
+      "repost_count": "<integer>",
+      "total_play_count": "<integer>",
+      "track_count": "<integer>",
+      "user": {
+        "album_count": "<integer>",
+        "erc_wallet": "<string>",
+        "followee_count": "<integer>",
+        "follower_count": "<integer>",
+        "handle": "<string>",
+        "id": "<string>",
+        "is_available": "<boolean>",
+        "is_deactivated": "<boolean>",
+        "is_verified": "<boolean>",
+        "name": "<string>",
+        "playlist_count": "<integer>",
+        "repost_count": "<integer>",
+        "spl_wallet": "<string>",
+        "supporter_count": "<integer>",
+        "supporting_count": "<integer>",
+        "total_audio_balance": "<integer>",
+        "track_count": "<integer>",
+        "verified_with_instagram": "<boolean>",
+        "verified_with_tiktok": "<boolean>",
+        "verified_with_twitter": "<boolean>",
+        "wallet": "<string>",
+        "artist_pick_track_id": "<string>",
+        "bio": "<string>",
+        "cover_photo": {
+          "640x": "<string>",
+          "2000x": "<string>"
+        },
+        "twitter_handle": "<string>",
+        "instagram_handle": "<string>",
+        "tiktok_handle": "<string>",
+        "website": "<string>",
+        "donation": "<string>",
+        "location": "<string>",
+        "profile_picture": {
+          "150x150": "<string>",
+          "480x480": "<string>",
+          "1000x1000": "<string>"
+        },
+        "spl_usdc_payout_wallet": "<string>"
+      },
+      "artwork": {
+        "150x150": "<string>",
+        "480x480": "<string>",
+        "1000x1000": "<string>"
+      },
+      "description": "<string>",
+      "ddex_app": "<string>",
+      "upc": "<string>"
+    }
+  ]
+}
+GET
+Get Trending Playlists
+https://discoveryprovider.audius.co/v1/playlists/trending?time=week
+Gets trending playlists for a time period
+Query Params
+time
+week
+Calculate trending over a specified time range
+Example
+Success
+
+Request
+cURL
+curl --location 'https://discoveryprovider.audius.co/v1/playlists/trending?time=week' \
+--header 'Accept: application/json'
+200 OK
+Response
+Body
+Headers (1)
+View More
+json
+{
+  "data": [
+    {
+      "access": {
+        "download": "<boolean>",
+        "stream": "<boolean>"
+      },
+      "favorite_count": "<integer>",
+      "id": "<string>",
+      "is_album": "<boolean>",
+      "is_image_autogenerated": "<boolean>",
+      "permalink": "<string>",
+      "playlist_contents": [
+        {
+          "metadata_timestamp": "<integer>",
+          "timestamp": "<integer>",
+          "track_id": "<string>"
+        },
+        {
+          "metadata_timestamp": "<integer>",
+          "timestamp": "<integer>",
+          "track_id": "<string>"
+        }
+      ],
+      "playlist_name": "<string>",
+      "repost_count": "<integer>",
+      "total_play_count": "<integer>",
+      "track_count": "<integer>",
+      "user": {
+        "album_count": "<integer>",
+        "erc_wallet": "<string>",
+        "followee_count": "<integer>",
+        "follower_count": "<integer>",
+        "handle": "<string>",
+        "id": "<string>",
+        "is_available": "<boolean>",
+        "is_deactivated": "<boolean>",
+        "is_verified": "<boolean>",
+        "name": "<string>",
+        "playlist_count": "<integer>",
+        "repost_count": "<integer>",
+        "spl_wallet": "<string>",
+        "supporter_count": "<integer>",
+        "supporting_count": "<integer>",
+        "total_audio_balance": "<integer>",
+        "track_count": "<integer>",
+        "verified_with_instagram": "<boolean>",
+        "verified_with_tiktok": "<boolean>",
+        "verified_with_twitter": "<boolean>",
+        "wallet": "<string>",
+        "artist_pick_track_id": "<string>",
+        "bio": "<string>",
+        "cover_photo": {
+          "640x": "<string>",
+          "2000x": "<string>"
+        },
+        "twitter_handle": "<string>",
+        "instagram_handle": "<string>",
+        "tiktok_handle": "<string>",
+        "website": "<string>",
+        "donation": "<string>",
+        "location": "<string>",
+        "profile_picture": {
+          "150x150": "<string>",
+          "480x480": "<string>",
+          "1000x1000": "<string>"
+        },
+        "spl_usdc_payout_wallet": "<string>"
+      },
+      "artwork": {
+        "150x150": "<string>",
+        "480x480": "<string>",
+        "1000x1000": "<string>"
+      },
+      "description": "<string>",
+      "ddex_app": "<string>",
+      "upc": "<string>"
+    },
+    {
+      "access": {
+        "download": "<boolean>",
+        "stream": "<boolean>"
+      },
+      "favorite_count": "<integer>",
+      "id": "<string>",
+      "is_album": "<boolean>",
+      "is_image_autogenerated": "<boolean>",
+      "permalink": "<string>",
+      "playlist_contents": [
+        {
+          "metadata_timestamp": "<integer>",
+          "timestamp": "<integer>",
+          "track_id": "<string>"
+        },
+        {
+          "metadata_timestamp": "<integer>",
+          "timestamp": "<integer>",
+          "track_id": "<string>"
+        }
+      ],
+      "playlist_name": "<string>",
+      "repost_count": "<integer>",
+      "total_play_count": "<integer>",
+      "track_count": "<integer>",
+      "user": {
+        "album_count": "<integer>",
+        "erc_wallet": "<string>",
+        "followee_count": "<integer>",
+        "follower_count": "<integer>",
+        "handle": "<string>",
+        "id": "<string>",
+        "is_available": "<boolean>",
+        "is_deactivated": "<boolean>",
+        "is_verified": "<boolean>",
+        "name": "<string>",
+        "playlist_count": "<integer>",
+        "repost_count": "<integer>",
+        "spl_wallet": "<string>",
+        "supporter_count": "<integer>",
+        "supporting_count": "<integer>",
+        "total_audio_balance": "<integer>",
+        "track_count": "<integer>",
+        "verified_with_instagram": "<boolean>",
+        "verified_with_tiktok": "<boolean>",
+        "verified_with_twitter": "<boolean>",
+        "wallet": "<string>",
+        "artist_pick_track_id": "<string>",
+        "bio": "<string>",
+        "cover_photo": {
+          "640x": "<string>",
+          "2000x": "<string>"
+        },
+        "twitter_handle": "<string>",
+        "instagram_handle": "<string>",
+        "tiktok_handle": "<string>",
+        "website": "<string>",
+        "donation": "<string>",
+        "location": "<string>",
+        "profile_picture": {
+          "150x150": "<string>",
+          "480x480": "<string>",
+          "1000x1000": "<string>"
+        },
+        "spl_usdc_payout_wallet": "<string>"
+      },
+      "artwork": {
+        "150x150": "<string>",
+        "480x480": "<string>",
+        "1000x1000": "<string>"
+      },
+      "description": "<string>",
+      "ddex_app": "<string>",
+      "upc": "<string>"
+    }
+  ]
+}
+GET
+Get Playlist Access Info
+https://discoveryprovider.audius.co/v1/playlists/:playlist_id/access-info?user_id=<string>&include_network_cut=<boolean>
+Gets the information necessary to access the playlist and what access the given user has.
+Query Params
+user_id
+<string>
+The user ID of the user making the request
+include_network_cut
+<boolean>
+Whether to include the staking system as a recipient
+Path Variables
+playlist_id
+<string>
+(Required) A Playlist ID
+Example
+Success
+
+Request
+View More
+cURL
+curl --location 'https://discoveryprovider.audius.co/v1/playlists/:playlist_id/access-info?user_id=%3Cstring%3E&include_network_cut=%3Cboolean%3E' \
+--header 'Accept: application/json'
+200 OK
+Response
+Body
+Headers (1)
+View More
+json
+{
+  "data": {
+    "blocknumber": "<integer>",
+    "user_id": "<string>",
+    "access": {
+      "download": "<boolean>",
+      "stream": "<boolean>"
+    },
+    "is_stream_gated": "<boolean>",
+    "stream_conditions": {
+      "tip_user_id": "<integer>"
+    },
+    "is_download_gated": "<boolean>",
+    "download_conditions": {
+      "tip_user_id": "<integer>"
+    }
+  }
+}
+GET
+Get Playlist Tracks
+https://discoveryprovider.audius.co/v1/playlists/:playlist_id/tracks
+Fetch tracks within a playlist.
+Path Variables
+playlist_id
+<string>
+(Required) A Playlist ID
+Example
+Success
+
+Request
+cURL
+curl --location 'https://discoveryprovider.audius.co/v1/playlists/:playlist_id/tracks' \
+--header 'Accept: application/json'
+200 OK
+Response
+Body
+Headers (1)
+View More
+json
+{
+  "data": [
+    {
+      "artwork": {
+        "150x150": "<string>",
+        "480x480": "<string>",
+        "1000x1000": "<string>"
+      },
+      "comment_count": "<integer>",
+      "duration": "<integer>",
+      "favorite_count": "<integer>",
+      "genre": "<string>",
+      "id": "<string>",
+      "is_downloadable": "<boolean>",
+      "is_original_available": "<boolean>",
+      "permalink": "<string>",
+      "play_count": "<integer>",
+      "repost_count": "<integer>",
+      "title": "<string>",
+      "user": {
+        "album_count": "<integer>",
+        "erc_wallet": "<string>",
+        "followee_count": "<integer>",
+        "follower_count": "<integer>",
+        "handle": "<string>",
+        "id": "<string>",
+        "is_available": "<boolean>",
+        "is_deactivated": "<boolean>",
+        "is_verified": "<boolean>",
+        "name": "<string>",
+        "playlist_count": "<integer>",
+        "repost_count": "<integer>",
+        "spl_wallet": "<string>",
+        "supporter_count": "<integer>",
+        "supporting_count": "<integer>",
+        "total_audio_balance": "<integer>",
+        "track_count": "<integer>",
+        "verified_with_instagram": "<boolean>",
+        "verified_with_tiktok": "<boolean>",
+        "verified_with_twitter": "<boolean>",
+        "wallet": "<string>",
+        "artist_pick_track_id": "<string>",
+        "bio": "<string>",
+        "cover_photo": {
+          "640x": "<string>",
+          "2000x": "<string>"
+        },
+        "twitter_handle": "<string>",
+        "instagram_handle": "<string>",
+        "tiktok_handle": "<string>",
+        "website": "<string>",
+        "donation": "<string>",
+        "location": "<string>",
+        "profile_picture": {
+          "150x150": "<string>",
+          "480x480": "<string>",
+          "1000x1000": "<string>"
+        },
+        "spl_usdc_payout_wallet": "<string>"
+      },
+      "description": "<string>",
+      "track_cid": "<string>",
+      "preview_cid": "<string>",
+      "orig_file_cid": "<string>",
+      "orig_filename": "<string>",
+      "mood": "<string>",
+      "release_date": "<string>",
+      "remix_of": {
+        "tracks": [
+          {
+            "parent_track_id": "<string>"
+          },
+          {
+            "parent_track_id": "<string>"
+          }
+        ]
+      },
+      "tags": "<string>",
+      "is_streamable": "<boolean>",
+      "ddex_app": "<string>",
+      "playlists_containing_track": [
+        "<integer>",
+        "<integer>"
+      ]
+    },
+    {
+      "artwork": {
+        "150x150": "<string>",
+        "480x480": "<string>",
+        "1000x1000": "<string>"
+      },
+      "comment_count": "<integer>",
+      "duration": "<integer>",
+      "favorite_count": "<integer>",
+      "genre": "<string>",
+      "id": "<string>",
+      "is_downloadable": "<boolean>",
+      "is_original_available": "<boolean>",
+      "permalink": "<string>",
+      "play_count": "<integer>",
+      "repost_count": "<integer>",
+      "title": "<string>",
+      "user": {
+        "album_count": "<integer>",
+        "erc_wallet": "<string>",
+        "followee_count": "<integer>",
+        "follower_count": "<integer>",
+        "handle": "<string>",
+        "id": "<string>",
+        "is_available": "<boolean>",
+        "is_deactivated": "<boolean>",
+        "is_verified": "<boolean>",
+        "name": "<string>",
+        "playlist_count": "<integer>",
+        "repost_count": "<integer>",
+        "spl_wallet": "<string>",
+        "supporter_count": "<integer>",
+        "supporting_count": "<integer>",
+        "total_audio_balance": "<integer>",
+        "track_count": "<integer>",
+        "verified_with_instagram": "<boolean>",
+        "verified_with_tiktok": "<boolean>",
+        "verified_with_twitter": "<boolean>",
+        "wallet": "<string>",
+        "artist_pick_track_id": "<string>",
+        "bio": "<string>",
+        "cover_photo": {
+          "640x": "<string>",
+          "2000x": "<string>"
+        },
+        "twitter_handle": "<string>",
+        "instagram_handle": "<string>",
+        "tiktok_handle": "<string>",
+        "website": "<string>",
+        "donation": "<string>",
+        "location": "<string>",
+        "profile_picture": {
+          "150x150": "<string>",
+          "480x480": "<string>",
+          "1000x1000": "<string>"
+        },
+        "spl_usdc_payout_wallet": "<string>"
+      },
+      "description": "<string>",
+      "track_cid": "<string>",
+      "preview_cid": "<string>",
+      "orig_file_cid": "<string>",
+      "orig_filename": "<string>",
+      "mood": "<string>",
+      "release_date": "<string>",
+      "remix_of": {
+        "tracks": [
+          {
+            "parent_track_id": "<string>"
+          },
+          {
+            "parent_track_id": "<string>"
+          }
+        ]
+      },
+      "tags": "<string>",
+      "is_streamable": "<boolean>",
+      "ddex_app": "<string>",
+      "playlists_containing_track": [
+        "<integer>",
+        "<integer>"
+      ]
+    }
+  ]
+}
+tips
+This folder doesn't have a description.﻿
+GET
+Get Tips
+https://discoveryprovider.audius.co/v1/tips?offset=<integer>&limit=<integer>&user_id=<string>&receiver_min_followers=0&receiver_is_verified=false&current_user_follows=receiver&unique_by=receiver
+Gets the most recent tips on the network
+Query Params
+offset
+<integer>
+The number of items to skip. Useful for pagination (page number * limit)
+limit
+<integer>
+The number of items to fetch
+user_id
+<string>
+The user ID of the user making the request
+receiver_min_followers
+0
+Only include tips to recipients that have this many followers
+receiver_is_verified
+false
+Only include tips to recipients that are verified
+current_user_follows
+receiver
+Only include tips involving the user's followers in the given capacity. Requires user_id to be set.
+unique_by
+receiver
+Only include the most recent tip for a user was involved in the given capacity.
+Eg. 'sender' will ensure that each tip returned has a unique sender, using the most recent tip sent by a user if that user has sent multiple tips.
+
+Example
+Success
+
+Request
+View More
+cURL
+curl --location 'https://discoveryprovider.audius.co/v1/tips?offset=%3Cinteger%3E&limit=%3Cinteger%3E&user_id=%3Cstring%3E&receiver_min_followers=0&receiver_is_verified=false&current_user_follows=receiver&unique_by=receiver' \
+--header 'Accept: application/json'
+200 OK
+Response
+Body
+Headers (1)
+View More
+json
+{
+  "data": [
+    {
+      "amount": "<string>",
+      "created_at": "<string>",
+      "sender": {
+        "album_count": "<integer>",
+        "erc_wallet": "<string>",
+        "followee_count": "<integer>",
+        "follower_count": "<integer>",
+        "handle": "<string>",
+        "id": "<string>",
+        "is_available": "<boolean>",
+        "is_deactivated": "<boolean>",
+        "is_verified": "<boolean>",
+        "name": "<string>",
+        "playlist_count": "<integer>",
+        "repost_count": "<integer>",
+        "spl_wallet": "<string>",
+        "supporter_count": "<integer>",
+        "supporting_count": "<integer>",
+        "total_audio_balance": "<integer>",
+        "track_count": "<integer>",
+        "verified_with_instagram": "<boolean>",
+        "verified_with_tiktok": "<boolean>",
+        "verified_with_twitter": "<boolean>",
+        "wallet": "<string>",
+        "artist_pick_track_id": "<string>",
+        "bio": "<string>",
+        "cover_photo": {
+          "640x": "<string>",
+          "2000x": "<string>"
+        },
+        "twitter_handle": "<string>",
+        "instagram_handle": "<string>",
+        "tiktok_handle": "<string>",
+        "website": "<string>",
+        "donation": "<string>",
+        "location": "<string>",
+        "profile_picture": {
+          "150x150": "<string>",
+          "480x480": "<string>",
+          "1000x1000": "<string>"
+        },
+        "spl_usdc_payout_wallet": "<string>"
+      },
+      "receiver": {
+        "album_count": "<integer>",
+        "erc_wallet": "<string>",
+        "followee_count": "<integer>",
+        "follower_count": "<integer>",
+        "handle": "<string>",
+        "id": "<string>",
+        "is_available": "<boolean>",
+        "is_deactivated": "<boolean>",
+        "is_verified": "<boolean>",
+        "name": "<string>",
+        "playlist_count": "<integer>",
+        "repost_count": "<integer>",
+        "spl_wallet": "<string>",
+        "supporter_count": "<integer>",
+        "supporting_count": "<integer>",
+        "total_audio_balance": "<integer>",
+        "track_count": "<integer>",
+        "verified_with_instagram": "<boolean>",
+        "verified_with_tiktok": "<boolean>",
+        "verified_with_twitter": "<boolean>",
+        "wallet": "<string>",
+        "artist_pick_track_id": "<string>",
+        "bio": "<string>",
+        "cover_photo": {
+          "640x": "<string>",
+          "2000x": "<string>"
+        },
+        "twitter_handle": "<string>",
+        "instagram_handle": "<string>",
+        "tiktok_handle": "<string>",
+        "website": "<string>",
+        "donation": "<string>",
+        "location": "<string>",
+        "profile_picture": {
+          "150x150": "<string>",
+          "480x480": "<string>",
+          "1000x1000": "<string>"
+        },
+        "spl_usdc_payout_wallet": "<string>"
+      }
+    },
+    {
+      "amount": "<string>",
+      "created_at": "<string>",
+      "sender": {
+        "album_count": "<integer>",
+        "erc_wallet": "<string>",
+        "followee_count": "<integer>",
+        "follower_count": "<integer>",
+        "handle": "<string>",
+        "id": "<string>",
+        "is_available": "<boolean>",
+        "is_deactivated": "<boolean>",
+        "is_verified": "<boolean>",
+        "name": "<string>",
+        "playlist_count": "<integer>",
+        "repost_count": "<integer>",
+        "spl_wallet": "<string>",
+        "supporter_count": "<integer>",
+        "supporting_count": "<integer>",
+        "total_audio_balance": "<integer>",
+        "track_count": "<integer>",
+        "verified_with_instagram": "<boolean>",
+        "verified_with_tiktok": "<boolean>",
+        "verified_with_twitter": "<boolean>",
+        "wallet": "<string>",
+        "artist_pick_track_id": "<string>",
+        "bio": "<string>",
+        "cover_photo": {
+          "640x": "<string>",
+          "2000x": "<string>"
+        },
+        "twitter_handle": "<string>",
+        "instagram_handle": "<string>",
+        "tiktok_handle": "<string>",
+        "website": "<string>",
+        "donation": "<string>",
+        "location": "<string>",
+        "profile_picture": {
+          "150x150": "<string>",
+          "480x480": "<string>",
+          "1000x1000": "<string>"
+        },
+        "spl_usdc_payout_wallet": "<string>"
+      },
+      "receiver": {
+        "album_count": "<integer>",
+        "erc_wallet": "<string>",
+        "followee_count": "<integer>",
+        "follower_count": "<integer>",
+        "handle": "<string>",
+        "id": "<string>",
+        "is_available": "<boolean>",
+        "is_deactivated": "<boolean>",
+        "is_verified": "<boolean>",
+        "name": "<string>",
+        "playlist_count": "<integer>",
+        "repost_count": "<integer>",
+        "spl_wallet": "<string>",
+        "supporter_count": "<integer>",
+        "supporting_count": "<integer>",
+        "total_audio_balance": "<integer>",
+        "track_count": "<integer>",
+        "verified_with_instagram": "<boolean>",
+        "verified_with_tiktok": "<boolean>",
+        "verified_with_twitter": "<boolean>",
+        "wallet": "<string>",
+        "artist_pick_track_id": "<string>",
+        "bio": "<string>",
+        "cover_photo": {
+          "640x": "<string>",
+          "2000x": "<string>"
+        },
+        "twitter_handle": "<string>",
+        "instagram_handle": "<string>",
+        "tiktok_handle": "<string>",
+        "website": "<string>",
+        "donation": "<string>",
+        "location": "<string>",
+        "profile_picture": {
+          "150x150": "<string>",
+          "480x480": "<string>",
+          "1000x1000": "<string>"
+        },
+        "spl_usdc_payout_wallet": "<string>"
+      }
+    }
+  ]
+}
+developer_apps
+This folder doesn't have a description.﻿
+GET
+Get Developer App
+https://discoveryprovider.audius.co/v1/developer_apps/:address
+Gets developer app matching given address (API key)
+Path Variables
+address
+<string>
+(Required) A developer app address (API Key)
+Example
+Success
+
+Request
+cURL
+curl --location 'https://discoveryprovider.audius.co/v1/developer_apps/:address' \
+--header 'Accept: application/json'
+200 OK
+Response
+Body
+Headers (1)
+json
+{
+  "data": {
+    "address": "<string>",
+    "name": "<string>",
+    "user_id": "<string>",
+    "description": "<string>",
+    "image_url": "<string>"
+  }
+}
+GET
+Get Developer Apps by User
+https://discoveryprovider.audius.co/v1/users/:id/developer_apps
+Gets the developer apps that the user owns
+Path Variables
+id
+<string>
+(Required) A User ID
+Example
+Success
+
+Request
+cURL
+curl --location 'https://discoveryprovider.audius.co/v1/users/:id/developer_apps' \
+--header 'Accept: application/json'
+200 OK
+Response
+Body
+Headers (1)
+View More
+json
+{
+  "data": [
+    {
+      "address": "<string>",
+      "name": "<string>",
+      "user_id": "<string>",
+      "description": "<string>",
+      "image_url": "<string>"
+    },
+    {
+      "address": "<string>",
+      "name": "<string>",
+      "user_id": "<string>",
+      "description": "<string>",
+      "image_url": "<string>"
+    }
+  ]
+}
+resolve
+This folder doesn't have a description.﻿
+GET
+Resolves and redirects a provided Audius app URL to the API resource URL it represents
+https://discoveryprovider.audius.co/v1/resolve?url=<string>
+This endpoint allows you to lookup and access API resources when you only know the
+audius.co URL.
+Tracks, Playlists, and Users are supported.
+Query Params
+url
+<string>
+(Required) URL to resolve. Either fully formed URL (https://audius.co) or just the absolute path
+Example
