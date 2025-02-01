@@ -1,9 +1,19 @@
 # @modelcontextprotocol/audius-mcp
+[![smithery badge](https://smithery.ai/badge/@glassBead-tc/audius-mcp)](https://smithery.ai/server/@glassBead-tc/audius-mcp)
 
 An MCP (Model Context Protocol) server for interacting with the Audius API. This package provides a set of tools to query and interact with Audius music platform data through the Model Context Protocol.
 
 ## Installation
 
+### Installing via Smithery
+
+To install Audius MCP Server for Claude Desktop automatically via [Smithery](https://smithery.ai/server/@glassBead-tc/audius-mcp):
+
+```bash
+npx -y @smithery/cli install @glassBead-tc/audius-mcp --client claude
+```
+
+### Manual Installation
 ```bash
 npm install -g @modelcontextprotocol/audius-mcp
 ```
