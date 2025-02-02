@@ -666,11 +666,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request): Promise<ServerR
 
       case "get-track-stream": {
         const { trackId } = GetTrackStreamSchema.parse(args);
-        const streamUrl = await audiusSdk.tracks.getTrackStreamUrl({ trackId });
+        const directUrl = await audiusSdk.tracks.getTrackStreamUrl({ trackId });
+        const proxyUrl = `http://localhost:${process.env.STREAMING_PORT || '3000'}/stream/${trackId}`;
         return {
           content: [{
             type: "audio",
-            url: streamUrl,
+            urls: [proxyUrl, directUrl], // Try proxy first, fall back to direct
             mimeType: "audio/mpeg"
           }],
           tools: []  // Required by ServerResult type

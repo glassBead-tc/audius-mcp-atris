@@ -79,6 +79,19 @@ export class StreamingManager {
         this.activeStreams = new Map();
         this.rateLimiter = new RateLimiter();
 
+        // Configure CORS
+        const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['*'];
+        this.app.use((req, res, next) => {
+            const origin = req.headers.origin;
+            if (origin && (allowedOrigins.includes('*') || allowedOrigins.includes(origin))) {
+                res.setHeader('Access-Control-Allow-Origin', origin);
+                res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+                res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Range');
+                res.setHeader('Access-Control-Expose-Headers', 'Content-Range, Accept-Ranges');
+            }
+            next();
+        });
+
         // Cleanup inactive streams and cache every hour
         setInterval(() => this.cleanup(), 3600000);
 
@@ -244,6 +257,9 @@ export class StreamingManager {
                 // Get stream metadata
                 const streamOptions = await this.getStreamMetadata(trackId);
 
+                // Get stream URL
+                const streamUrl = await this.getStreamUrl(trackId);
+
                 // Set headers
                 res.setHeader('Content-Type', streamOptions.contentType);
                 res.setHeader('Transfer-Encoding', streamOptions.encoding);
@@ -254,18 +270,35 @@ export class StreamingManager {
                 res.setHeader('Access-Control-Allow-Origin', '*');
                 res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
                 res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Range');
-                res.setHeader('Access-Control-Expose-Headers', 'Content-Range');
+                res.setHeader('Access-Control-Expose-Headers', 'Content-Range, Accept-Ranges, Content-Length');
+
+                // Set Accept-Ranges header for all requests
+                res.setHeader('Accept-Ranges', 'bytes');
 
                 // Handle range requests
                 const range = req.headers.range;
                 if (range && typeof range === 'string') {
-                    // TODO: Implement range request handling
-                    res.status(501).send({ error: 'Range requests not yet implemented' });
+                    // Parse range header
+                    const parts = range.replace(/bytes=/, '').split('-');
+                    if (parts.length !== 2) {
+                        throw new Error('Invalid range header format');
+                    }
+                    const audioResponse = await fetch(streamUrl, {
+                        headers: { Range: range }
+                    });
+                    
+                    if (!audioResponse.ok || !audioResponse.body) {
+                        throw new Error('Failed to fetch audio stream');
+                    }
+
+                    res.status(206);
+                    res.setHeader('Accept-Ranges', 'bytes');
+                    res.setHeader('Content-Range', audioResponse.headers.get('Content-Range') || '');
+                    res.setHeader('Content-Length', audioResponse.headers.get('Content-Length') || '');
+
+                    await this.streamWithBackpressure(audioResponse.body, res, sessionId);
                     return;
                 }
-
-                // Get stream URL
-                const streamUrl = await this.getStreamUrl(trackId);
 
                 // Create stream session
                 this.activeStreams.set(sessionId, {
@@ -284,6 +317,12 @@ export class StreamingManager {
                 const audioResponse = await fetch(streamUrl);
                 if (!audioResponse.ok || !audioResponse.body) {
                     throw new Error('Failed to fetch audio stream');
+                }
+
+                // Set Content-Length if available
+                const contentLength = audioResponse.headers.get('Content-Length');
+                if (contentLength) {
+                    res.setHeader('Content-Length', contentLength);
                 }
 
                 // Stream with backpressure handling
@@ -307,9 +346,18 @@ export class StreamingManager {
 
         // Handle OPTIONS requests for CORS
         this.app.options('/stream/:trackId', (req: express.Request, res: express.Response) => {
-            res.setHeader('Access-Control-Allow-Origin', '*');
+            const origin = req.headers.origin;
+            const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['*'];
+            
+            if (origin && (allowedOrigins.includes('*') || allowedOrigins.includes(origin))) {
+                res.setHeader('Access-Control-Allow-Origin', origin);
+            } else {
+                res.setHeader('Access-Control-Allow-Origin', '*');
+            }
+            
             res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
             res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Range');
+            res.setHeader('Access-Control-Expose-Headers', 'Content-Range, Accept-Ranges, Content-Length');
             res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
             res.status(204).end();
         });
@@ -328,7 +376,7 @@ export class StreamingManager {
     /**
      * Start the streaming server
      */
-    async start(port: number = 3000): Promise<void> {
+    async start(port: number = parseInt(process.env.STREAMING_PORT || '3000')): Promise<void> {
         return new Promise<void>((resolve, reject) => {
             try {
                 this.app.listen(port, () => {
