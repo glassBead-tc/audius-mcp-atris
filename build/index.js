@@ -23,7 +23,7 @@ if (!API_KEY) {
 }
 // Initialize Audius SDK
 const audiusSdk = sdk({
-    appName: "audius-mcp-server",
+    appName: "mcp-audius",
     apiKey: API_KEY,
     ...(API_SECRET && { apiSecret: API_SECRET }),
     environment: "production"
@@ -218,7 +218,7 @@ const UnfavoriteAlbumSchema = z.object({
 }).describe("Unfavorite an album");
 // Server instance
 const server = new Server({
-    name: "audius-mcp-server",
+    name: "mcp-audius",
     version: "1.0.0",
 }, {
     capabilities: {

@@ -19,13 +19,18 @@ Completed:
    - USDC transactions enabled
 
 ## Recent Changes
-- Implemented Extended Track Features:
+- Fixed server startup issues:
+  - Created .env.local with proper API credentials
+  - Server now running successfully
+  - Note: Punycode deprecation warning present but not affecting functionality
+- Previous Changes:
+  - Implemented Extended Track Features
   - Created TrackExtendedManager class
   - Added comprehensive track data retrieval
   - Implemented top listeners functionality
   - Added enhanced comment features
   - Integrated with Audius SDK
-- Updated documentation to reflect new capabilities
+  - Updated documentation to reflect new capabilities
 
 ## Next Steps
 1. Implement Analytics & Reporting:
