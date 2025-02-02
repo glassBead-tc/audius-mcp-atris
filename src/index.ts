@@ -47,6 +47,7 @@ import { TrendingManager, GetTrendingTracksSchema, GetTrendingPlaylistsSchema, G
 import { AnalyticsManager, GetGenrePopularitySchema, GetMoodPopularitySchema } from "./analytics.js";
 import { AnalyzeTrendingTracksSchema } from "./trending-analytics.js";
 import { StreamingManager } from "./streaming.js";
+import { AudioPlayerManager } from "./audio-player.js";
 
 // Load environment variables
 config({ path: '.env.local' });
@@ -78,9 +79,15 @@ const trackExtendedManager = new TrackExtendedManager(audiusSdk);
 const trendingManager = new TrendingManager(audiusSdk);
 const analyticsManager = new AnalyticsManager(audiusSdk);
 const streamingManager = new StreamingManager(audiusSdk, walletManager);
+const audioPlayerManager = new AudioPlayerManager();
 
 // Common Types
 const HashIdSchema = z.string().describe("Audius ID - A unique identifier for an Audius resource");
+
+// Audio Player Schemas
+const PlayAudioSchema = z.object({
+  data: z.string().describe("Base64 encoded audio data"),
+}).describe("Play audio data using system audio");
 
 // User Schemas
 const GetUserSchema = z.object({
@@ -710,6 +717,17 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       description: "Analyze trending tracks with advanced metrics and research-based scoring. Optionally include detailed statistics about tempo and key signatures. Example: { limit: 100, includeStats: true }",
       inputSchema: zodToJsonSchema(AnalyzeTrendingTracksSchema),
     },
+    // Audio Player Tools
+    {
+      name: "play-audio",
+      description: "Play audio data using system audio",
+      inputSchema: zodToJsonSchema(PlayAudioSchema),
+    },
+    {
+      name: "stop-audio",
+      description: "Stop currently playing audio",
+      inputSchema: zodToJsonSchema(z.object({}).strict()),
+    },
   ],
 }));
 
@@ -1087,6 +1105,39 @@ server.setRequestHandler(CallToolRequestSchema, async (request): Promise<ServerR
         return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
       }
 
+      // Audio Player endpoints
+      case "play-audio": {
+        const { data } = PlayAudioSchema.parse(args);
+        try {
+          const audioData = Buffer.from(data, 'base64');
+          await audioPlayerManager.playAudioData(audioData);
+          return {
+            content: [{
+              type: "text",
+              text: "Playing audio data"
+            }]
+          };
+        } catch (error) {
+          return {
+            content: [{
+              type: "text",
+              text: `Failed to play audio: ${error instanceof Error ? error.message : String(error)}`
+            }],
+            isError: true
+          };
+        }
+      }
+
+      case "stop-audio": {
+        audioPlayerManager.stopPlayback();
+        return {
+          content: [{
+            type: "text",
+            text: "Stopped audio playback"
+          }]
+        };
+      }
+
       default:
         throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${name}`);
     }
@@ -1114,6 +1165,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request): Promise<ServerR
 
 // Handle cleanup on exit
 process.on('SIGINT', async () => {
+  audioPlayerManager.stopPlayback();
   await streamingManager.stop();
   process.exit(0);
 });
@@ -1139,6 +1191,7 @@ async function main() {
 // Execute main
 main().catch(async (error) => {
   // Ensure clean shutdown
+  audioPlayerManager.stopPlayback();
   await streamingManager.stop().catch(() => {});
   
   // If it's already an MCP error, rethrow it
