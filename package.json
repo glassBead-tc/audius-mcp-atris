@@ -9,7 +9,9 @@
   },
   "files": [
     "build",
-    "README.md"
+    "README.md",
+    ".githooks",
+    "SECURITY.md"
   ],
   "repository": {
     "type": "git",
@@ -28,7 +30,8 @@
   "scripts": {
     "build": "tsc && chmod +x build/index.js",
     "start": "node build/index.js",
-    "dev": "tsc -w"
+    "dev": "tsc -w",
+    "postinstall": "cp .githooks/* .git/hooks/ && chmod +x .git/hooks/*"
   },
   "dependencies": {
     "@audius/fixed-decimal": "^1.0.0",

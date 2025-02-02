@@ -1,0 +1,53 @@
+#!/bin/sh
+
+# Pre-commit hook to prevent committing sensitive files and environment variables
+
+echo "Running pre-commit checks..."
+
+# Check for .env files
+env_files=$(git diff --cached --name-only | grep -E '\.env(\.[^.]+)?$' | grep -v '\.env\.example$')
+if [ -n "$env_files" ]; then
+    echo "❌ Error: Attempting to commit environment files:"
+    echo "$env_files"
+    echo "Please remove these files from staging and add them to .gitignore"
+    exit 1
+fi
+
+# Check for files that might contain secrets
+secret_patterns='\b(SECRET|PASSWORD|KEY|TOKEN|CREDENTIAL|PWD|PASS)\b'
+files_to_check=$(git diff --cached --name-only | grep -v -E '(SECURITY.md|.env.example|package.json|README.md|.githooks/pre-commit)$')
+for file in $files_to_check; do
+    if [ -f "$file" ]; then
+        secret_found=$(git diff --cached -U0 "$file" | grep '^+' | grep -iE "$secret_patterns" || true)
+        if [ -n "$secret_found" ]; then
+            echo "❌ Error: Possible sensitive data detected in $file:"
+            echo "$secret_found"
+            echo "Please remove sensitive data before committing."
+            exit 1
+        fi
+    fi
+done
+
+# Verify .gitignore exists and contains essential patterns
+if [ ! -f .gitignore ]; then
+    echo "❌ Error: .gitignore file is missing"
+    exit 1
+fi
+
+required_patterns=('.env' '.env.local' '.env.*.local')
+missing_patterns=()
+
+for pattern in "${required_patterns[@]}"; do
+    if ! grep -q "^$pattern$" .gitignore; then
+        missing_patterns+=("$pattern")
+    fi
+done
+
+if [ ${#missing_patterns[@]} -ne 0 ]; then
+    echo "❌ Error: .gitignore is missing required patterns:"
+    printf '%s\n' "${missing_patterns[@]}"
+    exit 1
+fi
+
+echo "✅ Pre-commit checks passed"
+exit 0
