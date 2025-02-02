@@ -1,5 +1,7 @@
 # @glassbead/mcp-audius
 
+<img src="https://badge.mcpx.dev" title="MCP"/>
+
 An MCP (Model Context Protocol) server for comprehensive interaction with the Audius API. This package provides a rich set of tools to query and interact with the Audius music platform through the Model Context Protocol.
 
 ## Configuration
