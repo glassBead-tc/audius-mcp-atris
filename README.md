@@ -13,7 +13,7 @@ Add to your Claude Desktop configuration (`claude_desktop_config.json`):
 ```json
 {
   "mcpServers": {
-    "audius": {
+    "mcp-audius": {
       "command": "npx",
       "args": ["@glassbead/mcp-audius"],
       "env": {
