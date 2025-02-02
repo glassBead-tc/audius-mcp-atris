@@ -5,11 +5,34 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import {
   ListToolsRequestSchema,
   CallToolRequestSchema,
+  ListResourcesRequestSchema,
+  ListResourceTemplatesRequestSchema,
+  ReadResourceRequestSchema,
   ErrorCode,
   McpError,
   ServerResult,
 } from "@modelcontextprotocol/sdk/types.js";
-import { sdk } from '@audius/sdk';
+import { sdk, UserResponse, TrackResponse } from '@audius/sdk';
+
+interface AudiusUser extends UserResponse {
+  id: string;
+  handle: string;
+  name: string;
+  followers_count: number;
+  track_count: number;
+}
+
+interface AudiusTrack extends TrackResponse {
+  id: string;
+  title: string;
+  user: {
+    id: string;
+    handle: string;
+  };
+  play_count: number;
+  repost_count: number;
+  save_count: number;
+}
 import { z } from "zod";
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import { WalletManager } from "./auth.js";
@@ -22,6 +45,7 @@ import { UserExtendedManager, GetUserExtendedProfileSchema } from "./user-extend
 import { TrackExtendedManager, GetTrackExtendedDataSchema, GetTrackTopListenersSchema, GetTrackCommentsExtendedSchema } from "./track-extended.js";
 import { TrendingManager, GetTrendingTracksSchema, GetTrendingPlaylistsSchema, GetTrendingUsersSchema } from "./trending.js";
 import { AnalyticsManager, GetGenrePopularitySchema, GetMoodPopularitySchema } from "./analytics.js";
+import { AnalyzeTrendingTracksSchema } from "./trending-analytics.js";
 import { StreamingManager } from "./streaming.js";
 
 // Load environment variables
@@ -56,36 +80,36 @@ const analyticsManager = new AnalyticsManager(audiusSdk);
 const streamingManager = new StreamingManager(audiusSdk, walletManager);
 
 // Common Types
-const HashIdSchema = z.string().describe("Audius ID");
+const HashIdSchema = z.string().describe("Audius ID - A unique identifier for an Audius resource");
 
 // User Schemas
 const GetUserSchema = z.object({
   userId: HashIdSchema,
-}).describe("Get user details");
+}).describe("Get detailed information about a specific Audius user including their profile, stats, and verification status");
 
 const GetUserByHandleSchema = z.object({
-  handle: z.string(),
-}).describe("Get user by handle");
+  handle: z.string().describe("The user's handle/username without the @ symbol"),
+}).describe("Look up an Audius user by their handle (username). Returns the same information as get-user");
 
 const SearchUsersSchema = z.object({
-  query: z.string(),
-}).describe("Search for users");
+  query: z.string().describe("Search term to find users - can include partial names or handles"),
+}).describe("Search for Audius users by name or handle. Returns a list of matching users with basic profile information");
 
 const FollowUserSchema = z.object({
-  userId: HashIdSchema,
-  followeeUserId: HashIdSchema,
-}).describe("Follow a user");
+  userId: HashIdSchema.describe("ID of the user who will follow"),
+  followeeUserId: HashIdSchema.describe("ID of the user to be followed"),
+}).describe("Make one user follow another user. The userId is the follower, followeeUserId is the user being followed");
 
 const UnfollowUserSchema = z.object({
-  userId: HashIdSchema,
-  followeeUserId: HashIdSchema,
-}).describe("Unfollow a user");
+  userId: HashIdSchema.describe("ID of the user who will unfollow"),
+  followeeUserId: HashIdSchema.describe("ID of the user to be unfollowed"),
+}).describe("Remove a follow relationship between users. The userId is the unfollower, followeeUserId is the user being unfollowed");
 
 const GetUserFollowersSchema = z.object({
-  userId: HashIdSchema,
-  limit: z.number().optional(),
-  offset: z.number().optional(),
-}).describe("Get user's followers");
+  userId: HashIdSchema.describe("ID of the user whose followers you want to retrieve"),
+  limit: z.number().optional().describe("Maximum number of followers to return (default: 100)"),
+  offset: z.number().optional().describe("Number of followers to skip for pagination"),
+}).describe("Get a paginated list of users who follow the specified user. Use limit and offset for pagination");
 
 const GetUserFollowingSchema = z.object({
   userId: HashIdSchema,
@@ -289,7 +313,112 @@ server.onerror = async (error) => {
   process.exit(1);
 };
 
-// Register request handlers
+// Register resource handlers
+server.setRequestHandler(ListResourcesRequestSchema, async () => ({
+  resources: [
+    {
+      uri: "audius://stats/global",
+      name: "Global Audius Statistics",
+      description: "Global platform statistics including total users, tracks, etc.",
+      mimeType: "application/json"
+    }
+  ]
+}));
+
+server.setRequestHandler(ListResourceTemplatesRequestSchema, async () => ({
+  resourceTemplates: [
+    {
+      uriTemplate: "audius://artists/{handle}/stats",
+      name: "Artist Statistics",
+      description: "Basic statistics for an artist including follower count, track count, etc.",
+      mimeType: "application/json"
+    },
+    {
+      uriTemplate: "audius://tracks/{trackId}/stats",
+      name: "Track Statistics",
+      description: "Basic statistics for a track including play count, repost count, etc.",
+      mimeType: "application/json"
+    }
+  ]
+}));
+
+server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
+  const { uri } = request.params;
+
+  // Handle global stats
+  if (uri === "audius://stats/global") {
+    // Get total users by checking trending users with large limit
+    const users = await trendingManager.getTrendingUsers({ limit: 1 });
+    const tracks = await trendingManager.getTrendingTracks({ limit: 1 });
+    const stats = {
+      totalUsers: users?.count || 0,
+      totalTracks: tracks?.count || 0,
+      timestamp: new Date().toISOString()
+    };
+    return {
+      contents: [{
+        uri,
+        mimeType: "application/json",
+        text: JSON.stringify(stats, null, 2)
+      }]
+    };
+  }
+
+  // Handle artist stats
+  const artistMatch = uri.match(/^audius:\/\/artists\/([^/]+)\/stats$/);
+  if (artistMatch) {
+    const handle = decodeURIComponent(artistMatch[1]);
+    const user = await audiusSdk.users.getUserByHandle({ handle });
+    if (!user) {
+      throw new McpError(ErrorCode.InvalidRequest, `Artist not found: ${handle}`);
+    }
+    const userData = user as AudiusUser;
+    const stats = {
+      handle: userData.handle || '',
+      name: userData.name || '',
+      followerCount: userData.followers_count || 0,
+      trackCount: userData.track_count || 0,
+      timestamp: new Date().toISOString()
+    };
+    return {
+      contents: [{
+        uri,
+        mimeType: "application/json",
+        text: JSON.stringify(stats, null, 2)
+      }]
+    };
+  }
+
+  // Handle track stats
+  const trackMatch = uri.match(/^audius:\/\/tracks\/([^/]+)\/stats$/);
+  if (trackMatch) {
+    const trackId = trackMatch[1];
+    const track = await audiusSdk.tracks.getTrack({ trackId });
+    if (!track) {
+      throw new McpError(ErrorCode.InvalidRequest, `Track not found: ${trackId}`);
+    }
+    const trackData = track as AudiusTrack;
+    const stats = {
+      title: trackData.title || '',
+      artist: trackData.user?.handle || '',
+      playCount: trackData.play_count || 0,
+      repostCount: trackData.repost_count || 0,
+      favoriteCount: trackData.save_count || 0,
+      timestamp: new Date().toISOString()
+    };
+    return {
+      contents: [{
+        uri,
+        mimeType: "application/json",
+        text: JSON.stringify(stats, null, 2)
+      }]
+    };
+  }
+
+  throw new McpError(ErrorCode.InvalidRequest, `Resource not found: ${uri}`);
+});
+
+// Register tool handlers
 server.setRequestHandler(ListToolsRequestSchema, async () => ({
   tools: [
     // User Tools
@@ -376,8 +505,13 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     },
     {
       name: "get-trending-tracks",
-      description: "Get trending tracks on Audius",
+      description: "Get trending tracks on Audius. Use genre parameter to filter by genre, limit/offset for pagination. Example: { genre: 'Electronic', limit: 20, offset: 0 }",
       inputSchema: zodToJsonSchema(GetTrendingTracksSchema),
+    },
+    {
+      name: "get-underground-trending-tracks",
+      description: "Gets the top 100 trending underground tracks on Audius",
+      inputSchema: zodToJsonSchema(z.object({}).strict()),
     },
     {
       name: "favorite-track",
@@ -470,13 +604,13 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     },
     {
       name: "get-trending-playlists",
-      description: "Get trending playlists on Audius",
+      description: "Get trending playlists on Audius. Optionally specify time period (week/month/year) and use limit/offset for pagination. Example: { time: 'week', limit: 10 }",
       inputSchema: zodToJsonSchema(GetTrendingPlaylistsSchema),
     },
     {
-      name: "search-playlists",
-      description: "Search for playlists on Audius",
-      inputSchema: zodToJsonSchema(SearchPlaylistsSchema),
+      name: "get-trending-users",
+      description: "Get trending users on Audius platform. Filter by genre and use limit/offset for pagination. Users are ranked by follower growth and engagement. Example: { genre: 'Hip-Hop', limit: 50 }",
+      inputSchema: zodToJsonSchema(GetTrendingUsersSchema),
     },
     {
       name: "favorite-playlist",
@@ -563,13 +697,18 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     // Analytics Tools
     {
       name: "get-genre-popularity",
-      description: "Calculate genre popularity using trending tracks and Pareto distribution",
+      description: "Calculate genre popularity using trending tracks and Pareto distribution. Specify timeRange (day/week/month/year) and optionally request detailed metrics. Example: { timeRange: 'week', includeDetails: true }",
       inputSchema: zodToJsonSchema(GetGenrePopularitySchema),
     },
     {
       name: "get-mood-popularity",
-      description: "Calculate mood popularity and emotional trends using trending tracks",
+      description: "Calculate mood popularity and emotional trends using trending tracks. Analyze over different time periods with optional detailed metrics. Example: { timeRange: 'month', includeDetails: true }",
       inputSchema: zodToJsonSchema(GetMoodPopularitySchema),
+    },
+    {
+      name: "analyze-trending-tracks",
+      description: "Analyze trending tracks with advanced metrics and research-based scoring. Optionally include detailed statistics about tempo and key signatures. Example: { limit: 100, includeStats: true }",
+      inputSchema: zodToJsonSchema(AnalyzeTrendingTracksSchema),
     },
   ],
 }));
@@ -700,6 +839,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request): Promise<ServerR
       case "get-trending-tracks": {
         const { genre, limit, offset } = GetTrendingTracksSchema.parse(args);
         const response = await trendingManager.getTrendingTracks({ genre, limit, offset });
+        return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
+      }
+
+      case "get-underground-trending-tracks": {
+        const response = await audiusSdk.tracks.getUndergroundTrendingTracks();
         return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
       }
 
@@ -927,6 +1071,19 @@ server.setRequestHandler(CallToolRequestSchema, async (request): Promise<ServerR
       case "get-mood-popularity": {
         const { timeRange, totalPoints, includeDetails } = GetMoodPopularitySchema.parse(args);
         const response = await analyticsManager.getMoodPopularity({ timeRange, totalPoints, includeDetails });
+        return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
+      }
+
+      case "analyze-trending-tracks": {
+        const { limit, includeStats } = AnalyzeTrendingTracksSchema.parse(args);
+        const analyticsManager = trendingManager.getAnalyticsManager();
+        if (!analyticsManager) {
+          throw new McpError(ErrorCode.InternalError, "Analytics manager not initialized");
+        }
+        const response = await analyticsManager.analyzeTrendingTracks({ 
+          limit, 
+          includeStats 
+        });
         return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
       }
 
