@@ -47,7 +47,6 @@ import { TrendingManager, GetTrendingTracksSchema, GetTrendingPlaylistsSchema, G
 import { AnalyticsManager, GetGenrePopularitySchema, GetMoodPopularitySchema } from "./analytics.js";
 import { AnalyzeTrendingTracksSchema } from "./trending-analytics.js";
 import { StreamingManager } from "./streaming.js";
-import { AudioPlayerManager } from "./audio-player.js";
 
 // Load environment variables
 config({ path: '.env.local' });
@@ -79,15 +78,9 @@ const trackExtendedManager = new TrackExtendedManager(audiusSdk);
 const trendingManager = new TrendingManager(audiusSdk);
 const analyticsManager = new AnalyticsManager(audiusSdk);
 const streamingManager = new StreamingManager(audiusSdk, walletManager);
-const audioPlayerManager = new AudioPlayerManager();
 
 // Common Types
 const HashIdSchema = z.string().describe("Audius ID - A unique identifier for an Audius resource");
-
-// Audio Player Schemas
-const PlayAudioSchema = z.object({
-  data: z.string().describe("Base64 encoded audio data"),
-}).describe("Play audio data using system audio");
 
 // User Schemas
 const GetUserSchema = z.object({
@@ -716,18 +709,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       name: "analyze-trending-tracks",
       description: "Analyze trending tracks with advanced metrics and research-based scoring. Optionally include detailed statistics about tempo and key signatures. Example: { limit: 100, includeStats: true }",
       inputSchema: zodToJsonSchema(AnalyzeTrendingTracksSchema),
-    },
-    // Audio Player Tools
-    {
-      name: "play-audio",
-      description: "Play audio data using system audio",
-      inputSchema: zodToJsonSchema(PlayAudioSchema),
-    },
-    {
-      name: "stop-audio",
-      description: "Stop currently playing audio",
-      inputSchema: zodToJsonSchema(z.object({}).strict()),
-    },
+    }
   ],
 }));
 
@@ -827,18 +809,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request): Promise<ServerR
 
       case "get-track-stream": {
         const { trackId } = GetTrackStreamSchema.parse(args);
-        const directUrl = await audiusSdk.tracks.getTrackStreamUrl({ trackId });
-        const proxyUrl = `http://localhost:${process.env.STREAMING_PORT || '3000'}/stream/${trackId}`;
-        return {
-          content: [{
-            type: "text",
-            text: JSON.stringify({
-              proxyUrl,
-              directUrl,
-              mimeType: "audio/mpeg"
-            }, null, 2)
+        const streamUrl = await audiusSdk.tracks.getTrackStreamUrl({ trackId });
+        const trackDetails = await audiusSdk.tracks.getTrack({ trackId });
+        return { 
+          content: [{ 
+            type: "text", 
+            text: `Opening "${trackDetails.data?.title}" by ${trackDetails.data?.user?.name}" in your browser's audio player...`
           }],
-          tools: []  // Required by ServerResult type
+          command: `open "${streamUrl}"`
         };
       }
 
@@ -855,13 +833,13 @@ server.setRequestHandler(CallToolRequestSchema, async (request): Promise<ServerR
       }
 
       case "get-trending-tracks": {
-        const { genre, limit, offset } = GetTrendingTracksSchema.parse(args);
-        const response = await trendingManager.getTrendingTracks({ genre, limit, offset });
+        const params = GetTrendingTracksSchema.parse(args);
+        const response = await trendingManager.getTrendingTracks(params);
         return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
       }
 
       case "get-underground-trending-tracks": {
-        const response = await audiusSdk.tracks.getUndergroundTrendingTracks();
+        const response = await trendingManager.getTrendingTracks({ limit: 100 });
         return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
       }
 
@@ -879,14 +857,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request): Promise<ServerR
 
       // Challenge endpoints
       case "get-undisbursed-challenges": {
-        const { offset, limit, userId, completedBlocknumber, challengeId } = GetUndisbursedChallengesSchema.parse(args);
-        const response = await challengeManager.getUndisbursedChallenges({
-          offset,
-          limit,
-          userId,
-          completedBlocknumber,
-          challengeId
-        });
+        const params = GetUndisbursedChallengesSchema.parse(args);
+        const response = await challengeManager.getUndisbursedChallenges(params);
         return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
       }
 
@@ -896,14 +868,47 @@ server.setRequestHandler(CallToolRequestSchema, async (request): Promise<ServerR
         return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
       }
 
-      // Track Purchase endpoints
-      case "get-track-price": {
-        const { trackId } = GetTrackPriceSchema.parse(args);
-        const response = await purchaseManager.getTrackPrice(trackId);
+      // URL Resolution endpoints
+      case "resolve-url": {
+        const params = ResolveUrlSchema.parse(args);
+        const response = await resolveManager.resolveUrl(params.url);
         return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
       }
 
-      case "purchase-track": {
+      // Extended User endpoints
+      case "get-user-extended-profile": {
+        const params = GetUserExtendedProfileSchema.parse(args);
+        const response = await userExtendedManager.getUserExtendedProfile(params.userId);
+        return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
+      }
+
+      // Extended Track endpoints
+      case "get-track-extended-data": {
+        const { trackId } = GetTrackExtendedDataSchema.parse(args);
+        const response = await trackExtendedManager.getTrackExtendedData(trackId);
+        return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
+      }
+
+      case "get-track-top-listeners": {
+        const params = GetTrackTopListenersSchema.parse(args);
+        const response = await trackExtendedManager.getTrackTopListeners(params.trackId);
+        return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
+      }
+
+      case "get-track-comments-extended": {
+        const { trackId } = GetTrackCommentsExtendedSchema.parse(args);
+        const response = await trackExtendedManager.getTrackComments(trackId);
+        return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
+      }
+
+      // Comment endpoints
+      case "get-unclaimed-comment-id": {
+        const response = await commentManager.getUnclaimedCommentId();
+        return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
+      }
+
+      case "get-comment-replies": {
+        const { commentId } = z.object({ commentId: HashIdSchema }).parse(args);
         const { trackId, buyerId } = PurchaseTrackSchema.parse(args);
         const response = await purchaseManager.purchaseTrack(trackId, buyerId);
         return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
@@ -912,7 +917,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request): Promise<ServerR
       case "verify-purchase": {
         const { trackId, userId } = VerifyPurchaseSchema.parse(args);
         const response = await purchaseManager.verifyPurchase(trackId, userId);
-        return { content: [{ type: "text", text: JSON.stringify({ verified: response }, null, 2) }] };
+        return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
       }
 
       // Playlist endpoints
@@ -929,14 +934,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request): Promise<ServerR
       }
 
       case "get-trending-playlists": {
-        const { time, limit, offset } = GetTrendingPlaylistsSchema.parse(args);
-        const response = await trendingManager.getTrendingPlaylists({ time, limit, offset });
-        return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
-      }
-
-      case "search-playlists": {
-        const { query } = SearchPlaylistsSchema.parse(args);
-        const response = await audiusSdk.playlists.searchPlaylists({ query });
+        const params = GetTrendingPlaylistsSchema.parse(args);
+        const response = await trendingManager.getTrendingPlaylists(params);
         return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
       }
 
@@ -952,41 +951,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request): Promise<ServerR
         return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
       }
 
-      // Album endpoints
-      case "get-album": {
-        const { albumId, userId } = GetAlbumSchema.parse(args);
-        const response = await audiusSdk.albums.getAlbum({ albumId, userId });
-        return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
-      }
-
-      case "get-album-tracks": {
-        const { albumId } = GetAlbumTracksSchema.parse(args);
-        const response = await audiusSdk.albums.getAlbumTracks({ albumId });
-        return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
-      }
-
-      case "favorite-album": {
-        const { userId, albumId } = FavoriteAlbumSchema.parse(args);
-        const response = await audiusSdk.albums.favoriteAlbum({ userId, albumId });
-        return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
-      }
-
-      case "unfavorite-album": {
-        const { userId, albumId } = UnfavoriteAlbumSchema.parse(args);
-        const response = await audiusSdk.albums.unfavoriteAlbum({ userId, albumId });
-        return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
-      }
-
-      case "handle-rpc-request": {
-        const { method, params } = z.object({
-          method: z.string(),
-          params: z.array(z.unknown())
-        }).parse(args);
-        const response = await walletManager.handleRPCRequest(method, params);
-        return { content: [{ type: "text", text: JSON.stringify(response) }] };
-      }
-
-      // Wallet endpoints
+      // Wallet & Financial endpoints
       case "connect-wallet": {
         const { userId, walletAddress, walletType } = ConnectWalletSchema.parse(args);
         const response = await walletManager.connectWallet(userId, walletAddress, walletType);
@@ -1013,7 +978,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request): Promise<ServerR
 
       // Tip endpoints
       case "send-tip": {
-        const { senderId, recipientId, amount, contentId, contentType } = SendTipSchema.parse(args);
+        const params = SendTipSchema.parse(args);
+        const { senderId, recipientId, amount, contentId, contentType } = params;
         const response = await tipManager.sendTip(senderId, recipientId, amount, contentId, contentType);
         return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
       }
@@ -1036,172 +1002,78 @@ server.setRequestHandler(CallToolRequestSchema, async (request): Promise<ServerR
         return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
       }
 
-      // Comment endpoints
-      case "get-unclaimed-comment-id": {
-        const response = await commentManager.getUnclaimedCommentId();
-        return { content: [{ type: "text", text: JSON.stringify({ commentId: response }, null, 2) }] };
-      }
-
-      case "get-comment-replies": {
-        const { commentId } = z.object({
-          commentId: HashIdSchema,
-        }).parse(args);
-        const response = await commentManager.getCommentReplies(commentId);
+      // Album endpoints
+      case "get-album": {
+        const { albumId, userId } = GetAlbumSchema.parse(args);
+        const response = await audiusSdk.playlists.getPlaylist({ playlistId: albumId, userId });
         return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
       }
 
-      case "resolve-url": {
-        const { url } = ResolveUrlSchema.parse(args);
-        const response = await resolveManager.resolveUrl(url);
+      case "get-album-tracks": {
+        const { albumId } = GetAlbumTracksSchema.parse(args);
+        const response = await audiusSdk.playlists.getPlaylistTracks({ playlistId: albumId });
         return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
       }
 
-      case "get-user-extended-profile": {
-        const { userId } = GetUserExtendedProfileSchema.parse(args);
-        const response = await userExtendedManager.getUserExtendedProfile(userId);
+      case "favorite-album": {
+        const { userId, albumId } = FavoriteAlbumSchema.parse(args);
+        const response = await audiusSdk.playlists.favoritePlaylist({ userId, playlistId: albumId });
         return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
       }
 
-      case "get-track-extended-data": {
-        const { trackId } = GetTrackExtendedDataSchema.parse(args);
-        const response = await trackExtendedManager.getTrackExtendedData(trackId);
+      case "unfavorite-album": {
+        const { userId, albumId } = UnfavoriteAlbumSchema.parse(args);
+        const response = await audiusSdk.playlists.unfavoritePlaylist({ userId, playlistId: albumId });
         return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
       }
 
-      case "get-track-top-listeners": {
-        const { trackId } = GetTrackTopListenersSchema.parse(args);
-        const response = await trackExtendedManager.getTrackTopListeners(trackId);
-        return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
-      }
-
-      case "get-track-comments-extended": {
-        const { trackId } = GetTrackCommentsExtendedSchema.parse(args);
-        const response = await trackExtendedManager.getTrackComments(trackId);
-        return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
-      }
-
+      // Analytics endpoints
       case "get-genre-popularity": {
-        const { timeRange, totalPoints, includeDetails } = GetGenrePopularitySchema.parse(args);
-        const response = await analyticsManager.getGenrePopularity({ timeRange, totalPoints, includeDetails });
+        const params = GetGenrePopularitySchema.parse(args);
+        const response = await analyticsManager.getGenrePopularity(params);
         return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
       }
 
       case "get-mood-popularity": {
-        const { timeRange, totalPoints, includeDetails } = GetMoodPopularitySchema.parse(args);
-        const response = await analyticsManager.getMoodPopularity({ timeRange, totalPoints, includeDetails });
+        const params = GetMoodPopularitySchema.parse(args);
+        const response = await analyticsManager.getMoodPopularity(params);
         return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
       }
 
       case "analyze-trending-tracks": {
-        const { limit, includeStats } = AnalyzeTrendingTracksSchema.parse(args);
-        const analyticsManager = trendingManager.getAnalyticsManager();
-        if (!analyticsManager) {
-          throw new McpError(ErrorCode.InternalError, "Analytics manager not initialized");
-        }
-        const response = await analyticsManager.analyzeTrendingTracks({ 
-          limit, 
-          includeStats 
-        });
+        const params = AnalyzeTrendingTracksSchema.parse(args);
+        const response = await trendingManager.analyzeTrendingTracks(params);
         return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
-      }
-
-      // Audio Player endpoints
-      case "play-audio": {
-        const { data } = PlayAudioSchema.parse(args);
-        try {
-          const audioData = Buffer.from(data, 'base64');
-          await audioPlayerManager.playAudioData(audioData);
-          return {
-            content: [{
-              type: "text",
-              text: "Playing audio data"
-            }]
-          };
-        } catch (error) {
-          return {
-            content: [{
-              type: "text",
-              text: `Failed to play audio: ${error instanceof Error ? error.message : String(error)}`
-            }],
-            isError: true
-          };
-        }
-      }
-
-      case "stop-audio": {
-        audioPlayerManager.stopPlayback();
-        return {
-          content: [{
-            type: "text",
-            text: "Stopped audio playback"
-          }]
-        };
       }
 
       default:
         throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${name}`);
     }
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      throw new McpError(
-        ErrorCode.InvalidParams,
-        `Invalid arguments: ${error.errors
-          .map((e) => `${e.path.join(".")}: ${e.message}`)
-          .join(", ")}`
-      );
+    if (error instanceof McpError) {
+      throw error;
     }
-    
-    // Handle SDK errors
-    if (error instanceof Error) {
-      throw new McpError(
-        ErrorCode.InternalError,
-        `Audius SDK error: ${error.message}`
-      );
-    }
-    
-    throw error;
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    throw new McpError(ErrorCode.InternalError, `Error executing tool ${name}: ${errorMessage}`);
   }
 });
 
-// Handle cleanup on exit
+// Start server
+const transport = new StdioServerTransport();
+server.connect(transport).catch((error) => {
+  console.error('Failed to start server:', error);
+  process.exit(1);
+});
+
+// Handle process signals
 process.on('SIGINT', async () => {
-  audioPlayerManager.stopPlayback();
-  await streamingManager.stop();
+  await streamingManager.stop().catch(() => {});
+  await server.close();
   process.exit(0);
 });
 
-// Start the server
-async function main() {
-  try {
-    // First start streaming server
-    await streamingManager.start();
-
-    // Then connect MCP server once streaming is ready
-    const transport = new StdioServerTransport();
-    await server.connect(transport);
-  } catch (error) {
-    // Only log critical initialization failures
-    if (error instanceof Error) {
-      throw new McpError(ErrorCode.InternalError, `Failed to initialize: ${error.message}`);
-    }
-    throw error;
-  }
-}
-
-// Execute main
-main().catch(async (error) => {
-  // Ensure clean shutdown
-  audioPlayerManager.stopPlayback();
+process.on('SIGTERM', async () => {
   await streamingManager.stop().catch(() => {});
-  
-  // If it's already an MCP error, rethrow it
-  if (error instanceof McpError) {
-    throw error;
-  }
-  
-  // Otherwise wrap in MCP error
-  throw new McpError(
-    ErrorCode.InternalError,
-    error instanceof Error ? error.message : String(error)
-  );
+  await server.close();
+  process.exit(0);
 });

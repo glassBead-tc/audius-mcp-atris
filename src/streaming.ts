@@ -69,7 +69,14 @@ class RateLimiter {
 }
 
 /**
- * Manages audio streaming for the Audius MCP server
+ * Manages audio streaming for the Audius MCP server.
+ * 
+ * Note: For basic playback, you can simply open the stream URL in a browser.
+ * This streaming server is primarily used for advanced features like:
+ * - Range requests for seeking
+ * - Stream health monitoring
+ * - Rate limiting
+ * - Connection management
  */
 export class StreamingManager {
     private audiusSdk: ReturnType<typeof sdk>;
