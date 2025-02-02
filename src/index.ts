@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { config } from 'dotenv';
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
@@ -6,324 +7,556 @@ import {
   CallToolRequestSchema,
   ErrorCode,
   McpError,
+  ServerResult,
 } from "@modelcontextprotocol/sdk/types.js";
+import { sdk } from '@audius/sdk';
 import { z } from "zod";
-import {
-  fetchFromAudius,
-  AudiusAPIError,
-  cleanResponse,
-  type PaginationParams
-} from "./utils.js";
-import {
-  authInputSchema,
-  getAuthFromArgs,
-  fetchFromAudiusWithAuth,
-  AuthError
-} from './auth.js';
+import { zodToJsonSchema } from 'zod-to-json-schema';
+import { WalletManager } from "./auth.js";
+import { PurchaseManager } from "./purchase.js";
+import { TipManager } from "./tip.js";
+import { ChallengeManager } from "./challenges.js";
+import { CommentManager } from "./comments.js";
+import { ResolveManager, ResolveUrlSchema } from "./resolve.js";
+import { UserExtendedManager, GetUserExtendedProfileSchema } from "./user-extended.js";
+import { TrackExtendedManager, GetTrackExtendedDataSchema, GetTrackTopListenersSchema, GetTrackCommentsExtendedSchema } from "./track-extended.js";
 
-// Input schemas for tools
-const GetUserSchema = z.object({
-  userId: z.string().describe("A User ID"),
-  currentUserId: z.string().optional().describe("The user ID of the user making the request"),
+// Load environment variables
+config({ path: '.env.local' });
+
+const API_KEY = process.env.AUDIUS_API_KEY;
+const API_SECRET = process.env.AUDIUS_API_SECRET;
+
+if (!API_KEY) {
+  throw new Error('AUDIUS_API_KEY environment variable is required');
+}
+
+// Initialize Audius SDK
+const audiusSdk = sdk({
+  appName: "audius-mcp-server",
+  apiKey: API_KEY,
+  ...(API_SECRET && { apiSecret: API_SECRET }),
+  environment: "production"
 });
+
+// Initialize managers
+const walletManager = new WalletManager(audiusSdk);
+const purchaseManager = new PurchaseManager(audiusSdk, walletManager);
+const tipManager = new TipManager(audiusSdk, walletManager);
+const challengeManager = new ChallengeManager(audiusSdk);
+const commentManager = new CommentManager(audiusSdk);
+const resolveManager = new ResolveManager(audiusSdk);
+const userExtendedManager = new UserExtendedManager(audiusSdk);
+const trackExtendedManager = new TrackExtendedManager(audiusSdk);
+
+// Common Types
+const HashIdSchema = z.string().describe("Audius ID");
+
+// User Schemas
+const GetUserSchema = z.object({
+  userId: HashIdSchema,
+}).describe("Get user details");
 
 const GetUserByHandleSchema = z.object({
-  handle: z.string().describe("The user's handle/username"),
-  currentUserId: z.string().optional().describe("The user ID of the user making the request"),
-});
+  handle: z.string(),
+}).describe("Get user by handle");
 
 const SearchUsersSchema = z.object({
-  query: z.string().describe("Search query for finding users"),
-  genre: z.array(z.string()).optional().describe("The genres to filter by"),
-  sortMethod: z.enum(["popular"]).optional().describe("The sort method"),
-  isVerified: z.boolean().optional().describe("Only include verified users"),
-});
+  query: z.string(),
+}).describe("Search for users");
 
-const GetUserTracksSchema = z.object({
-  userId: z.string().describe("A User ID"),
-  limit: z.number().optional().describe("Number of tracks to return"),
-  offset: z.number().optional().describe("Offset for pagination"),
-});
+const FollowUserSchema = z.object({
+  userId: HashIdSchema,
+  followeeUserId: HashIdSchema,
+}).describe("Follow a user");
 
-const GetUserRepostsSchema = z.object({
-  userId: z.string().describe("A User ID"),
-  limit: z.number().optional().describe("Number of reposts to return"),
-  offset: z.number().optional().describe("Offset for pagination"),
-});
+const UnfollowUserSchema = z.object({
+  userId: HashIdSchema,
+  followeeUserId: HashIdSchema,
+}).describe("Unfollow a user");
 
 const GetUserFollowersSchema = z.object({
-  userId: z.string().describe("A User ID"),
-  limit: z.number().optional().describe("Number of followers to return"),
-  offset: z.number().optional().describe("Offset for pagination"),
-});
+  userId: HashIdSchema,
+  limit: z.number().optional(),
+  offset: z.number().optional(),
+}).describe("Get user's followers");
 
 const GetUserFollowingSchema = z.object({
-  userId: z.string().describe("A User ID"),
-  limit: z.number().optional().describe("Number of following users to return"),
-  offset: z.number().optional().describe("Offset for pagination"),
-});
+  userId: HashIdSchema,
+  limit: z.number().optional(),
+  offset: z.number().optional(),
+}).describe("Get users that a user is following");
 
-const GetUserTagsSchema = z.object({
-  userId: z.string().describe("A User ID"),
-});
+const GetTrendingUsersSchema = z.object({
+  genre: z.array(z.string()).optional(),
+}).describe("Get trending users on Audius");
 
+const GetRelatedArtistsSchema = z.object({
+  userId: HashIdSchema,
+  limit: z.number().optional(),
+  offset: z.number().optional(),
+}).describe("Get related artists for a given user");
+
+const GetUserTracksSchema = z.object({
+  userId: HashIdSchema,
+  limit: z.number().optional(),
+  offset: z.number().optional(),
+  sort: z.enum(['date', 'plays']).optional(),
+  sortMethod: z.enum(['title', 'artist_name', 'release_date', 'last_listen_date', 'added_date', 'plays', 'reposts', 'saves', 'most_listens_by_user']).optional(),
+  sortDirection: z.enum(['asc', 'desc']).optional(),
+  filterTracks: z.enum(['all', 'public', 'unlisted']).optional(),
+}).describe("Get tracks created by a user");
+
+const GetUserFavoritesSchema = z.object({
+  userId: HashIdSchema,
+}).describe("Get a user's favorite tracks");
+
+const GetUserRepostsSchema = z.object({
+  userId: HashIdSchema,
+  limit: z.number().optional(),
+  offset: z.number().optional(),
+}).describe("Get a user's reposts");
+
+// Track Schemas
 const GetTrackSchema = z.object({
-  trackId: z.string().describe("A Track ID"),
-  currentUserId: z.string().optional().describe("The user ID of the user making the request"),
-});
+  trackId: HashIdSchema,
+}).describe("Get track details");
 
-const GetTrackAccessInfoSchema = z.object({
-  trackId: z.string().describe("A Track ID"),
-  currentUserId: z.string().optional().describe("The user ID of the user making the request"),
-  includeNetworkCut: z.boolean().optional().describe("Whether to include the staking system as a recipient"),
-});
+const GetTrackStreamUrlSchema = z.object({
+  trackId: HashIdSchema,
+}).describe("Get streamable URL for a track");
 
-const GetTrackDetailsSchema = z.object({
-  trackId: z.string().describe("A Track ID"),
-  original: z.boolean().optional().describe("If true, inspects the original quality file"),
-});
-
-const GetTrackTopListenersSchema = z.object({
-  trackId: z.string().describe("A Track ID"),
-  currentUserId: z.string().optional().describe("The user ID of the user making the request"),
-  limit: z.number().optional().describe("Number of listeners to return"),
-  offset: z.number().optional().describe("Offset for pagination"),
-});
-
-const GetTrackStemsSchema = z.object({
-  trackId: z.string().describe("A Track ID"),
-});
-
-const GetTracksSchema = z.object({
-  ids: z.array(z.string()).describe("Array of track IDs"),
-});
-
-const StreamTrackSchema = z.object({
-  trackId: z.string().describe("A Track ID"),
-  userId: z.string().optional().describe("The user ID of the user making the request"),
-  userSignature: z.string().optional().describe("Signature from the requesting user's wallet"),
-  userData: z.string().optional().describe("Data used to generate the signature"),
-  nftAccessSignature: z.string().optional().describe("Gated content signature"),
-  skipPlayCount: z.boolean().optional().describe("Disable tracking of play counts"),
-  apiKey: z.string().optional().describe("API key for third party apps"),
-  skipCheck: z.boolean().optional().describe("Skip node health check"),
-  noRedirect: z.boolean().optional().describe("Return stream URL in JSON instead of redirecting"),
-});
+const GetTrackCommentsSchema = z.object({
+  trackId: HashIdSchema,
+  limit: z.number().optional(),
+  offset: z.number().optional(),
+}).describe("Get comments on a track");
 
 const SearchTracksSchema = z.object({
-  query: z.string().describe("Search query for finding tracks"),
-  onlyDownloadable: z.boolean().optional().describe("Filter to only show downloadable tracks"),
-  genre: z.array(z.string()).optional().describe("The genres to filter by"),
-  mood: z.array(z.string()).optional().describe("The moods to filter by"),
-  includePurchaseable: z.boolean().optional().describe("Whether to include purchaseable content"),
-  isPurchaseable: z.boolean().optional().describe("Only include purchaseable tracks"),
-  hasDownloads: z.boolean().optional().describe("Only include tracks with downloads"),
-  key: z.array(z.string()).optional().describe("Only include tracks that match the musical key"),
-  bpmMin: z.number().optional().describe("Only include tracks with BPM >= this value"),
-  bpmMax: z.number().optional().describe("Only include tracks with BPM <= this value"),
-});
+  query: z.string(),
+}).describe("Search for tracks");
 
 const GetTrendingTracksSchema = z.object({
-  genre: z.string().optional().describe("Filter trending tracks by genre"),
-  time: z.enum(["week", "month", "year", "allTime"]).optional().describe("Time range for trending calculation"),
-});
+  genre: z.string().optional(),
+}).describe("Get trending tracks");
 
-const GetUndergroundTrendingTracksSchema = z.object({
-  offset: z.number().optional().describe("Offset for pagination"),
-  limit: z.number().optional().describe("Number of tracks to return"),
-});
+const FavoriteTrackSchema = z.object({
+  userId: HashIdSchema,
+  trackId: HashIdSchema,
+}).describe("Favorite a track");
 
-const GetTipsSchema = z.object({
-  offset: z.number().optional().describe("Offset for pagination"),
-  limit: z.number().optional().describe("Number of tips to return"),
-  currentUserId: z.string().optional().describe("The user ID of the user making the request"),
-  receiverMinFollowers: z.number().optional().describe("Only include tips to recipients with this many followers"),
-  receiverIsVerified: z.boolean().optional().describe("Only include tips to verified recipients"),
-  currentUserFollows: z.enum(["sender", "receiver"]).optional().describe("Only include tips involving user's followers"),
-  uniqueBy: z.enum(["sender", "receiver"]).optional().describe("Only include unique tips by sender/receiver"),
-});
+const UnfavoriteTrackSchema = z.object({
+  userId: HashIdSchema,
+  trackId: HashIdSchema,
+}).describe("Unfavorite a track");
 
-const GetDeveloperAppSchema = z.object({
-  address: z.string().describe("Developer app address (API Key)"),
-});
+// Challenge Schemas
+const GetUndisbursedChallengesSchema = z.object({
+  offset: z.number().optional(),
+  limit: z.number().optional(),
+  userId: HashIdSchema.optional(),
+  completedBlocknumber: z.number().optional(),
+  challengeId: z.string().optional(),
+}).describe("Get all undisbursed challenges");
 
-const ResolveUrlSchema = z.object({
-  url: z.string().describe("URL to resolve (audius.co URL or path)"),
-});
+const GetUserChallengesSchema = z.object({
+  userId: HashIdSchema,
+  showHistorical: z.boolean().optional(),
+}).describe("Get user challenges");
 
+// Track Purchase Schemas
+const GetTrackPriceSchema = z.object({
+  trackId: HashIdSchema,
+}).describe("Get price information for a track");
+
+const PurchaseTrackSchema = z.object({
+  trackId: HashIdSchema,
+  buyerId: HashIdSchema,
+}).describe("Purchase a track using USDC");
+
+const VerifyPurchaseSchema = z.object({
+  trackId: HashIdSchema,
+  userId: HashIdSchema,
+}).describe("Verify if a user has purchased a track");
+
+// Playlist Schemas
 const GetPlaylistSchema = z.object({
-  playlistId: z.string().describe("A Playlist ID"),
-});
+  playlistId: HashIdSchema,
+}).describe("Get playlist details");
 
 const GetPlaylistTracksSchema = z.object({
-  playlistId: z.string().describe("A Playlist ID"),
-});
+  playlistId: HashIdSchema,
+}).describe("Get tracks in a playlist");
+
+const GetTrendingPlaylistsSchema = z.object({
+  time: z.enum(['week', 'month', 'year']).optional(),
+}).describe("Get trending playlists");
 
 const SearchPlaylistsSchema = z.object({
-  query: z.string().describe("Search query for finding playlists"),
-  genre: z.array(z.string()).optional().describe("The genres to filter by"),
-  mood: z.array(z.string()).optional().describe("The moods to filter by"),
-  sortMethod: z.enum(["popular"]).optional().describe("The sort method"),
-  includePurchaseable: z.boolean().optional().describe("Whether to include purchaseable content"),
-  hasDownloads: z.boolean().optional().describe("Only include tracks that have downloads"),
-});
+  query: z.string(),
+}).describe("Search for playlists");
 
-// Server configuration
+const FavoritePlaylistSchema = z.object({
+  userId: HashIdSchema,
+  playlistId: HashIdSchema,
+}).describe("Favorite a playlist");
+
+const UnfavoritePlaylistSchema = z.object({
+  userId: HashIdSchema,
+  playlistId: HashIdSchema,
+}).describe("Unfavorite a playlist");
+
+// Wallet & Financial Schemas
+const ConnectWalletSchema = z.object({
+  userId: HashIdSchema,
+  walletAddress: z.string(),
+  walletType: z.enum(['eth', 'solana']),
+}).describe("Connect a wallet to a user's account");
+
+const GetWalletInfoSchema = z.object({
+  userId: HashIdSchema,
+}).describe("Get connected wallet details for a user");
+
+const GetUserBalanceSchema = z.object({
+  userId: HashIdSchema,
+  tokenType: z.enum(['wAUDIO', 'USDC']),
+}).describe("Get user's token balance");
+
+const InitializeUserBankSchema = z.object({
+  userId: HashIdSchema,
+  tokenType: z.enum(['wAUDIO', 'USDC']),
+}).describe("Initialize a user's bank for token operations");
+
+// Tip Schemas
+const SendTipSchema = z.object({
+  senderId: HashIdSchema,
+  recipientId: HashIdSchema,
+  amount: z.string(),
+  contentId: HashIdSchema.optional(),
+  contentType: z.enum(['track', 'playlist', 'album']).optional(),
+}).describe("Send a tip using wAUDIO");
+
+const GetTipHistorySchema = z.object({
+  userId: HashIdSchema,
+  type: z.enum(['sent', 'received']).optional(),
+}).describe("Get tip history for a user");
+
+const AddTipReactionSchema = z.object({
+  tipId: z.string(),
+  userId: HashIdSchema,
+  reaction: z.string(),
+}).describe("Add a reaction to a tip");
+
+const GetTipReactionsSchema = z.object({
+  tipId: z.string(),
+}).describe("Get reactions for a tip");
+
+// Album Schemas
+const GetAlbumSchema = z.object({
+  albumId: HashIdSchema,
+  userId: HashIdSchema.optional(),
+}).describe("Get album details");
+
+const GetAlbumTracksSchema = z.object({
+  albumId: HashIdSchema,
+}).describe("Get album tracks");
+
+const FavoriteAlbumSchema = z.object({
+  userId: HashIdSchema,
+  albumId: HashIdSchema,
+}).describe("Favorite an album");
+
+const UnfavoriteAlbumSchema = z.object({
+  userId: HashIdSchema,
+  albumId: HashIdSchema,
+}).describe("Unfavorite an album");
+
+// Server instance
 const server = new Server(
   {
-    name: "audius-api",
+    name: "audius-mcp-server",
     version: "1.0.0",
   },
   {
     capabilities: {
+      resources: {},
       tools: {},
     },
   }
 );
 
-// List available tools
-server.setRequestHandler(ListToolsRequestSchema, async () => {
-  return {
-    tools: [
-      // User tools
-      {
-        name: "get-user",
-        description: "Get details about a specific Audius user by their ID",
-        inputSchema: GetUserSchema,
-      },
-      {
-        name: "get-user-by-wallet",
-        description: "Get a User ID from an associated wallet address",
-        inputSchema: z.object({
-          wallet: z.string().describe("Wallet address"),
-        }),
-      },
-      {
-        name: "get-user-by-handle",
-        description: "Get details about a specific Audius user by their handle/username",
-        inputSchema: GetUserByHandleSchema,
-      },
-      {
-        name: "search-users",
-        description: "Search for Audius users",
-        inputSchema: SearchUsersSchema,
-      },
-      {
-        name: "get-user-tracks",
-        description: "Get tracks created by a specific user",
-        inputSchema: GetUserTracksSchema,
-      },
-      {
-        name: "get-user-reposts",
-        description: "Get tracks and playlists reposted by a user",
-        inputSchema: GetUserRepostsSchema,
-      },
-      {
-        name: "get-user-followers",
-        description: "Get users who follow the specified user",
-        inputSchema: GetUserFollowersSchema,
-      },
-      {
-        name: "get-user-following",
-        description: "Get users that the specified user follows",
-        inputSchema: GetUserFollowingSchema,
-      },
-      {
-        name: "get-user-tags",
-        description: "Get most used track tags by a user",
-        inputSchema: GetUserTagsSchema,
-      },
-      // Track tools
-      {
-        name: "get-track",
-        description: "Get details about a specific track by ID",
-        inputSchema: GetTrackSchema,
-      },
-      {
-        name: "get-track-access-info",
-        description: "Get track access information and permissions",
-        inputSchema: GetTrackAccessInfoSchema,
-      },
-      {
-        name: "get-track-details",
-        description: "Get technical details about a track",
-        inputSchema: GetTrackDetailsSchema,
-      },
-      {
-        name: "get-track-top-listeners",
-        description: "Get users who have listened to a track the most",
-        inputSchema: GetTrackTopListenersSchema,
-      },
-      {
-        name: "get-track-stems",
-        description: "Get the remixable stems of a track",
-        inputSchema: GetTrackStemsSchema,
-      },
-      {
-        name: "get-underground-trending",
-        description: "Get trending underground tracks",
-        inputSchema: GetUndergroundTrendingTracksSchema,
-      },
-      {
-        name: "get-tracks",
-        description: "Get multiple tracks by their IDs",
-        inputSchema: GetTracksSchema,
-      },
-      {
-        name: "stream-track",
-        description: "Get the streamable MP3 file URL for a track",
-        inputSchema: StreamTrackSchema,
-      },
-      {
-        name: "search-tracks",
-        description: "Search for tracks on Audius",
-        inputSchema: SearchTracksSchema,
-      },
-      {
-        name: "get-trending-tracks",
-        description: "Get trending tracks on Audius",
-        inputSchema: GetTrendingTracksSchema,
-      },
-      // Playlist tools
-      {
-        name: "get-playlist",
-        description: "Get details about a specific playlist by ID",
-        inputSchema: GetPlaylistSchema,
-      },
-      {
-        name: "get-playlist-by-permalink",
-        description: "Get a playlist by handle and slug",
-        inputSchema: z.object({
-          handle: z.string().describe("Playlist owner handle"),
-          slug: z.string().describe("Playlist slug"),
-          currentUserId: z.string().optional().describe("The user ID of the user making the request"),
-        }),
-      },
-      {
-        name: "get-playlist-access-info",
-        description: "Get playlist access information and permissions",
-        inputSchema: z.object({
-          playlistId: z.string().describe("A Playlist ID"),
-          currentUserId: z.string().optional().describe("The user ID of the user making the request"),
-          includeNetworkCut: z.boolean().optional().describe("Whether to include the staking system as a recipient"),
-        }),
-      },
-      {
-        name: "get-playlist-tracks",
-        description: "Get all tracks in a playlist",
-        inputSchema: GetPlaylistTracksSchema,
-      },
-      {
-        name: "search-playlists", 
-        description: "Search for playlists on Audius",
-        inputSchema: SearchPlaylistsSchema,
-      },
-    ],
-  };
-});
+// Error handling
+server.onerror = (error) => {
+  console.error("[MCP Server Error]", error);
+};
+
+// Register request handlers
+server.setRequestHandler(ListToolsRequestSchema, async () => ({
+  tools: [
+    // User Tools
+    {
+      name: "get-user",
+      description: "Get details about a specific Audius user by their ID",
+      inputSchema: zodToJsonSchema(GetUserSchema),
+    },
+    {
+      name: "get-user-by-handle",
+      description: "Get details about a specific Audius user by their handle/username",
+      inputSchema: zodToJsonSchema(GetUserByHandleSchema),
+    },
+    {
+      name: "search-users",
+      description: "Search for Audius users",
+      inputSchema: zodToJsonSchema(SearchUsersSchema),
+    },
+    {
+      name: "follow-user",
+      description: "Follow an Audius user",
+      inputSchema: zodToJsonSchema(FollowUserSchema),
+    },
+    {
+      name: "unfollow-user",
+      description: "Unfollow an Audius user",
+      inputSchema: zodToJsonSchema(UnfollowUserSchema),
+    },
+    {
+      name: "get-user-followers",
+      description: "Get a list of users who follow the specified user",
+      inputSchema: zodToJsonSchema(GetUserFollowersSchema),
+    },
+    {
+      name: "get-user-following",
+      description: "Get a list of users that the specified user follows",
+      inputSchema: zodToJsonSchema(GetUserFollowingSchema),
+    },
+    {
+      name: "get-trending-users",
+      description: "Get trending users on Audius platform",
+      inputSchema: zodToJsonSchema(GetTrendingUsersSchema),
+    },
+    {
+      name: "get-related-artists",
+      description: "Get a list of artists related to the specified user",
+      inputSchema: zodToJsonSchema(GetRelatedArtistsSchema),
+    },
+    {
+      name: "get-user-tracks",
+      description: "Get tracks created by a specific user",
+      inputSchema: zodToJsonSchema(GetUserTracksSchema),
+    },
+    {
+      name: "get-user-favorites",
+      description: "Get a user's favorite tracks",
+      inputSchema: zodToJsonSchema(GetUserFavoritesSchema),
+    },
+    {
+      name: "get-user-reposts",
+      description: "Get a user's reposts",
+      inputSchema: zodToJsonSchema(GetUserRepostsSchema),
+    },
+    // Track Tools
+    {
+      name: "get-track",
+      description: "Get details about a specific track",
+      inputSchema: zodToJsonSchema(GetTrackSchema),
+    },
+    {
+      name: "get-track-stream-url",
+      description: "Get a streamable URL for a specific track",
+      inputSchema: zodToJsonSchema(GetTrackStreamUrlSchema),
+    },
+    {
+      name: "get-track-comments",
+      description: "Get all comments on a specific track",
+      inputSchema: zodToJsonSchema(GetTrackCommentsSchema),
+    },
+    {
+      name: "search-tracks",
+      description: "Search for tracks on Audius",
+      inputSchema: zodToJsonSchema(SearchTracksSchema),
+    },
+    {
+      name: "get-trending-tracks",
+      description: "Get trending tracks on Audius",
+      inputSchema: zodToJsonSchema(GetTrendingTracksSchema),
+    },
+    {
+      name: "favorite-track",
+      description: "Favorite a track",
+      inputSchema: zodToJsonSchema(FavoriteTrackSchema),
+    },
+    {
+      name: "unfavorite-track",
+      description: "Unfavorite a track",
+      inputSchema: zodToJsonSchema(UnfavoriteTrackSchema),
+    },
+    // Challenge Tools
+    {
+      name: "get-undisbursed-challenges",
+      description: "Get all undisbursed challenges",
+      inputSchema: zodToJsonSchema(GetUndisbursedChallengesSchema),
+    },
+    {
+      name: "get-user-challenges",
+      description: "Get user challenges",
+      inputSchema: zodToJsonSchema(GetUserChallengesSchema),
+    },
+    // URL Resolution Tools
+    {
+      name: "resolve-url",
+      description: "Resolve an Audius URL to its corresponding API resource",
+      inputSchema: zodToJsonSchema(ResolveUrlSchema),
+    },
+    // Extended User Tools
+    {
+      name: "get-user-extended-profile",
+      description: "Get user's extended profile data including metrics and track history",
+      inputSchema: zodToJsonSchema(GetUserExtendedProfileSchema),
+    },
+    // Extended Track Tools
+    {
+      name: "get-track-extended-data",
+      description: "Get comprehensive track data including details, comments, and top listeners",
+      inputSchema: zodToJsonSchema(GetTrackExtendedDataSchema),
+    },
+    {
+      name: "get-track-top-listeners",
+      description: "Get track's top listeners with detailed user info",
+      inputSchema: zodToJsonSchema(GetTrackTopListenersSchema),
+    },
+    {
+      name: "get-track-comments-extended",
+      description: "Get track's comments with user info",
+      inputSchema: zodToJsonSchema(GetTrackCommentsExtendedSchema),
+    },
+    // Comment Tools
+    {
+      name: "get-unclaimed-comment-id",
+      description: "Get an unclaimed comment ID for creating new comments",
+      inputSchema: zodToJsonSchema(z.object({}).strict()),
+    },
+    {
+      name: "get-comment-replies",
+      description: "Get replies to a specific comment",
+      inputSchema: zodToJsonSchema(z.object({
+        commentId: HashIdSchema,
+      }).strict()),
+    },
+    // Track Purchase Tools
+    {
+      name: "get-track-price",
+      description: "Get price information for a track",
+      inputSchema: zodToJsonSchema(GetTrackPriceSchema),
+    },
+    {
+      name: "purchase-track",
+      description: "Purchase a track using USDC",
+      inputSchema: zodToJsonSchema(PurchaseTrackSchema),
+    },
+    {
+      name: "verify-purchase",
+      description: "Verify if a user has purchased a track",
+      inputSchema: zodToJsonSchema(VerifyPurchaseSchema),
+    },
+    // Playlist Tools
+    {
+      name: "get-playlist",
+      description: "Get details about a specific playlist",
+      inputSchema: zodToJsonSchema(GetPlaylistSchema),
+    },
+    {
+      name: "get-playlist-tracks",
+      description: "Get all tracks in a specific playlist",
+      inputSchema: zodToJsonSchema(GetPlaylistTracksSchema),
+    },
+    {
+      name: "get-trending-playlists",
+      description: "Get trending playlists on Audius",
+      inputSchema: zodToJsonSchema(GetTrendingPlaylistsSchema),
+    },
+    {
+      name: "search-playlists",
+      description: "Search for playlists on Audius",
+      inputSchema: zodToJsonSchema(SearchPlaylistsSchema),
+    },
+    {
+      name: "favorite-playlist",
+      description: "Favorite a playlist",
+      inputSchema: zodToJsonSchema(FavoritePlaylistSchema),
+    },
+    {
+      name: "unfavorite-playlist",
+      description: "Unfavorite a playlist",
+      inputSchema: zodToJsonSchema(UnfavoritePlaylistSchema),
+    },
+    // Wallet & Financial Tools
+    {
+      name: "connect-wallet",
+      description: "Connect a wallet to a user's account",
+      inputSchema: zodToJsonSchema(ConnectWalletSchema),
+    },
+    {
+      name: "get-wallet-info",
+      description: "Get connected wallet details for a user",
+      inputSchema: zodToJsonSchema(GetWalletInfoSchema),
+    },
+    {
+      name: "get-user-balance",
+      description: "Get user's token balance",
+      inputSchema: zodToJsonSchema(GetUserBalanceSchema),
+    },
+    {
+      name: "initialize-user-bank",
+      description: "Initialize a user's bank for token operations",
+      inputSchema: zodToJsonSchema(InitializeUserBankSchema),
+    },
+    // Tip Tools
+    {
+      name: "send-tip",
+      description: "Send a tip using wAUDIO",
+      inputSchema: zodToJsonSchema(SendTipSchema),
+    },
+    {
+      name: "get-tip-history",
+      description: "Get tip history for a user",
+      inputSchema: zodToJsonSchema(GetTipHistorySchema),
+    },
+    {
+      name: "add-tip-reaction",
+      description: "Add a reaction to a tip",
+      inputSchema: zodToJsonSchema(AddTipReactionSchema),
+    },
+    {
+      name: "get-tip-reactions",
+      description: "Get reactions for a tip",
+      inputSchema: zodToJsonSchema(GetTipReactionsSchema),
+    },
+    // Album Tools
+    {
+      name: "get-album",
+      description: "Get details about a specific album",
+      inputSchema: zodToJsonSchema(GetAlbumSchema),
+    },
+    {
+      name: "get-album-tracks",
+      description: "Get tracks from a specific album",
+      inputSchema: zodToJsonSchema(GetAlbumTracksSchema),
+    },
+    {
+      name: "favorite-album",
+      description: "Favorite an album",
+      inputSchema: zodToJsonSchema(FavoriteAlbumSchema),
+    },
+    {
+      name: "unfavorite-album",
+      description: "Unfavorite an album",
+      inputSchema: zodToJsonSchema(UnfavoriteAlbumSchema),
+    },
+  ],
+}));
 
 // Handle tool execution
-server.setRequestHandler(CallToolRequestSchema, async (request) => {
+server.setRequestHandler(CallToolRequestSchema, async (request): Promise<ServerResult> => {
   const { name, arguments: args } = request.params;
 
   try {
@@ -331,270 +564,323 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       // User endpoints
       case "get-user": {
         const { userId } = GetUserSchema.parse(args);
-        const data = await fetchFromAudius(`users/${userId}`);
-        return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+        const response = await audiusSdk.users.getUser({ id: userId });
+        return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
       }
 
       case "get-user-by-handle": {
         const { handle } = GetUserByHandleSchema.parse(args);
-        const data = await fetchFromAudius(`users/handle/${handle}`);
-        return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
-      }
-
-      case "get-user-by-wallet": {
-        const { wallet } = z.object({
-          wallet: z.string(),
-        }).parse(args);
-        const data = await fetchFromAudius('users/id', { associated_wallet: wallet });
-        return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+        const response = await audiusSdk.users.getUserByHandle({ handle });
+        return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
       }
 
       case "search-users": {
-        const { query, genre, sortMethod, isVerified } = SearchUsersSchema.parse(args);
-        const data = await fetchFromAudius('users/search', {
-          query,
-          genre: genre?.join(','),
-          sort_method: sortMethod,
-          is_verified: isVerified
-        });
-        return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+        const { query } = SearchUsersSchema.parse(args);
+        const response = await audiusSdk.users.searchUsers({ query });
+        return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
       }
 
-      case "get-user-tracks": {
-        const { userId, limit, offset } = GetUserTracksSchema.parse(args);
-        const data = await fetchFromAudius(`users/${userId}/tracks`, { limit, offset });
-        return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+      case "follow-user": {
+        const { userId, followeeUserId } = FollowUserSchema.parse(args);
+        const response = await audiusSdk.users.followUser({ userId, followeeUserId });
+        return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
       }
 
-      case "get-user-reposts": {
-        const { userId, limit, offset } = GetUserRepostsSchema.parse(args);
-        const data = await fetchFromAudius(`users/${userId}/reposts`, { limit, offset });
-        return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+      case "unfollow-user": {
+        const { userId, followeeUserId } = UnfollowUserSchema.parse(args);
+        const response = await audiusSdk.users.unfollowUser({ userId, followeeUserId });
+        return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
       }
 
       case "get-user-followers": {
         const { userId, limit, offset } = GetUserFollowersSchema.parse(args);
-        const data = await fetchFromAudius(`users/${userId}/followers`, { limit, offset });
-        return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+        const response = await audiusSdk.users.getFollowers({ id: userId, limit, offset });
+        return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
       }
 
       case "get-user-following": {
         const { userId, limit, offset } = GetUserFollowingSchema.parse(args);
-        const data = await fetchFromAudius(`users/${userId}/following`, { limit, offset });
-        return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+        const response = await audiusSdk.users.getFollowing({ id: userId, limit, offset });
+        return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
       }
 
-      case "get-user-tags": {
-        const { userId } = GetUserTagsSchema.parse(args);
-        const data = await fetchFromAudius(`users/${userId}/tags`);
-        return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+      case "get-trending-users": {
+        const { genre } = GetTrendingUsersSchema.parse(args);
+        const response = await audiusSdk.users.searchUsers({ 
+          query: '', // Empty query to get all users
+          sortMethod: 'popular',
+          genre
+        });
+        return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
+      }
+
+      case "get-related-artists": {
+        const { userId, limit, offset } = GetRelatedArtistsSchema.parse(args);
+        const response = await audiusSdk.users.getRelatedUsers({ id: userId, limit, offset });
+        return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
+      }
+
+      case "get-user-tracks": {
+        const { userId, limit, offset, sort, sortMethod, sortDirection, filterTracks } = GetUserTracksSchema.parse(args);
+        const response = await audiusSdk.users.getTracksByUser({ 
+          id: userId, 
+          limit, 
+          offset,
+          sort,
+          sortMethod,
+          sortDirection,
+          filterTracks
+        });
+        return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
+      }
+
+      case "get-user-favorites": {
+        const { userId } = GetUserFavoritesSchema.parse(args);
+        const response = await audiusSdk.users.getFavorites({ id: userId });
+        return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
+      }
+
+      case "get-user-reposts": {
+        const { userId, limit, offset } = GetUserRepostsSchema.parse(args);
+        const response = await audiusSdk.users.getReposts({ id: userId, limit, offset });
+        return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
       }
 
       // Track endpoints
       case "get-track": {
         const { trackId } = GetTrackSchema.parse(args);
-        const data = await fetchFromAudius(`tracks/${trackId}`);
-        return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+        const response = await audiusSdk.tracks.getTrack({ trackId });
+        return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
       }
 
-      case "get-tracks": {
-        const { ids } = GetTracksSchema.parse(args);
-        const data = await fetchFromAudius('tracks', { id: ids.join(',') });
-        return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+      case "get-track-stream-url": {
+        const { trackId } = GetTrackStreamUrlSchema.parse(args);
+        const response = await audiusSdk.tracks.getTrackStreamUrl({ trackId });
+        return { content: [{ type: "text", text: JSON.stringify({ streamUrl: response }, null, 2) }] };
       }
 
-      case "stream-track": {
-        const { 
-          trackId,
-          userId,
-          userSignature,
-          userData,
-          nftAccessSignature,
-          skipPlayCount,
-          apiKey,
-          skipCheck,
-          noRedirect
-        } = StreamTrackSchema.parse(args);
-
-        const headers: Record<string, string> = {};
-        if (userSignature) {
-          headers['Encoded-Data-Signature'] = userSignature;
-        }
-        if (userData) {
-          headers['Encoded-Data-Message'] = userData;
-        }
-
-        const data = await fetchFromAudius(
-          `tracks/${trackId}/stream`,
-          {
-            user_id: userId,
-            user_signature: userSignature,
-            user_data: userData,
-            nft_access_signature: nftAccessSignature,
-            skip_play_count: skipPlayCount,
-            api_key: apiKey,
-            skip_check: skipCheck,
-          },
-          {
-            headers,
-            noRedirect,
-          }
-        );
-        return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+      case "get-track-comments": {
+        const { trackId, limit, offset } = GetTrackCommentsSchema.parse(args);
+        const response = await audiusSdk.tracks.trackComments({ trackId, limit, offset });
+        return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
       }
 
       case "search-tracks": {
-        const {
-          query,
-          onlyDownloadable,
-          genre,
-          mood,
-          includePurchaseable,
-          isPurchaseable,
-          hasDownloads,
-          key,
-          bpmMin,
-          bpmMax
-        } = SearchTracksSchema.parse(args);
-
-        const data = await fetchFromAudius('tracks/search', {
-          query,
-          only_downloadable: onlyDownloadable,
-          genre: genre?.join(','),
-          mood: mood?.join(','),
-          include_purchaseable: includePurchaseable,
-          is_purchaseable: isPurchaseable,
-          has_downloads: hasDownloads,
-          key: key?.join(','),
-          bpm_min: bpmMin,
-          bpm_max: bpmMax
-        });
-        return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+        const { query } = SearchTracksSchema.parse(args);
+        const response = await audiusSdk.tracks.searchTracks({ query });
+        return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
       }
 
       case "get-trending-tracks": {
-        const { genre, time } = GetTrendingTracksSchema.parse(args);
-        const data = await fetchFromAudius('tracks/trending', { genre, time });
-        return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+        const { genre } = GetTrendingTracksSchema.parse(args);
+        const response = await audiusSdk.tracks.getTrendingTracks({ genre });
+        return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
+      }
+
+      case "favorite-track": {
+        const { userId, trackId } = FavoriteTrackSchema.parse(args);
+        const response = await audiusSdk.tracks.favoriteTrack({ userId, trackId });
+        return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
+      }
+
+      case "unfavorite-track": {
+        const { userId, trackId } = UnfavoriteTrackSchema.parse(args);
+        const response = await audiusSdk.tracks.unfavoriteTrack({ userId, trackId });
+        return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
+      }
+
+      // Challenge endpoints
+      case "get-undisbursed-challenges": {
+        const { offset, limit, userId, completedBlocknumber, challengeId } = GetUndisbursedChallengesSchema.parse(args);
+        const response = await challengeManager.getUndisbursedChallenges({
+          offset,
+          limit,
+          userId,
+          completedBlocknumber,
+          challengeId
+        });
+        return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
+      }
+
+      case "get-user-challenges": {
+        const { userId, showHistorical } = GetUserChallengesSchema.parse(args);
+        const response = await challengeManager.getUserChallenges(userId, showHistorical);
+        return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
+      }
+
+      // Track Purchase endpoints
+      case "get-track-price": {
+        const { trackId } = GetTrackPriceSchema.parse(args);
+        const response = await purchaseManager.getTrackPrice(trackId);
+        return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
+      }
+
+      case "purchase-track": {
+        const { trackId, buyerId } = PurchaseTrackSchema.parse(args);
+        const response = await purchaseManager.purchaseTrack(trackId, buyerId);
+        return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
+      }
+
+      case "verify-purchase": {
+        const { trackId, userId } = VerifyPurchaseSchema.parse(args);
+        const response = await purchaseManager.verifyPurchase(trackId, userId);
+        return { content: [{ type: "text", text: JSON.stringify({ verified: response }, null, 2) }] };
       }
 
       // Playlist endpoints
       case "get-playlist": {
         const { playlistId } = GetPlaylistSchema.parse(args);
-        const data = await fetchFromAudius(`playlists/${playlistId}`);
-        return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+        const response = await audiusSdk.playlists.getPlaylist({ playlistId });
+        return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
       }
 
       case "get-playlist-tracks": {
         const { playlistId } = GetPlaylistTracksSchema.parse(args);
-        const data = await fetchFromAudius(`playlists/${playlistId}/tracks`);
-        return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+        const response = await audiusSdk.playlists.getPlaylistTracks({ playlistId });
+        return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
+      }
+
+      case "get-trending-playlists": {
+        const { time } = GetTrendingPlaylistsSchema.parse(args);
+        const response = await audiusSdk.playlists.getTrendingPlaylists({ time });
+        return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
       }
 
       case "search-playlists": {
-        const {
-          query,
-          genre,
-          mood,
-          sortMethod,
-          includePurchaseable,
-          hasDownloads
-        } = SearchPlaylistsSchema.parse(args);
-
-        const data = await fetchFromAudius('playlists/search', {
-          query,
-          genre: genre?.join(','),
-          mood: mood?.join(','),
-          sort_method: sortMethod,
-          include_purchaseable: includePurchaseable,
-          has_downloads: hasDownloads
-        });
-        return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+        const { query } = SearchPlaylistsSchema.parse(args);
+        const response = await audiusSdk.playlists.searchPlaylists({ query });
+        return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
       }
 
-      // Tips endpoints
-      case "get-tips": {
-        const params = GetTipsSchema.parse(args);
-        const data = await fetchFromAudius('tips', params);
-        return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+      case "favorite-playlist": {
+        const { userId, playlistId } = FavoritePlaylistSchema.parse(args);
+        const response = await audiusSdk.playlists.favoritePlaylist({ userId, playlistId });
+        return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
       }
 
-      // Developer app endpoints
-      case "get-developer-app": {
-        const { address } = GetDeveloperAppSchema.parse(args);
-        const data = await fetchFromAudius(`developer_apps/${address}`);
-        return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+      case "unfavorite-playlist": {
+        const { userId, playlistId } = UnfavoritePlaylistSchema.parse(args);
+        const response = await audiusSdk.playlists.unfavoritePlaylist({ userId, playlistId });
+        return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
       }
 
-      // Track endpoints
-      case "get-track-access-info": {
-        const { trackId, currentUserId, includeNetworkCut } = GetTrackAccessInfoSchema.parse(args);
-        const data = await fetchFromAudius(`tracks/${trackId}/access-info`, {
-          user_id: currentUserId,
-          include_network_cut: includeNetworkCut,
-        });
-        return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+      // Album endpoints
+      case "get-album": {
+        const { albumId, userId } = GetAlbumSchema.parse(args);
+        const response = await audiusSdk.albums.getAlbum({ albumId, userId });
+        return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
       }
 
-      case "get-track-details": {
-        const { trackId, original } = GetTrackDetailsSchema.parse(args);
-        const data = await fetchFromAudius(`tracks/${trackId}/inspect`, { original });
-        return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+      case "get-album-tracks": {
+        const { albumId } = GetAlbumTracksSchema.parse(args);
+        const response = await audiusSdk.albums.getAlbumTracks({ albumId });
+        return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
+      }
+
+      case "favorite-album": {
+        const { userId, albumId } = FavoriteAlbumSchema.parse(args);
+        const response = await audiusSdk.albums.favoriteAlbum({ userId, albumId });
+        return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
+      }
+
+      case "unfavorite-album": {
+        const { userId, albumId } = UnfavoriteAlbumSchema.parse(args);
+        const response = await audiusSdk.albums.unfavoriteAlbum({ userId, albumId });
+        return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
+      }
+
+      // Wallet endpoints
+      case "connect-wallet": {
+        const { userId, walletAddress, walletType } = ConnectWalletSchema.parse(args);
+        const response = await walletManager.connectWallet(userId, walletAddress, walletType);
+        return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
+      }
+
+      case "get-wallet-info": {
+        const { userId } = GetWalletInfoSchema.parse(args);
+        const response = await walletManager.getWalletInfo(userId);
+        return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
+      }
+
+      case "get-user-balance": {
+        const { userId, tokenType } = GetUserBalanceSchema.parse(args);
+        const response = await walletManager.getUserBalance(userId, tokenType);
+        return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
+      }
+
+      case "initialize-user-bank": {
+        const { userId, tokenType } = InitializeUserBankSchema.parse(args);
+        const response = await walletManager.initializeUserBank(userId, tokenType);
+        return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
+      }
+
+      // Tip endpoints
+      case "send-tip": {
+        const { senderId, recipientId, amount, contentId, contentType } = SendTipSchema.parse(args);
+        const response = await tipManager.sendTip(senderId, recipientId, amount, contentId, contentType);
+        return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
+      }
+
+      case "get-tip-history": {
+        const { userId, type } = GetTipHistorySchema.parse(args);
+        const response = await tipManager.getTipHistory(userId, type);
+        return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
+      }
+
+      case "add-tip-reaction": {
+        const { tipId, userId, reaction } = AddTipReactionSchema.parse(args);
+        const response = await tipManager.addTipReaction(tipId, userId, reaction);
+        return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
+      }
+
+      case "get-tip-reactions": {
+        const { tipId } = GetTipReactionsSchema.parse(args);
+        const response = await tipManager.getTipReactions(tipId);
+        return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
+      }
+
+      // Comment endpoints
+      case "get-unclaimed-comment-id": {
+        const response = await commentManager.getUnclaimedCommentId();
+        return { content: [{ type: "text", text: JSON.stringify({ commentId: response }, null, 2) }] };
+      }
+
+      case "get-comment-replies": {
+        const { commentId } = z.object({
+          commentId: HashIdSchema,
+        }).parse(args);
+        const response = await commentManager.getCommentReplies(commentId);
+        return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
+      }
+
+      case "resolve-url": {
+        const { url } = ResolveUrlSchema.parse(args);
+        const response = await resolveManager.resolveUrl(url);
+        return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
+      }
+
+      case "get-user-extended-profile": {
+        const { userId } = GetUserExtendedProfileSchema.parse(args);
+        const response = await userExtendedManager.getUserExtendedProfile(userId);
+        return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
+      }
+
+      case "get-track-extended-data": {
+        const { trackId } = GetTrackExtendedDataSchema.parse(args);
+        const response = await trackExtendedManager.getTrackExtendedData(trackId);
+        return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
       }
 
       case "get-track-top-listeners": {
-        const { trackId, currentUserId, limit, offset } = GetTrackTopListenersSchema.parse(args);
-        const data = await fetchFromAudius(`tracks/${trackId}/top_listeners`, {
-          user_id: currentUserId,
-          limit,
-          offset,
-        });
-        return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+        const { trackId } = GetTrackTopListenersSchema.parse(args);
+        const response = await trackExtendedManager.getTrackTopListeners(trackId);
+        return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
       }
 
-      case "get-track-stems": {
-        const { trackId } = GetTrackStemsSchema.parse(args);
-        const data = await fetchFromAudius(`tracks/${trackId}/stems`);
-        return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
-      }
-
-      case "get-underground-trending": {
-        const { limit, offset } = GetUndergroundTrendingTracksSchema.parse(args);
-        const data = await fetchFromAudius('tracks/trending/underground', { limit, offset });
-        return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
-      }
-
-      // Playlist endpoints
-      case "get-playlist-by-permalink": {
-        const { handle, slug, currentUserId } = z.object({
-          handle: z.string(),
-          slug: z.string(),
-          currentUserId: z.string().optional(),
-        }).parse(args);
-        const data = await fetchFromAudius(`playlists/by_permalink/${handle}/${slug}`, {
-          user_id: currentUserId,
-        });
-        return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
-      }
-
-      case "get-playlist-access-info": {
-        const { playlistId, currentUserId, includeNetworkCut } = z.object({
-          playlistId: z.string(),
-          currentUserId: z.string().optional(),
-          includeNetworkCut: z.boolean().optional(),
-        }).parse(args);
-        const data = await fetchFromAudius(`playlists/${playlistId}/access-info`, {
-          user_id: currentUserId,
-          include_network_cut: includeNetworkCut,
-        });
-        return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
-      }
-
-      // URL resolution
-      case "resolve": {
-        const { url } = ResolveUrlSchema.parse(args);
-        const data = await fetchFromAudius('resolve', { url });
-        return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+      case "get-track-comments-extended": {
+        const { trackId } = GetTrackCommentsExtendedSchema.parse(args);
+        const response = await trackExtendedManager.getTrackComments(trackId);
+        return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
       }
 
       default:
@@ -609,24 +895,32 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           .join(", ")}`
       );
     }
-    if (error instanceof AudiusAPIError) {
+    
+    // Handle SDK errors
+    if (error instanceof Error) {
       throw new McpError(
-        error.statusCode >= 500 ? ErrorCode.InternalError : ErrorCode.InvalidRequest,
-        error.message,
-        error.data
+        ErrorCode.InternalError,
+        `Audius SDK error: ${error.message}`
       );
     }
+    
     throw error;
   }
 });
 
 // Start the server
 async function main() {
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
-  console.error("Audius MCP Server running on stdio");
+  try {
+    const transport = new StdioServerTransport();
+    await server.connect(transport);
+    console.error("Audius MCP Server running on stdio");
+  } catch (error) {
+    console.error("Failed to initialize server:", error);
+    process.exit(1);
+  }
 }
 
+// Execute main
 main().catch((error) => {
   console.error("Fatal error:", error);
   process.exit(1);

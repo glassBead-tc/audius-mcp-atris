@@ -1,131 +1,185 @@
-import { fetchFromAudius } from './utils.js';
+import { Connection, PublicKey } from '@solana/web3.js';
+import { USDC } from '@audius/fixed-decimal';
+import { sdk } from '@audius/sdk';
 
-// Types for authentication
-export interface AuthenticatedUser {
-  userId: string;
-  email: string;
-  handle: string;
-  name: string;
-  verified: boolean;
-  sub?: string;
-  iat?: string;
+// Extend base types since SDK types don't include all properties
+interface ExtendedUser {
+  associatedSolWallets?: string[];
+  userBank?: string;
+  ercWallet?: string;
 }
 
-export interface AuthOptions {
-  token: string;
+// Define wallet association types
+interface WalletAssociation {
+  signature: string;
 }
 
-export class AuthError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'AuthError';
-  }
+interface WalletAssociations {
+  [address: string]: WalletAssociation;
 }
 
-// Cache verified tokens to reduce API calls
-const tokenCache = new Map<string, {
-  user: AuthenticatedUser;
-  expires: number;
-}>();
-
-interface TokenResponse {
-  data?: {
-    userId: string;
-    email: string;
-    handle: string;
-    name: string;
-    verified: boolean;
-    sub?: string;
-    iat?: string;
-  };
+export interface WalletInfo {
+  ethWallet?: string;
+  solanaWallet?: string;
+  userBank?: string;
 }
 
-// Verify a token and get user information
-export async function verifyToken(token: string): Promise<AuthenticatedUser> {
-  // Check cache first
-  const cached = tokenCache.get(token);
-  if (cached && cached.expires > Date.now()) {
-    return cached.user;
+export interface TokenBalance {
+  available: string;
+  pending: string;
+}
+
+export class WalletManager {
+  private solanaConnection: Connection;
+  private audiusSdk: ReturnType<typeof sdk>;
+
+  constructor(audiusSdk: ReturnType<typeof sdk>) {
+    this.audiusSdk = audiusSdk;
+    // Initialize Solana connection
+    this.solanaConnection = new Connection(
+      process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com'
+    );
   }
 
-  // Verify with Audius API
-  const data = await fetchFromAudius('users/verify_token', { token }) as TokenResponse;
-  
-  if (!data.data) {
-    throw new AuthError('Invalid token');
-  }
+  /**
+   * Connect a wallet to a user's account
+   */
+  async connectWallet(userId: string, walletAddress: string, walletType: 'eth' | 'solana') {
+    try {
+      // Validate wallet address format
+      if (walletType === 'eth') {
+        if (!walletAddress.match(/^0x[a-fA-F0-9]{40}$/)) {
+          throw new Error('Invalid Ethereum wallet address format');
+        }
+      } else {
+        try {
+          new PublicKey(walletAddress);
+        } catch {
+          throw new Error('Invalid Solana wallet address format');
+        }
+      }
 
-  const user: AuthenticatedUser = {
-    userId: data.data.userId,
-    email: data.data.email,
-    handle: data.data.handle,
-    name: data.data.name,
-    verified: data.data.verified,
-    sub: data.data.sub,
-    iat: data.data.iat
-  };
+      // Create wallet association
+      const walletAssociation: WalletAssociation = {
+        signature: 'placeholder' // In a real implementation, this would be a proper signature
+      };
 
-  // Cache the result for 5 minutes
-  tokenCache.set(token, {
-    user,
-    expires: Date.now() + 5 * 60 * 1000
-  });
+      // Update user profile with wallet
+      await this.audiusSdk.users.updateProfile({
+        userId,
+        metadata: {
+          ...(walletType === 'eth' ? {
+            associatedWallets: { [walletAddress]: walletAssociation }
+          } : {}),
+          ...(walletType === 'solana' ? {
+            associatedSolWallets: { [walletAddress]: walletAssociation }
+          } : {})
+        } as any // Cast to any since SDK types don't include all properties
+      });
 
-  return user;
-}
-
-// Make an authenticated request to the Audius API
-export async function fetchFromAudiusWithAuth<T>(
-  endpoint: string,
-  token: string,
-  method: 'GET' | 'POST' | 'PUT' | 'DELETE' = 'GET',
-  body?: any
-): Promise<T> {
-  // First verify the token is valid
-  await verifyToken(token);
-
-  // Get an Audius API host
-  const hostResponse = await fetch('https://api.audius.co');
-  const hosts = await hostResponse.json();
-  const host = hosts.data[0];
-
-  const url = `${host}/v1/${endpoint}`;
-  
-  const response = await fetch(url, {
-    method,
-    headers: {
-      'Accept': 'application/json',
-      'Authorization': `Bearer ${token}`,
-      ...(body && { 'Content-Type': 'application/json' })
-    },
-    ...(body && { body: JSON.stringify(body) })
-  });
-
-  if (!response.ok) {
-    if (response.status === 401) {
-      throw new AuthError('Invalid or expired token');
+      return { success: true };
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        throw new Error(`Failed to connect wallet: ${error.message}`);
+      }
+      throw new Error('Failed to connect wallet: Unknown error');
     }
-    throw new Error(`Audius API error: ${response.statusText}`);
   }
 
-  return response.json();
+  /**
+   * Get wallet information for a user
+   */
+  async getWalletInfo(userId: string): Promise<WalletInfo> {
+    try {
+      const response = await this.audiusSdk.users.getUser({ id: userId });
+      const user = response.data as unknown as ExtendedUser;
+      
+      if (!user) {
+        throw new Error('User not found');
+      }
+
+      return {
+        ethWallet: user.ercWallet,
+        solanaWallet: user.associatedSolWallets?.[0],
+        userBank: user.userBank
+      };
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        throw new Error(`Failed to get wallet info: ${error.message}`);
+      }
+      throw new Error('Failed to get wallet info: Unknown error');
+    }
+  }
+
+  /**
+   * Get token balance for a user
+   */
+  async getUserBalance(userId: string, tokenType: 'wAUDIO' | 'USDC'): Promise<TokenBalance> {
+    try {
+      const walletInfo = await this.getWalletInfo(userId);
+      
+      if (!walletInfo.userBank) {
+        throw new Error('User bank not initialized');
+      }
+
+      const userBankPubKey = new PublicKey(walletInfo.userBank);
+      
+      // Get token account info
+      const tokenBalance = await this.solanaConnection.getTokenAccountBalance(userBankPubKey);
+      
+      if (!tokenBalance.value) {
+        throw new Error('Failed to fetch token balance');
+      }
+
+      // Convert to proper decimal representation
+      const balance = tokenType === 'USDC' 
+        ? USDC(tokenBalance.value.uiAmount || 0).toString()
+        : tokenBalance.value.uiAmountString || '0';
+
+      return {
+        available: balance,
+        pending: '0' // Implement pending balance logic if needed
+      };
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        throw new Error(`Failed to get user balance: ${error.message}`);
+      }
+      throw new Error('Failed to get user balance: Unknown error');
+    }
+  }
+
+  /**
+   * Initialize a user bank for token operations
+   */
+  async initializeUserBank(userId: string, tokenType: 'wAUDIO' | 'USDC') {
+    try {
+      const walletInfo = await this.getWalletInfo(userId);
+      
+      if (!walletInfo.solanaWallet) {
+        throw new Error('Solana wallet must be connected first');
+      }
+
+      // For now, simulate user bank creation since SDK doesn't have this method
+      const userBankAddress = new PublicKey(walletInfo.solanaWallet).toString();
+
+      // Update user profile with bank info
+      await this.audiusSdk.users.updateProfile({
+        userId,
+        metadata: {
+          // Cast to any since the SDK types don't include userBank
+          userBank: userBankAddress
+        } as any
+      });
+
+      return {
+        success: true,
+        userBankAddress
+      };
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        throw new Error(`Failed to initialize user bank: ${error.message}`);
+      }
+      throw new Error('Failed to initialize user bank: Unknown error');
+    }
+  }
 }
-
-// Helper to extract auth options from tool arguments
-export function getAuthFromArgs(args: any): AuthOptions {
-  if (!args.token) {
-    throw new AuthError('Authentication token is required');
-  }
-
-  return {
-    token: args.token
-  };
-}
-
-// Base schema for authenticated tool inputs
-export const authInputSchema = {
-  token: { 
-    type: "string", 
-    description: "Authentication token from Audius" 
-  }
-} as const;
