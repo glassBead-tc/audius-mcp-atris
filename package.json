@@ -1,21 +1,21 @@
 {
-  "name": "@glassbead/audius-mcp",
+  "name": "@glassbead/audius-mcp-server",
   "version": "1.0.1",
   "description": "MCP server for Audius API integration - access Audius API endpoints through the Model Context Protocol",
   "type": "module",
   "main": "build/index.js",
   "bin": {
-    "audius-mcp": "./build/index.js"
+    "audius-mcp-server": "./build/index.js"
   },
   "files": [
     "build",
     "README.md",
     ".githooks",
-    "SECURITY.md"
+    "CONTRIBUTING.md"
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/glassBead-tc/mcp-servers/audius"
+    "url": "https://github.com/glassBead-tc/audius-mcp.git"
   },
   "keywords": [
     "mcp",
@@ -36,7 +36,6 @@
   "dependencies": {
     "@audius/fixed-decimal": "^1.0.0",
     "@audius/sdk": "^8.0.1",
-    "@glassbead-tc/audius-mcp": "github:glassbead-tc/audius-mcp",
     "@modelcontextprotocol/sdk": "^1.4.1",
     "@solana/web3.js": "^1.91.0",
     "dotenv": "^16.4.7",
