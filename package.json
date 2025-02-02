@@ -1,11 +1,11 @@
 {
-  "name": "@glassbead/audius-mcp-server",
+  "name": "@glassbead/mcp-audius",
   "version": "1.0.0",
   "description": "MCP server for Audius API integration - access Audius API endpoints through the Model Context Protocol",
   "type": "module",
   "main": "build/index.js",
   "bin": {
-    "audius-mcp-server": "./build/index.js"
+    "mcp-audius": "./build/index.js"
   },
   "files": [
     "build",
