@@ -34,7 +34,7 @@ if (!API_KEY) {
   throw new Error('AUDIUS_API_KEY environment variable is required');
 }
 
-// Initialize Audius SDK
+// Initialize Audius SDK with API key and optional API secret
 const audiusSdk = sdk({
   appName: "mcp-audius",
   apiKey: API_KEY,
@@ -53,19 +53,7 @@ const userExtendedManager = new UserExtendedManager(audiusSdk);
 const trackExtendedManager = new TrackExtendedManager(audiusSdk);
 const trendingManager = new TrendingManager(audiusSdk);
 const analyticsManager = new AnalyticsManager(audiusSdk);
-const streamingManager = new StreamingManager(audiusSdk, console);
-
-// Start streaming server
-streamingManager.start().catch(error => {
-  console.error("Failed to start streaming server:", error);
-  process.exit(1);
-});
-
-// Handle cleanup on exit
-process.on('SIGINT', async () => {
-  await streamingManager.stop();
-  process.exit(0);
-});
+const streamingManager = new StreamingManager(audiusSdk, walletManager);
 
 // Common Types
 const HashIdSchema = z.string().describe("Audius ID");
@@ -284,7 +272,7 @@ const UnfavoriteAlbumSchema = z.object({
 const server = new Server(
   {
     name: "mcp-audius",
-    version: "1.0.0",
+    version: "1.1.5",
   },
   {
     capabilities: {
@@ -295,8 +283,10 @@ const server = new Server(
 );
 
 // Error handling
-server.onerror = (error) => {
-  console.error("[MCP Server Error]", error);
+server.onerror = async (error) => {
+  // Stop streaming server on MCP server error
+  await streamingManager.stop().catch(() => {});
+  process.exit(1);
 };
 
 // Register request handlers
@@ -546,6 +536,15 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       description: "Get details about a specific album",
       inputSchema: zodToJsonSchema(GetAlbumSchema),
     },
+    // RPC Tools
+    {
+      name: "handle-rpc-request",
+      description: "Handle RPC requests that would normally go to local transport",
+      inputSchema: zodToJsonSchema(z.object({
+        method: z.string(),
+        params: z.array(z.unknown())
+      })),
+    },
     {
       name: "get-album-tracks",
       description: "Get tracks from a specific album",
@@ -670,9 +669,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request): Promise<ServerR
         const proxyUrl = `http://localhost:${process.env.STREAMING_PORT || '3000'}/stream/${trackId}`;
         return {
           content: [{
-            type: "audio",
-            urls: [proxyUrl, directUrl], // Try proxy first, fall back to direct
-            mimeType: "audio/mpeg"
+            type: "text",
+            text: JSON.stringify({
+              proxyUrl,
+              directUrl,
+              mimeType: "audio/mpeg"
+            }, null, 2)
           }],
           tools: []  // Required by ServerResult type
         };
@@ -808,6 +810,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request): Promise<ServerR
         return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
       }
 
+      case "handle-rpc-request": {
+        const { method, params } = z.object({
+          method: z.string(),
+          params: z.array(z.unknown())
+        }).parse(args);
+        const response = await walletManager.handleRPCRequest(method, params);
+        return { content: [{ type: "text", text: JSON.stringify(response) }] };
+      }
+
       // Wallet endpoints
       case "connect-wallet": {
         const { userId, walletAddress, walletType } = ConnectWalletSchema.parse(args);
@@ -933,20 +944,43 @@ server.setRequestHandler(CallToolRequestSchema, async (request): Promise<ServerR
   }
 });
 
+// Handle cleanup on exit
+process.on('SIGINT', async () => {
+  await streamingManager.stop();
+  process.exit(0);
+});
+
 // Start the server
 async function main() {
   try {
+    // First start streaming server
+    await streamingManager.start();
+
+    // Then connect MCP server once streaming is ready
     const transport = new StdioServerTransport();
     await server.connect(transport);
-    console.error("Audius MCP Server running on stdio");
   } catch (error) {
-    console.error("Failed to initialize server:", error);
-    process.exit(1);
+    // Only log critical initialization failures
+    if (error instanceof Error) {
+      throw new McpError(ErrorCode.InternalError, `Failed to initialize: ${error.message}`);
+    }
+    throw error;
   }
 }
 
 // Execute main
-main().catch((error) => {
-  console.error("Fatal error:", error);
-  process.exit(1);
+main().catch(async (error) => {
+  // Ensure clean shutdown
+  await streamingManager.stop().catch(() => {});
+  
+  // If it's already an MCP error, rethrow it
+  if (error instanceof McpError) {
+    throw error;
+  }
+  
+  // Otherwise wrap in MCP error
+  throw new McpError(
+    ErrorCode.InternalError,
+    error instanceof Error ? error.message : String(error)
+  );
 });

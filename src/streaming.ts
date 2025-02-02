@@ -2,6 +2,7 @@ import { sdk } from '@audius/sdk';
 import express from 'express';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 import { cacheManager } from './cache/cache-manager.js';
+import { WalletManager } from './auth.js';
 
 interface StreamSession {
     trackId: string;
@@ -28,6 +29,11 @@ interface StreamOptions {
         artist: string;
         duration: number;
     };
+}
+
+interface RangeRequest {
+    start: number;
+    end?: number;
 }
 
 class RateLimiter {
@@ -67,41 +73,113 @@ class RateLimiter {
  */
 export class StreamingManager {
     private audiusSdk: ReturnType<typeof sdk>;
+    private walletManager: WalletManager;
     private app: express.Application;
     private logger: Console;
     private activeStreams: Map<string, StreamSession>;
     private rateLimiter: RateLimiter;
+    private corsHeaders: Record<string, string>;
+    private server?: ReturnType<typeof this.app.listen>;
+    private cleanupInterval?: NodeJS.Timeout;
 
-    constructor(audiusSdk: ReturnType<typeof sdk>, logger: Console = console) {
+    constructor(audiusSdk: ReturnType<typeof sdk>, walletManager: WalletManager, logger?: Console) {
         this.audiusSdk = audiusSdk;
-        this.logger = logger;
+        this.walletManager = walletManager;
+        // Create a minimal logger that only logs critical errors
+        this.logger = logger || {
+            assert: () => {},
+            clear: () => {},
+            count: () => {},
+            countReset: () => {},
+            debug: () => {},
+            dir: () => {},
+            dirxml: () => {},
+            error: (message: string) => {
+                // Only log critical errors that could affect MCP operation
+                if (message.includes('Failed to start streaming server') ||
+                    message.includes('Failed to stop streaming server')) {
+                    console.error(`[Streaming] ${message}`);
+                }
+            },
+            group: () => {},
+            groupCollapsed: () => {},
+            groupEnd: () => {},
+            info: () => {},
+            log: () => {},
+            table: () => {},
+            time: () => {},
+            timeEnd: () => {},
+            timeLog: () => {},
+            trace: () => {},
+            warn: () => {},
+            profile: () => {},
+            profileEnd: () => {},
+            timeStamp: () => {},
+            Console: console.Console
+        } as Console;
         this.app = express();
         this.activeStreams = new Map();
         this.rateLimiter = new RateLimiter();
 
-        // Configure CORS
+        // Initialize CORS headers
         const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['*'];
+        this.corsHeaders = {
+            'Access-Control-Allow-Methods': 'GET, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Range',
+            'Access-Control-Expose-Headers': 'Content-Range, Accept-Ranges, Content-Length',
+            'Access-Control-Max-Age': '86400' // 24 hours
+        };
+
+        // Configure CORS middleware
         this.app.use((req, res, next) => {
             const origin = req.headers.origin;
             if (origin && (allowedOrigins.includes('*') || allowedOrigins.includes(origin))) {
                 res.setHeader('Access-Control-Allow-Origin', origin);
-                res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-                res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Range');
-                res.setHeader('Access-Control-Expose-Headers', 'Content-Range, Accept-Ranges');
+            } else {
+                res.setHeader('Access-Control-Allow-Origin', '*');
             }
+            
+            // Apply common CORS headers
+            Object.entries(this.corsHeaders).forEach(([key, value]) => {
+                res.setHeader(key, value);
+            });
+            
             next();
         });
-
-        // Cleanup inactive streams and cache every hour
-        setInterval(() => this.cleanup(), 3600000);
 
         this.setupRoutes();
     }
 
     private validateTrackId(trackId: string): void {
-        if (!trackId?.match(/^[0-9a-fA-F]+$/)) {
+        if (!trackId?.match(/^[A-Za-z0-9]+$/)) {
             throw new McpError(ErrorCode.InvalidParams, 'Invalid track ID format');
         }
+    }
+
+    private parseRangeHeader(range: string): RangeRequest {
+        // Remove 'bytes=' prefix and split on hyphen
+        const parts = range.replace(/bytes=/, '').split('-');
+        if (parts.length !== 2) {
+            throw new Error('Invalid range header format');
+        }
+
+        const start = parseInt(parts[0], 10);
+        const end = parts[1] ? parseInt(parts[1], 10) : undefined;
+        
+        if (isNaN(start)) {
+            throw new Error('Invalid range start value');
+        }
+        
+        if (end !== undefined) {
+            if (isNaN(end)) {
+                throw new Error('Invalid range end value');
+            }
+            if (start > end) {
+                throw new Error('Range start must be less than end');
+            }
+        }
+
+        return { start, end };
     }
 
     private async getStreamMetadata(trackId: string): Promise<StreamOptions> {
@@ -142,16 +220,31 @@ export class StreamingManager {
         }
         
         try {
-            const streamUrl = await this.audiusSdk.tracks.getTrackStreamUrl({ trackId });
-            if (!streamUrl) {
-                throw new Error('No stream URL returned from Audius API');
+            // First try to get the stream URL without authentication
+            const streamUrl = await this.audiusSdk.tracks.getTrackStreamUrl({ trackId }).catch(() => null);
+            
+            if (streamUrl) {
+                // Cache the URL with 1 hour expiration
+                const expiresAt = Date.now() + 3600000;
+                cacheManager.setStreamUrl(trackId, streamUrl, expiresAt);
+                return streamUrl;
             }
+
+            // If that fails, try to get the track details to check if it exists
+            const trackDetails = await this.audiusSdk.tracks.getTrack({ trackId }).catch(() => null);
             
-            // Cache the URL with 1 hour expiration
-            const expiresAt = Date.now() + 3600000;
-            cacheManager.setStreamUrl(trackId, streamUrl, expiresAt);
+            if (!trackDetails?.data) {
+                throw new Error('Track not found');
+            }
+
+            // For public tracks, use the default Audius API endpoint
+            // This is a fallback in case the SDK stream URL fails
+            const defaultEndpoint = process.env.AUDIUS_API_ENDPOINT || 'https://discovery-us-01.audius.openplayer.org';
+            const directUrl = `${defaultEndpoint}/v1/tracks/${trackId}/stream`;
             
-            return streamUrl;
+            // Cache the direct URL
+            cacheManager.setStreamUrl(trackId, directUrl, Date.now() + 3600000);
+            return directUrl;
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
             this.logger.error(`Failed to get stream URL: ${errorMessage}`);
@@ -161,7 +254,7 @@ export class StreamingManager {
 
     private setupStreamHandlers(res: express.Response, sessionId: string) {
         res.on('close', () => {
-            this.logger.info(`Stream ${sessionId} closed by client`);
+            // Remove non-critical log
             this.cleanupStream(sessionId);
         });
         
@@ -176,7 +269,7 @@ export class StreamingManager {
         if (session) {
             clearTimeout(session.timeoutRef);
             this.activeStreams.delete(sessionId);
-            this.logger.info(`Cleaned up stream ${sessionId}`);
+            // Remove non-critical log
         }
     }
 
@@ -186,7 +279,7 @@ export class StreamingManager {
 
         // Log cleanup stats
         const cacheStats = cacheManager.getStreamUrlCacheStats();
-        this.logger.info(`Cleanup complete. Active streams: ${this.activeStreams.size}, Cache entries: ${cacheStats.size}`);
+        // Remove non-critical log
     }
 
     private async streamWithBackpressure(
@@ -238,6 +331,10 @@ export class StreamingManager {
         };
     }
 
+    private async handleRPCRequest(method: string, params: unknown[]) {
+        return this.walletManager.handleRPCRequest(method, params);
+    }
+
     private setupRoutes() {
         this.app.get('/stream/:trackId', async (req: express.Request, res: express.Response) => {
             const { trackId } = req.params;
@@ -249,6 +346,23 @@ export class StreamingManager {
                 if (!this.rateLimiter.isAllowed(clientIp)) {
                     res.status(429).send({ error: 'Too many requests' });
                     return;
+                }
+
+                // Handle RPC requests if present
+                const rpcMethod = req.query.rpc_method as string;
+                if (rpcMethod) {
+                    try {
+                        const rpcParams = JSON.parse(req.query.rpc_params as string || '[]');
+                        const result = await this.handleRPCRequest(rpcMethod, rpcParams);
+                        res.json({ result });
+                        return;
+                    } catch (error) {
+                        res.status(400).json({
+                            error: 'RPC request failed',
+                            details: error instanceof Error ? error.message : String(error)
+                        });
+                        return;
+                    }
                 }
 
                 // Validate track ID
@@ -265,39 +379,44 @@ export class StreamingManager {
                 res.setHeader('Transfer-Encoding', streamOptions.encoding);
                 res.setHeader('Cache-Control', 'no-cache');
                 res.setHeader('Connection', 'keep-alive');
-
-                // Enable CORS
-                res.setHeader('Access-Control-Allow-Origin', '*');
-                res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-                res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Range');
-                res.setHeader('Access-Control-Expose-Headers', 'Content-Range, Accept-Ranges, Content-Length');
-
-                // Set Accept-Ranges header for all requests
                 res.setHeader('Accept-Ranges', 'bytes');
 
                 // Handle range requests
                 const range = req.headers.range;
                 if (range && typeof range === 'string') {
-                    // Parse range header
-                    const parts = range.replace(/bytes=/, '').split('-');
-                    if (parts.length !== 2) {
-                        throw new Error('Invalid range header format');
-                    }
-                    const audioResponse = await fetch(streamUrl, {
-                        headers: { Range: range }
-                    });
-                    
-                    if (!audioResponse.ok || !audioResponse.body) {
-                        throw new Error('Failed to fetch audio stream');
-                    }
+                    try {
+                        const { start, end } = this.parseRangeHeader(range);
+                        const rangeHeader = end !== undefined ? `bytes=${start}-${end}` : `bytes=${start}-`;
 
-                    res.status(206);
-                    res.setHeader('Accept-Ranges', 'bytes');
-                    res.setHeader('Content-Range', audioResponse.headers.get('Content-Range') || '');
-                    res.setHeader('Content-Length', audioResponse.headers.get('Content-Length') || '');
+                        const audioResponse = await fetch(streamUrl, {
+                            headers: { Range: rangeHeader }
+                        });
+                        
+                        if (!audioResponse.ok || !audioResponse.body) {
+                            throw new Error('Failed to fetch audio stream');
+                        }
 
-                    await this.streamWithBackpressure(audioResponse.body, res, sessionId);
-                    return;
+                        // Ensure we have valid Content-Range header
+                        const contentRange = audioResponse.headers.get('Content-Range');
+                        if (!contentRange) {
+                            throw new Error('Missing Content-Range header from upstream');
+                        }
+
+                        res.status(206);
+                        res.setHeader('Content-Range', contentRange);
+                        res.setHeader('Content-Length', audioResponse.headers.get('Content-Length') || '');
+
+                        await this.streamWithBackpressure(audioResponse.body, res, sessionId);
+                        return;
+                    } catch (error) {
+                        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                        this.logger.error(`Range request failed: ${errorMessage}`);
+                        res.status(416).send({ 
+                            error: 'Invalid range request',
+                            details: error instanceof Error ? error.message : 'Unknown error'
+                        });
+                        return;
+                    }
                 }
 
                 // Create stream session
@@ -329,7 +448,7 @@ export class StreamingManager {
                 await this.streamWithBackpressure(audioResponse.body, res, sessionId);
 
                 res.end();
-                this.logger.info(`Stream ${sessionId} completed successfully`);
+                // Stream completed successfully
 
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -346,19 +465,6 @@ export class StreamingManager {
 
         // Handle OPTIONS requests for CORS
         this.app.options('/stream/:trackId', (req: express.Request, res: express.Response) => {
-            const origin = req.headers.origin;
-            const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['*'];
-            
-            if (origin && (allowedOrigins.includes('*') || allowedOrigins.includes(origin))) {
-                res.setHeader('Access-Control-Allow-Origin', origin);
-            } else {
-                res.setHeader('Access-Control-Allow-Origin', '*');
-            }
-            
-            res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-            res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Range');
-            res.setHeader('Access-Control-Expose-Headers', 'Content-Range, Accept-Ranges, Content-Length');
-            res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
             res.status(204).end();
         });
 
@@ -376,31 +482,123 @@ export class StreamingManager {
     /**
      * Start the streaming server
      */
-    async start(port: number = parseInt(process.env.STREAMING_PORT || '3000')): Promise<void> {
-        return new Promise<void>((resolve, reject) => {
-            try {
-                this.app.listen(port, () => {
-                    this.logger.info(`Streaming server running on port ${port}`);
-                    resolve();
-                });
-            } catch (error) {
-                const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-                this.logger.error(`Failed to start streaming server: ${errorMessage}`);
-                reject(error);
+    async start(port: number = parseInt(process.env.STREAMING_PORT || '3333')): Promise<void> {
+        try {
+            // If server is already running, stop it first
+            if (this.server) {
+                await this.stop();
             }
-        });
+
+            // Start cleanup interval
+            this.cleanupInterval = setInterval(() => this.cleanup(), 3600000);
+
+            // Try to find an available port starting from the specified port
+            let currentPort = port;
+            const maxRetries = 10;
+            let lastError: Error | undefined;
+            
+            for (let attempt = 0; attempt < maxRetries; attempt++) {
+                try {
+                    await new Promise<void>((resolve, reject) => {
+                        const server = this.app.listen(currentPort, 'localhost');
+                        
+                        server.once('listening', () => {
+                            this.server = server;
+                            // Remove non-critical log
+                            resolve();
+                        });
+
+                        server.once('error', (error: NodeJS.ErrnoException) => {
+                            if (error.code === 'EADDRINUSE') {
+                                // Remove non-critical log
+                                currentPort++;
+                                server.close();
+                                lastError = error;
+                                reject(new Error('Port in use'));
+                            } else {
+                                lastError = error;
+                                reject(error);
+                            }
+                        });
+                    });
+                    // If we get here, the server started successfully
+                    return;
+                } catch (error) {
+                    if (attempt === maxRetries - 1) {
+                        throw new Error(`Failed to find available port after ${maxRetries} attempts. Last error: ${lastError?.message}`);
+                    }
+                    // Continue to next attempt if port was in use
+                    if (error instanceof Error && error.message === 'Port in use') {
+                        continue;
+                    }
+                    throw error;
+                }
+            }
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            this.logger.error(`Failed to start streaming server: ${errorMessage}`);
+            throw new McpError(ErrorCode.InternalError, `Failed to start streaming server: ${errorMessage}`);
+        }
     }
 
     /**
      * Stop the streaming server
      */
     async stop(): Promise<void> {
+        // Clear cleanup interval
+        if (this.cleanupInterval) {
+            clearInterval(this.cleanupInterval);
+            this.cleanupInterval = undefined;
+        }
+
         // Cleanup all active streams
         for (const sessionId of this.activeStreams.keys()) {
             this.cleanupStream(sessionId);
         }
 
-        
-        this.logger.info('Streaming server stopped');
+        // Stop the HTTP server if it's running
+        if (this.server) {
+            await new Promise<void>((resolve, reject) => {
+                // Force close any existing connections
+                const connections = new Set<any>();
+                
+                this.server!.on('connection', (conn) => {
+                    connections.add(conn);
+                    conn.on('close', () => connections.delete(conn));
+                });
+
+                // Attempt graceful shutdown
+                this.server!.close((err) => {
+                    if (err) {
+                        this.logger.error(`Error stopping server: ${err.message}`);
+                        // Force close remaining connections
+                        connections.forEach(conn => {
+                            try {
+                                conn.destroy();
+                            } catch (e) {
+                                this.logger.error(`Error destroying connection: ${e instanceof Error ? e.message : String(e)}`);
+                            }
+                        });
+                        reject(err);
+                    } else {
+                        // Remove non-critical log
+                        resolve();
+                    }
+                });
+
+                // Set a timeout for graceful shutdown
+                setTimeout(() => {
+                    // Remove non-critical log
+                    connections.forEach(conn => {
+                        try {
+                            conn.destroy();
+                        } catch (e) {
+                            this.logger.error(`Error destroying connection: ${e instanceof Error ? e.message : String(e)}`);
+                        }
+                    });
+                }, 5000);
+            });
+            this.server = undefined;
+        }
     }
 }
