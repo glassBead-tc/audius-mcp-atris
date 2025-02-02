@@ -1,6 +1,6 @@
 {
   "name": "@glassbead/mcp-audius",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "MCP server for Audius API integration - access Audius API endpoints through the Model Context Protocol",
   "type": "module",
   "main": "build/index.js",
@@ -10,7 +10,6 @@
   "files": [
     "build",
     "README.md",
-    ".githooks",
     "CONTRIBUTING.md"
   ],
   "repository": {
@@ -33,9 +32,7 @@
   "homepage": "https://github.com/glassBead-tc/audius-mcp#readme",
   "scripts": {
     "build": "tsc && chmod +x build/index.js",
-    "start": "node build/index.js",
-    "dev": "tsc -w",
-    "postinstall": "cp .githooks/* .git/hooks/ && chmod +x .git/hooks/*"
+    "start": "node build/index.js"
   },
   "dependencies": {
     "@audius/fixed-decimal": "^0.1.1",
