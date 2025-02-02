@@ -1,6 +1,7 @@
 import { Connection, PublicKey } from '@solana/web3.js';
 import { USDC } from '@audius/fixed-decimal';
 import { sdk } from '@audius/sdk';
+import { RPCProxyManager } from './rpc-proxy.js';
 
 // Extend base types since SDK types don't include all properties
 interface ExtendedUser {
@@ -32,13 +33,29 @@ export interface TokenBalance {
 export class WalletManager {
   private solanaConnection: Connection;
   private audiusSdk: ReturnType<typeof sdk>;
+  private rpcProxy: RPCProxyManager;
 
   constructor(audiusSdk: ReturnType<typeof sdk>) {
     this.audiusSdk = audiusSdk;
+    this.rpcProxy = new RPCProxyManager();
     // Initialize Solana connection
     this.solanaConnection = new Connection(
       process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com'
     );
+  }
+
+  /**
+   * Handle RPC requests that would normally go to local transport
+   */
+  async handleRPCRequest(method: string, params: unknown[]) {
+    return this.rpcProxy.handleRPCRequest(method, params);
+  }
+
+  /**
+   * Get the Ethereum address used for signing
+   */
+  getSignerAddress(): string {
+    return this.rpcProxy.getAddress();
   }
 
   /**
