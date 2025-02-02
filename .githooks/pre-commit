@@ -15,7 +15,7 @@ fi
 
 # Check for files that might contain secrets
 secret_patterns='\b(SECRET|PASSWORD|KEY|TOKEN|CREDENTIAL|PWD|PASS)\b'
-files_to_check=$(git diff --cached --name-only | grep -v -E '(SECURITY.md|.env.example|package.json|README.md|.githooks/pre-commit)$')
+files_to_check=$(git diff --cached --name-only | grep -v -E '(SECURITY.md|CONTRIBUTING.md|.env.example|package.json|README.md|.githooks/pre-commit)$')
 for file in $files_to_check; do
     if [ -f "$file" ]; then
         secret_found=$(git diff --cached -U0 "$file" | grep '^+' | grep -iE "$secret_patterns" || true)
