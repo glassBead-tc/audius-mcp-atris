@@ -70,6 +70,26 @@ When SDK endpoints don't support direct pagination:
 4. Handle errors appropriately
 5. Document pagination implementation in manager class
 
+## Caching Architecture
+1. Cache Manager Pattern
+   - Singleton pattern for global cache access
+   - Modular design supporting multiple cache types
+   - Built-in monitoring and statistics
+   - Automatic cleanup and TTL support
+
+2. Stream URL Caching
+   - LRU (Least Recently Used) implementation
+   - Configurable cache size and TTL
+   - Automatic expiration handling
+   - Cache hit/miss tracking
+   - Memory-efficient storage
+
+3. Cache Implementation Details
+   - Generic cache interface for extensibility
+   - Type-safe implementations
+   - Built-in statistics gathering
+   - Automatic resource cleanup
+
 ## Code Style Guidelines
 1. Use TypeScript for type safety
 2. Follow async/await patterns

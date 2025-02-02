@@ -53,7 +53,7 @@ const userExtendedManager = new UserExtendedManager(audiusSdk);
 const trackExtendedManager = new TrackExtendedManager(audiusSdk);
 const trendingManager = new TrendingManager(audiusSdk);
 const analyticsManager = new AnalyticsManager(audiusSdk);
-const streamingManager = new StreamingManager(audiusSdk);
+const streamingManager = new StreamingManager(audiusSdk, console);
 
 // Start streaming server
 streamingManager.start().catch(error => {
@@ -666,10 +666,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request): Promise<ServerR
 
       case "get-track-stream": {
         const { trackId } = GetTrackStreamSchema.parse(args);
+        const streamUrl = await audiusSdk.tracks.getTrackStreamUrl({ trackId });
         return {
           content: [{
             type: "audio",
-            url: `http://localhost:3000/stream/${trackId}`,
+            url: streamUrl,
             mimeType: "audio/mpeg"
           }],
           tools: []  // Required by ServerResult type
