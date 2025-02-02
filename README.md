@@ -1,97 +1,106 @@
-# @modelcontextprotocol/audius-mcp
-[![smithery badge](https://smithery.ai/badge/@glassBead-tc/audius-mcp)](https://smithery.ai/server/@glassBead-tc/audius-mcp)
+# @glassbead/mcp-audius
 
-An MCP (Model Context Protocol) server for interacting with the Audius API. This package provides a set of tools to query and interact with Audius music platform data through the Model Context Protocol.
+An MCP (Model Context Protocol) server for comprehensive interaction with the Audius API. This package provides a rich set of tools to query and interact with the Audius music platform through the Model Context Protocol.
 
-## Installation
+## Configuration
 
-### Installing via Smithery
+This MCP server is designed to be used with MCP-compatible clients like Claude Desktop. Configure it in your client's settings file:
 
-To install Audius MCP Server for Claude Desktop automatically via [Smithery](https://smithery.ai/server/@glassBead-tc/audius-mcp):
+### Claude Desktop
 
-```bash
-npx -y @smithery/cli install @glassBead/audius-mcp --client claude
-```
-
-### Manual Installation
-```bash
-npm install -g @glassbead/audius-mcp
-```
-
-Or use directly with npx:
-
-```bash
-npx @glassbead/audius-mcp
-```
-
-## Features
-
-- User Operations
-  - Get user details
-  - Search users
-  - Get user tracks, reposts, followers, and following
-  - Get user tags
-
-- Track Operations
-  - Get track details
-  - Search tracks
-  - Get trending tracks
-  - Stream tracks
-  - Get track access info and technical details
-  - Get track stems and top listeners
-
-- Playlist Operations
-  - Get playlist details
-  - Search playlists
-  - Get playlist tracks
-  - Get playlist access info
-
-- Additional Features
-  - Tips information
-  - Developer app details
-  - URL resolution
-
-## Usage
-
-This package is designed to be used with MCP-compatible clients. Once installed, it can be referenced in your MCP configuration:
+Add to your Claude Desktop configuration (`claude_desktop_config.json`):
 
 ```json
 {
   "mcpServers": {
     "audius": {
-      "command": "audius-mcp"
+      "command": "npx",
+      "args": ["@glassbead/mcp-audius"],
+      "env": {
+        "AUDIUS_API_KEY": "your-api-key",
+        "AUDIUS_AUTH_SECRET": "your-auth-secret"
+      }
     }
   }
 }
 ```
 
-### Available Tools
+### Environment Variables
 
-Here are some example tool calls:
+Copy `.env.example` to `.env.local` and fill in your credentials:
 
-```typescript
-// Search for tracks
-await client.useMcpTool("audius", "search-tracks", {
-  query: "Jungle"
-});
-
-// Get trending tracks
-await client.useMcpTool("audius", "get-trending-tracks", {
-  genre: "Glitch Hop"
-});
-
-// Get user details
-await client.useMcpTool("audius", "get-user-by-handle", {
-  handle: "Whaskii"
-});
+```bash
+cp .env.example .env.local
 ```
+
+Required variables:
+- `AUDIUS_API_KEY`: Your Audius API key
+
+Optional variables:
+- `AUDIUS_AUTH_SECRET`: Your Audius authentication secret - some features may be limited without this
+
+## Features
+
+### User Operations
+- Get user details by ID or handle
+- Search for users
+- Follow/unfollow users
+- Get user followers and following
+- Get trending users
+- Get related artists
+- Get user tracks with sorting and filtering
+- Get user favorites and reposts
+- Get user's extended profile data
+
+### Track Operations
+- Get track details
+- Get track streaming URLs
+- Search tracks
+- Get trending tracks
+- Favorite/unfavorite tracks
+- Get track comments
+- Get track extended data
+- Get track top listeners
+- Get track price information
+- Purchase tracks using USDC
+- Verify track purchases
+
+### Playlist Operations
+- Get playlist details
+- Get playlist tracks
+- Get trending playlists
+- Search playlists
+- Favorite/unfavorite playlists
+
+### Album Operations
+- Get album details
+- Get album tracks
+- Favorite/unfavorite albums
+
+### Wallet & Financial Operations
+- Connect wallets (ETH/Solana)
+- Get wallet information
+- Get user token balances
+- Initialize user banks
+- Send tips using wAUDIO
+- Get tip history
+- Add and get tip reactions
+
+### Challenge Operations
+- Get undisbursed challenges
+- Get user challenges
+
+### Additional Features
+- URL resolution
+- Comment management
+- Extended data access
 
 ## Development
 
 To build from source:
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/glassBead-tc/audius-mcp.git
 cd audius-mcp
 npm install
 npm run build
