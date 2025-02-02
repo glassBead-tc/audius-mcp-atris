@@ -21,7 +21,7 @@ import { ResolveManager, ResolveUrlSchema } from "./resolve.js";
 import { UserExtendedManager, GetUserExtendedProfileSchema } from "./user-extended.js";
 import { TrackExtendedManager, GetTrackExtendedDataSchema, GetTrackTopListenersSchema, GetTrackCommentsExtendedSchema } from "./track-extended.js";
 import { TrendingManager, GetTrendingTracksSchema, GetTrendingPlaylistsSchema, GetTrendingUsersSchema } from "./trending.js";
-import { AnalyticsManager, GetGenrePopularitySchema } from "./analytics.js";
+import { AnalyticsManager, GetGenrePopularitySchema, GetMoodPopularitySchema } from "./analytics.js";
 import { StreamingManager } from "./streaming.js";
 
 // Load environment variables
@@ -272,7 +272,7 @@ const UnfavoriteAlbumSchema = z.object({
 const server = new Server(
   {
     name: "mcp-audius",
-    version: "1.1.5",
+    version: "1.1.6",
   },
   {
     capabilities: {
@@ -565,6 +565,11 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       name: "get-genre-popularity",
       description: "Calculate genre popularity using trending tracks and Pareto distribution",
       inputSchema: zodToJsonSchema(GetGenrePopularitySchema),
+    },
+    {
+      name: "get-mood-popularity",
+      description: "Calculate mood popularity and emotional trends using trending tracks",
+      inputSchema: zodToJsonSchema(GetMoodPopularitySchema),
     },
   ],
 }));
@@ -916,6 +921,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request): Promise<ServerR
       case "get-genre-popularity": {
         const { timeRange, totalPoints, includeDetails } = GetGenrePopularitySchema.parse(args);
         const response = await analyticsManager.getGenrePopularity({ timeRange, totalPoints, includeDetails });
+        return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
+      }
+
+      case "get-mood-popularity": {
+        const { timeRange, totalPoints, includeDetails } = GetMoodPopularitySchema.parse(args);
+        const response = await analyticsManager.getMoodPopularity({ timeRange, totalPoints, includeDetails });
         return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
       }
 
