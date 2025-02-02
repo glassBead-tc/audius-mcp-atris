@@ -20,6 +20,9 @@ import { CommentManager } from "./comments.js";
 import { ResolveManager, ResolveUrlSchema } from "./resolve.js";
 import { UserExtendedManager, GetUserExtendedProfileSchema } from "./user-extended.js";
 import { TrackExtendedManager, GetTrackExtendedDataSchema, GetTrackTopListenersSchema, GetTrackCommentsExtendedSchema } from "./track-extended.js";
+import { TrendingManager, GetTrendingTracksSchema, GetTrendingPlaylistsSchema, GetTrendingUsersSchema } from "./trending.js";
+import { AnalyticsManager, GetGenrePopularitySchema } from "./analytics.js";
+import { StreamingManager } from "./streaming.js";
 
 // Load environment variables
 config({ path: '.env.local' });
@@ -48,6 +51,21 @@ const commentManager = new CommentManager(audiusSdk);
 const resolveManager = new ResolveManager(audiusSdk);
 const userExtendedManager = new UserExtendedManager(audiusSdk);
 const trackExtendedManager = new TrackExtendedManager(audiusSdk);
+const trendingManager = new TrendingManager(audiusSdk);
+const analyticsManager = new AnalyticsManager(audiusSdk);
+const streamingManager = new StreamingManager(audiusSdk);
+
+// Start streaming server
+streamingManager.start().catch(error => {
+  console.error("Failed to start streaming server:", error);
+  process.exit(1);
+});
+
+// Handle cleanup on exit
+process.on('SIGINT', async () => {
+  await streamingManager.stop();
+  process.exit(0);
+});
 
 // Common Types
 const HashIdSchema = z.string().describe("Audius ID");
@@ -87,9 +105,6 @@ const GetUserFollowingSchema = z.object({
   offset: z.number().optional(),
 }).describe("Get users that a user is following");
 
-const GetTrendingUsersSchema = z.object({
-  genre: z.array(z.string()).optional(),
-}).describe("Get trending users on Audius");
 
 const GetRelatedArtistsSchema = z.object({
   userId: HashIdSchema,
@@ -122,9 +137,9 @@ const GetTrackSchema = z.object({
   trackId: HashIdSchema,
 }).describe("Get track details");
 
-const GetTrackStreamUrlSchema = z.object({
+const GetTrackStreamSchema = z.object({
   trackId: HashIdSchema,
-}).describe("Get streamable URL for a track");
+}).describe("Get track stream URL and SSE endpoint");
 
 const GetTrackCommentsSchema = z.object({
   trackId: HashIdSchema,
@@ -136,9 +151,6 @@ const SearchTracksSchema = z.object({
   query: z.string(),
 }).describe("Search for tracks");
 
-const GetTrendingTracksSchema = z.object({
-  genre: z.string().optional(),
-}).describe("Get trending tracks");
 
 const FavoriteTrackSchema = z.object({
   userId: HashIdSchema,
@@ -188,9 +200,6 @@ const GetPlaylistTracksSchema = z.object({
   playlistId: HashIdSchema,
 }).describe("Get tracks in a playlist");
 
-const GetTrendingPlaylistsSchema = z.object({
-  time: z.enum(['week', 'month', 'year']).optional(),
-}).describe("Get trending playlists");
 
 const SearchPlaylistsSchema = z.object({
   query: z.string(),
@@ -361,9 +370,9 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       inputSchema: zodToJsonSchema(GetTrackSchema),
     },
     {
-      name: "get-track-stream-url",
-      description: "Get a streamable URL for a specific track",
-      inputSchema: zodToJsonSchema(GetTrackStreamUrlSchema),
+      name: "get-track-stream",
+      description: "Get track stream URL and SSE endpoint",
+      inputSchema: zodToJsonSchema(GetTrackStreamSchema),
     },
     {
       name: "get-track-comments",
@@ -552,6 +561,12 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       description: "Unfavorite an album",
       inputSchema: zodToJsonSchema(UnfavoriteAlbumSchema),
     },
+    // Analytics Tools
+    {
+      name: "get-genre-popularity",
+      description: "Calculate genre popularity using trending tracks and Pareto distribution",
+      inputSchema: zodToJsonSchema(GetGenrePopularitySchema),
+    },
   ],
 }));
 
@@ -605,12 +620,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request): Promise<ServerR
       }
 
       case "get-trending-users": {
-        const { genre } = GetTrendingUsersSchema.parse(args);
-        const response = await audiusSdk.users.searchUsers({ 
-          query: '', // Empty query to get all users
-          sortMethod: 'popular',
-          genre
-        });
+        const { genre, limit, offset } = GetTrendingUsersSchema.parse(args);
+        const response = await trendingManager.getTrendingUsers({ genre, limit, offset });
         return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
       }
 
@@ -653,10 +664,16 @@ server.setRequestHandler(CallToolRequestSchema, async (request): Promise<ServerR
         return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
       }
 
-      case "get-track-stream-url": {
-        const { trackId } = GetTrackStreamUrlSchema.parse(args);
-        const response = await audiusSdk.tracks.getTrackStreamUrl({ trackId });
-        return { content: [{ type: "text", text: JSON.stringify({ streamUrl: response }, null, 2) }] };
+      case "get-track-stream": {
+        const { trackId } = GetTrackStreamSchema.parse(args);
+        return {
+          content: [{
+            type: "audio",
+            url: `http://localhost:3000/stream/${trackId}`,
+            mimeType: "audio/mpeg"
+          }],
+          tools: []  // Required by ServerResult type
+        };
       }
 
       case "get-track-comments": {
@@ -672,8 +689,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request): Promise<ServerR
       }
 
       case "get-trending-tracks": {
-        const { genre } = GetTrendingTracksSchema.parse(args);
-        const response = await audiusSdk.tracks.getTrendingTracks({ genre });
+        const { genre, limit, offset } = GetTrendingTracksSchema.parse(args);
+        const response = await trendingManager.getTrendingTracks({ genre, limit, offset });
         return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
       }
 
@@ -741,8 +758,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request): Promise<ServerR
       }
 
       case "get-trending-playlists": {
-        const { time } = GetTrendingPlaylistsSchema.parse(args);
-        const response = await audiusSdk.playlists.getTrendingPlaylists({ time });
+        const { time, limit, offset } = GetTrendingPlaylistsSchema.parse(args);
+        const response = await trendingManager.getTrendingPlaylists({ time, limit, offset });
         return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
       }
 
@@ -880,6 +897,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request): Promise<ServerR
       case "get-track-comments-extended": {
         const { trackId } = GetTrackCommentsExtendedSchema.parse(args);
         const response = await trackExtendedManager.getTrackComments(trackId);
+        return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
+      }
+
+      case "get-genre-popularity": {
+        const { timeRange, totalPoints, includeDetails } = GetGenrePopularitySchema.parse(args);
+        const response = await analyticsManager.getGenrePopularity({ timeRange, totalPoints, includeDetails });
         return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
       }
 

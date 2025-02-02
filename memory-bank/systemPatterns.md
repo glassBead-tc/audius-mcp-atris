@@ -26,6 +26,7 @@ The system follows a modular architecture with clear separation of concerns:
 - `src/auth.ts` - Authentication handling
 - `src/utils.ts` - Shared utilities
 - `src/error-handling.ts` - Error management
+- `src/trending.ts` - Trending content management with pagination
 
 ### 2. Authentication Pattern
 - Server-Side Authentication:
@@ -56,6 +57,18 @@ Resources should:
 - Include proper MIME types
 - Provide meaningful metadata
 - Follow consistent naming conventions
+
+### 5. Pagination Pattern
+When SDK endpoints don't support direct pagination:
+1. Create a dedicated manager class (e.g., TrendingManager)
+2. Fetch full dataset from SDK
+3. Implement client-side pagination:
+   - Accept limit and offset parameters
+   - Default to reasonable chunk size (e.g., 10)
+   - Slice results based on pagination parameters
+   - Return metadata (total, count, offset, limit)
+4. Handle errors appropriately
+5. Document pagination implementation in manager class
 
 ## Code Style Guidelines
 1. Use TypeScript for type safety
