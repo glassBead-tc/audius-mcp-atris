@@ -2,8 +2,32 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.3] - 2025-02-04
+
+### Added
+- Added MCP prompts capability with performance warning:
+  - Implemented performance warning prompt to inform clients about potential delays when requesting more than 10 tracks or playlists
+  - Added prompts infrastructure for future expansion
+
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [1.3.1] - 2025-02-03
+
+### Enhanced
+- Fixed tool exposure in MCP server:
+  - Added proper schema validation for all tools
+  - Exposed full set of implemented user and track tools
+  - Removed unimplemented purchase tools
+  - Updated tool descriptions and documentation
+
+## [1.3.0] - 2025-02-03
+
+### Added
+- Initial release with full tool set
+- User management tools
+- Track management tools
+- Streaming capabilities
 
 ## [1.1.5] - 2025-02-02
 

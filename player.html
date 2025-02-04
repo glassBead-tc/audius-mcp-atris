@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Audius Player</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background: #000;
+            color: #fff;
+            font-family: Arial, sans-serif;
+        }
+        #player {
+            text-align: center;
+        }
+        audio {
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="player">
+        <h2 id="title">Loading...</h2>
+        <audio id="audio" controls autoplay>
+            Your browser does not support the audio element.
+        </audio>
+    </div>
+    <script>
+        const audio = document.getElementById('audio');
+        const title = document.getElementById('title');
+        
+        // Function to update the audio source
+        async function loadAudio() {
+            try {
+                // Use the Audius stream URL directly
+                audio.src = 'https://audius.co/Zedd/squid-game-do-it-to-it-zedd-edit';
+                
+                // Update title
+                title.textContent = 'Squid Game & Do It To It (Zedd Edit)';
+            } catch (error) {
+                console.error('Error:', error);
+                title.textContent = 'Error loading audio';
+            }
+        }
+
+        // Load the audio when the page loads
+        loadAudio();
+    </script>
+</body>
+</html>
