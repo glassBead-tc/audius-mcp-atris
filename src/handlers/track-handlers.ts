@@ -4,6 +4,9 @@ import { ManagerFactory } from "../managers/manager-factory.js";
 import { sdk } from '@audius/sdk';
 import { BaseManager } from "../managers/base-manager.js";
 import { AudiusTrack, AudiusTrackResponse } from "../types/api-responses.js";
+import { isTestTrackId, getTestTrack, getAllTestTracks, TestTrack } from "../config/test-tracks.js";
+import * as path from 'path';
+import * as fs from 'fs';
 import {
   GetTrackSchema,
   GetTrackStreamSchema,
@@ -25,9 +28,37 @@ export class TrackHandlers extends BaseManager {
     this.managerFactory = managerFactory;
   }
 
+  private isTestMode = true; // TODO: Make this configurable
+
+  private convertTestTrackToAudiusFormat(track: TestTrack): AudiusTrack {
+    return {
+      id: track.id,
+      title: track.title,
+      user: {
+        id: "test-artist",
+        name: track.artist,
+        handle: track.artist.toLowerCase().replace(/\s+/g, '-'),
+      },
+      play_count: 0,
+      repost_count: 0,
+      save_count: 0
+    };
+  }
+
   async getTrack(args: unknown): Promise<ServerResult> {
     const { trackId } = GetTrackSchema.parse(args);
     
+    if (this.isTestMode && isTestTrackId(trackId)) {
+      const testTrack = getTestTrack(trackId);
+      if (!testTrack) {
+        throw new McpError(ErrorCode.InvalidRequest, `Test track not found: ${trackId}`);
+      }
+      const response = {
+        data: this.convertTestTrackToAudiusFormat(testTrack)
+      };
+      return { content: [{ type: "text", text: JSON.stringify(response, null, 2) }] };
+    }
+
     const response = await this.executeWithTimeout(
       `track:${trackId}`,
       () => this.audiusSdk.tracks.getTrack({ trackId }),
@@ -47,8 +78,22 @@ export class TrackHandlers extends BaseManager {
 
   async getTrackStream(args: unknown): Promise<ServerResult> {
     const { trackId } = GetTrackStreamSchema.parse(args);
-    const streamingManager = this.managerFactory.getStreamingManager();
     
+    if (this.isTestMode && isTestTrackId(trackId)) {
+      const testTrack = getTestTrack(trackId);
+      if (!testTrack) {
+        throw new McpError(ErrorCode.InvalidRequest, `Test track not found: ${trackId}`);
+      }
+      return { 
+        content: [{ 
+          type: "text", 
+          text: `Opening "${testTrack.title}" by ${testTrack.artist}" in your browser's audio player...`
+        }],
+        command: `open ${testTrack.url}`
+      };
+    }
+
+    const streamingManager = this.managerFactory.getStreamingManager();
     const trackDetails = await this.executeWithTimeout(
       `track:${trackId}`,
       () => this.audiusSdk.tracks.getTrack({ trackId }),
@@ -67,6 +112,38 @@ export class TrackHandlers extends BaseManager {
       }],
       command: `open http://localhost:${streamingManager.getPort()}/play/${trackId}`
     };
+  }
+
+  async getTestTracks(): Promise<ServerResult> {
+    if (!this.isTestMode) {
+      throw new McpError(ErrorCode.InvalidRequest, "Test mode is not enabled");
+    }
+
+    const tracks = getAllTestTracks().map(track => this.convertTestTrackToAudiusFormat(track));
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify({ data: tracks }, null, 2)
+      }]
+    };
+  }
+
+  serveTestAudio(trackId: string): string {
+    if (!this.isTestMode || !isTestTrackId(trackId)) {
+      throw new McpError(ErrorCode.InvalidRequest, "Invalid test track request");
+    }
+
+    const testTrack = getTestTrack(trackId);
+    if (!testTrack) {
+      throw new McpError(ErrorCode.InvalidRequest, `Test track not found: ${trackId}`);
+    }
+
+    const audioPath = path.join(process.cwd(), 'test-audio', path.basename(testTrack.url));
+    if (!fs.existsSync(audioPath)) {
+      throw new McpError(ErrorCode.InternalError, `Test audio file not found: ${audioPath}`);
+    }
+
+    return audioPath;
   }
 
   async getTrackComments(args: unknown): Promise<ServerResult> {

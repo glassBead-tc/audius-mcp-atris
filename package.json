@@ -1,6 +1,6 @@
 {
   "name": "@glassbead/mcp-audius",
-  "version": "1.3.3",
+  "version": "1.3.5",
   "description": "MCP server for Audius API integration and playback - access and play Audius content through the Model Context Protocol",
   "type": "module",
   "main": "build/index.js",
@@ -32,7 +32,7 @@
   },
   "homepage": "https://github.com/glassBead-tc/audius-mcp#readme",
   "scripts": {
-    "build": "tsc && chmod +x build/index.js",
+    "build": "tsc && chmod +x build/index.js && cp -r test-audio build/ && cp player.html build/",
     "start": "node build/index.js"
   },
   "dependencies": {

@@ -1,0 +1,39 @@
+# Cline Rules
+
+## Operational Mode Patterns
+1. All features must support both test and live modes
+2. Test mode must:
+   - Bypass SDK initialization completely
+   - Use local test tracks only
+   - Maintain full error handling
+   - Provide equivalent user experience
+3. Live mode must:
+   - Handle SDK initialization gracefully
+   - Provide proper error messages for SDK issues
+   - Include fallback mechanisms
+
+## Audio Player Implementation
+1. Player must work consistently in both modes
+2. Test tracks must:
+   - Be royalty-free and properly attributed
+   - Include basic metadata
+   - Support all core playback features
+3. Error handling must:
+   - Provide user-friendly messages
+   - Include fallback mechanisms
+   - Log detailed errors for debugging
+
+## Development Standards
+1. All new features must:
+   - Support both operational modes
+   - Include comprehensive error handling
+   - Maintain type safety
+   - Update memory bank documentation
+2. SDK integration must:
+   - Handle initialization failures gracefully
+   - Include proper error messages
+   - Document requirements clearly
+3. Documentation must:
+   - Stay synchronized with implementation
+   - Include clear next steps
+   - Maintain accurate status

@@ -6,14 +6,18 @@ async function main() {
   try {
     // Initialize server with configuration
     const serverInstance = await initializeServer();
+    const sdk = serverInstance.getAudiusSdk();
+    const managerFactory = serverInstance.getManagerFactory();
     
-    // Create and register routes
-    const routeRegistry = new RouteRegistry(
-      serverInstance.getServer(),
-      serverInstance.getAudiusSdk(),
-      serverInstance.getManagerFactory()
-    );
-    routeRegistry.registerRoutes();
+    // Only register routes if we have a valid SDK instance
+    if (sdk && managerFactory) {
+      const routeRegistry = new RouteRegistry(
+        serverInstance.getServer(),
+        sdk,
+        managerFactory
+      );
+      routeRegistry.registerRoutes();
+    }
 
     console.error('Audius MCP server running on stdio');
   } catch (error) {

@@ -8,6 +8,7 @@ import { TrackExtendedManager } from "../track-extended.js";
 import { TrendingManager } from "../trending.js";
 import { AnalyticsManager } from "../analytics.js";
 import { StreamingManager } from "../streaming.js";
+import { TrackHandlers } from "../handlers/track-handlers.js";
 
 /**
  * Factory for lazy loading and caching manager instances
@@ -92,6 +93,13 @@ export class ManagerFactory {
       const walletManager = this.getWalletManager();
       return new StreamingManager(this.audiusSdk, walletManager);
     });
+  }
+
+  /**
+   * Get or create TrackHandlers instance
+   */
+  public getTrackHandlers(): TrackHandlers {
+    return this.getOrCreateManager('trackHandlers', () => new TrackHandlers(this.audiusSdk, this));
   }
 
   /**
