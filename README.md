@@ -1,13 +1,5 @@
 # @glassbead/mcp-audius
 
-An MCP (Model Context Protocol) server that provides streamlined access to the Audius music platform. This package enables AI assistants and applications to interact with Audius through a clean, efficient interface focused on core music functionality.
-
-## Installation
-
-```bash
-npm install @glassbead/mcp-audius
-```
-
 ## Configuration
 
 Configure the MCP server in your client's settings:
