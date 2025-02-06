@@ -1,16 +1,12 @@
 # @glassbead/mcp-audius
 
-<img src="https://badge.mcpx.dev" title="MCP"/>
-
-An MCP (Model Context Protocol) server for comprehensive interaction with the Audius API. This package provides a rich set of tools to query and interact with the Audius music platform through the Model Context Protocol.
-
 ## Configuration
 
-This MCP server is designed to be used with MCP-compatible clients like Claude Desktop. Configure it in your client's settings file:
+Configure the MCP server in your client's settings:
 
 ### Claude Desktop
 
-Add to your Claude Desktop configuration (`claude_desktop_config.json`):
+Add to `claude_desktop_config.json`:
 
 ```json
 {
@@ -19,8 +15,25 @@ Add to your Claude Desktop configuration (`claude_desktop_config.json`):
       "command": "npx",
       "args": ["@glassbead/mcp-audius"],
       "env": {
-        "AUDIUS_API_KEY": "your-api-key",
-        "AUDIUS_AUTH_SECRET": "your-auth-secret"
+        "AUDIUS_API_KEY": "your-api-key"
+      }
+    }
+  }
+}
+```
+
+### VSCode
+
+Add to your MCP settings file:
+
+```json
+{
+  "mcpServers": {
+    "mcp-audius": {
+      "command": "npx",
+      "args": ["@glassbead/mcp-audius"],
+      "env": {
+        "AUDIUS_API_KEY": "your-api-key"
       }
     }
   }
@@ -29,77 +42,68 @@ Add to your Claude Desktop configuration (`claude_desktop_config.json`):
 
 ### Environment Variables
 
-Copy `.env.example` to `.env.local` and fill in your credentials:
+Copy `.env.example` to `.env.local` and configure:
 
 ```bash
 cp .env.example .env.local
 ```
 
-Required variables:
-- `AUDIUS_API_KEY`: Your Audius API key
-
-Optional variables:
-- `AUDIUS_AUTH_SECRET`: Your Audius authentication secret - some features may be limited without this
+Required:
+- `AUDIUS_API_KEY`: Your Audius API key (obtain from Audius)
 
 ## Features
 
-### User Operations
-- Get user details by ID or handle
-- Search for users
-- Follow/unfollow users
-- Get user followers and following
-- Get trending users
-- Get related artists
-- Get user tracks with sorting and filtering
-- Get user favorites and reposts
-- Get user's extended profile data
-
 ### Track Operations
-- Get track details
-- Get track streaming URLs
-- Search tracks
-- Get trending tracks
-- Favorite/unfavorite tracks
-- Get track comments
-- Get track extended data
-- Get track top listeners
-- Get track price information
-- Purchase tracks using USDC
-- Verify track purchases
+- Search tracks with filtering and sorting
+- Get track details and metadata
+- Stream tracks with efficient caching
+- Manage track favorites
+- Access track comments
+- Get trending tracks with pagination
 
-### Playlist Operations
-- Get playlist details
-- Get playlist tracks
+### User Operations
+- Get user profiles and details
+- Search for users
+- Follow/unfollow functionality
+- View user's tracks, favorites, and reposts
+- Get user followers and following
+- Access trending users
+
+### Playlist & Album Management
+- Access playlist details and tracks
+- View album information
 - Get trending playlists
-- Search playlists
-- Favorite/unfavorite playlists
+- Manage playlist favorites
 
-### Album Operations
-- Get album details
-- Get album tracks
-- Favorite/unfavorite albums
+### Performance Features
+- Efficient LRU caching system for stream URLs
+- Automatic cache cleanup and monitoring
+- Connection tracking and rate limiting
+- Graceful shutdown support
 
-### Wallet & Financial Operations
-- Connect wallets (ETH/Solana)
-- Get wallet information
-- Get user token balances
-- Initialize user banks
-- Send tips using wAUDIO
-- Get tip history
-- Add and get tip reactions
+## Performance Considerations
 
-### Challenge Operations
-- Get undisbursed challenges
-- Get user challenges
+### Batch Request Limits
+⚠️ **Important:** Requesting more than 10 tracks or playlists at once may result in extended wait times. For optimal performance:
+- Limit batch requests to 10 or fewer items
+- Utilize pagination for larger datasets
+- Consider using the caching system for frequently accessed content
 
-### Additional Features
-- URL resolution
-- Comment management
-- Extended data access
+### Caching Behavior
+The server implements an LRU (Least Recently Used) cache for stream URLs with:
+- Automatic TTL-based expiration
+- Memory usage optimization
+- Built-in monitoring and statistics
+
+### Streaming Server
+- Default port: 3333 (configurable)
+- Rate limiting: 60 requests/minute
+- Range request support for seeking
+- Proper CORS configuration
 
 ## Development
 
-To build from source:
+### Building from Source
 
 ```bash
 git clone https://github.com/glassBead-tc/audius-mcp.git
@@ -107,6 +111,27 @@ cd audius-mcp
 npm install
 npm run build
 ```
+
+### Running Tests
+
+```bash
+npm test
+```
+
+## Documentation
+
+- [CHANGELOG.md](CHANGELOG.md) - Detailed version history and changes
+- [CONTRIBUTING.md](CONTRIBUTING.md) - Guidelines for contributing
+
+## Version Information
+
+Current version: 1.3.3
+
+Notable changes in recent versions:
+- Added performance warning prompts
+- Improved streaming reliability
+- Enhanced caching system
+- Removed blockchain/financial features to focus on core music experience
 
 ## License
 

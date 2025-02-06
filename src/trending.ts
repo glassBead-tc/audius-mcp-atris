@@ -1,5 +1,6 @@
 import { sdk } from '@audius/sdk';
 import { z } from 'zod';
+import { TrendingAnalyticsManager } from './trending-analytics.js';
 
 /**
  * Manages trending content with pagination support
@@ -7,9 +8,33 @@ import { z } from 'zod';
 export class TrendingManager {
   private audiusSdk: ReturnType<typeof sdk>;
   private readonly DEFAULT_CHUNK_SIZE = 10;
+  private analyticsManager?: TrendingAnalyticsManager;
 
-  constructor(audiusSdk: ReturnType<typeof sdk>) {
+  constructor(audiusSdk: ReturnType<typeof sdk>, enableAnalytics: boolean = false) {
     this.audiusSdk = audiusSdk;
+    if (enableAnalytics) {
+      this.analyticsManager = new TrendingAnalyticsManager(audiusSdk);
+    }
+  }
+
+  /**
+   * Get the analytics manager instance if analytics are enabled
+   */
+  getAnalyticsManager(): TrendingAnalyticsManager | undefined {
+    return this.analyticsManager;
+  }
+
+  /**
+   * Analyze trending tracks with advanced metrics
+   */
+  async analyzeTrendingTracks(options: { 
+    limit?: number;
+    includeStats?: boolean;
+  } = {}) {
+    if (!this.analyticsManager) {
+      throw new Error('Analytics manager not enabled. Initialize TrendingManager with enableAnalytics=true');
+    }
+    return this.analyticsManager.analyzeTrendingTracks(options);
   }
 
   /**
@@ -27,14 +52,14 @@ export class TrendingManager {
     offset?: number;
   }) {
     try {
-      // First get all trending tracks
+      // Get trending tracks
       const allTracks = await this.audiusSdk.tracks.getTrendingTracks({ genre });
       
       if (!allTracks.data) {
         return { data: [] };
       }
 
-      // Then handle pagination manually
+      // Slice tracks to match limit and offset
       const paginatedTracks = allTracks.data.slice(offset, offset + limit);
 
       return {
