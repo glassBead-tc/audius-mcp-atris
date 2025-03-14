@@ -1,17 +1,15 @@
-# Dependencies
+# Dependency directories
 node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+
+# Compiled output
+/build
+/dist
 
 # Environment variables
 .env
-.env.local
-.env.*.local
-
-# Build output
-build/
-dist/
 
 # IDE and editor files
 .idea/
@@ -19,11 +17,3 @@ dist/
 *.swp
 *.swo
 .DS_Store
-
-# Project specific
-memory-bank/
-SECURITY-INCIDENT-*.md
-
-# Temporary files
-*.log
-*.tmp
