@@ -430,4 +430,691 @@ export class AudiusClient {
       throw error;
     }
   }
+  
+  /**
+   * Helper method to get a user's favorites
+   */
+  public async getUserFavorites(userId: string, limit = 10) {
+    try {
+      const result = await this.audiusSDK.users.getFavorites({
+        id: userId,
+        limit
+      });
+      return result.data || [];
+    } catch (error) {
+      console.error(`Error getting favorites for user ${userId}:`, error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Helper method to get a user's reposts
+   */
+  public async getUserReposts(userId: string, limit = 10) {
+    try {
+      const result = await this.audiusSDK.users.getReposts({
+        id: userId,
+        limit
+      });
+      return result.data || [];
+    } catch (error) {
+      console.error(`Error getting reposts for user ${userId}:`, error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Helper method to get a user's followers
+   */
+  public async getUserFollowers(userId: string, limit = 10) {
+    try {
+      const result = await this.audiusSDK.users.getFollowers({
+        id: userId,
+        limit
+      });
+      return result.data || [];
+    } catch (error) {
+      console.error(`Error getting followers for user ${userId}:`, error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Helper method to get a user's following
+   */
+  public async getUserFollowing(userId: string, limit = 10) {
+    try {
+      const result = await this.audiusSDK.users.getFollowing({
+        id: userId,
+        limit
+      });
+      return result.data || [];
+    } catch (error) {
+      console.error(`Error getting following for user ${userId}:`, error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Helper method to check if a user is following another user
+   */
+  public async isUserFollowing(userId: string, followeeUserId: string) {
+    try {
+      const result = await this.audiusSDK.users.isFollowing({
+        id: userId,
+        followeeId: followeeUserId
+      });
+      return result.data;
+    } catch (error) {
+      console.error(`Error checking if user ${userId} is following ${followeeUserId}:`, error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Helper method to get a track's favorites
+   */
+  public async getTrackFavorites(trackId: string, limit = 10) {
+    try {
+      const result = await this.audiusSDK.tracks.getFavorites({
+        id: trackId,
+        limit
+      });
+      return result.data || [];
+    } catch (error) {
+      console.error(`Error getting favorites for track ${trackId}:`, error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Helper method to get a track's reposts
+   */
+  public async getTrackReposts(trackId: string, limit = 10) {
+    try {
+      const result = await this.audiusSDK.tracks.getReposts({
+        id: trackId,
+        limit
+      });
+      return result.data || [];
+    } catch (error) {
+      console.error(`Error getting reposts for track ${trackId}:`, error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Helper method to add a comment to a track
+   */
+  public async addTrackComment(trackId: string, userId: string, comment: string) {
+    try {
+      if (!this.audiusSDK.tracks) {
+        throw new Error('Tracks API not initialized');
+      }
+      
+      const result = await this.audiusSDK.tracks.addTrackComment({
+        trackId,
+        userId,
+        comment
+      });
+      
+      return result.data;
+    } catch (error) {
+      console.error(`Error adding comment to track ${trackId}:`, error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Helper method to delete a comment from a track
+   */
+  public async deleteTrackComment(commentId: string, userId: string) {
+    try {
+      if (!this.audiusSDK.tracks) {
+        throw new Error('Tracks API not initialized');
+      }
+      
+      const result = await this.audiusSDK.tracks.deleteTrackComment({
+        commentId,
+        userId
+      });
+      
+      return result.data;
+    } catch (error) {
+      console.error(`Error deleting comment ${commentId}:`, error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Helper method to upload a track
+   */
+  public async uploadTrack(params: {
+    userId: string;
+    title: string;
+    description?: string;
+    genre?: string;
+    mood?: string;
+    tags?: string[];
+    audioFile: File;
+    artworkFile?: File;
+    isDownloadable?: boolean;
+    isPrivate?: boolean;
+  }) {
+    try {
+      if (!this.audiusSDK.tracks) {
+        throw new Error('Tracks API not initialized');
+      }
+      
+      // Build upload metadata
+      const uploadParams: any = {
+        userId: params.userId,
+        title: params.title,
+        description: params.description || '',
+        genre: params.genre,
+        mood: params.mood,
+        tags: params.tags || [],
+        downloadable: params.isDownloadable || false,
+        is_private: params.isPrivate || false,
+        track: params.audioFile
+      };
+      
+      if (params.artworkFile) {
+        uploadParams.artwork = params.artworkFile;
+      }
+      
+      // Use the TrackUploadHelper from the SDK
+      const result = await this.audiusSDK.tracks.uploadTrack(uploadParams);
+      
+      return result.data;
+    } catch (error) {
+      console.error('Error uploading track:', error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Helper method to update a track
+   */
+  public async updateTrack(params: {
+    trackId: string;
+    userId: string;
+    title?: string;
+    description?: string;
+    genre?: string;
+    mood?: string;
+    tags?: string[];
+    artworkFile?: File;
+    isDownloadable?: boolean;
+    isPrivate?: boolean;
+  }) {
+    try {
+      if (!this.audiusSDK.tracks) {
+        throw new Error('Tracks API not initialized');
+      }
+      
+      // Build update parameters
+      const updateParams: any = {
+        trackId: params.trackId,
+        userId: params.userId
+      };
+      
+      // Add optional parameters if provided
+      if (params.title) updateParams.title = params.title;
+      if (params.description) updateParams.description = params.description;
+      if (params.genre) updateParams.genre = params.genre;
+      if (params.mood) updateParams.mood = params.mood;
+      if (params.tags) updateParams.tags = params.tags;
+      if (params.isDownloadable !== undefined) updateParams.downloadable = params.isDownloadable;
+      if (params.isPrivate !== undefined) updateParams.is_private = params.isPrivate;
+      
+      if (params.artworkFile) {
+        updateParams.artwork = params.artworkFile;
+      }
+      
+      const result = await this.audiusSDK.tracks.updateTrack(updateParams);
+      
+      return result.data;
+    } catch (error) {
+      console.error(`Error updating track ${params.trackId}:`, error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Helper method to delete a track
+   */
+  public async deleteTrack(trackId: string, userId: string) {
+    try {
+      if (!this.audiusSDK.tracks) {
+        throw new Error('Tracks API not initialized');
+      }
+      
+      const result = await this.audiusSDK.tracks.deleteTrack({
+        trackId,
+        userId
+      });
+      
+      return result.data;
+    } catch (error) {
+      console.error(`Error deleting track ${trackId}:`, error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Helper method to create a playlist
+   */
+  public async createPlaylist(params: {
+    userId: string;
+    playlistName: string;
+    isPrivate?: boolean;
+    isAlbum?: boolean;
+    description?: string;
+    artworkFile?: File;
+    trackIds?: string[];
+  }) {
+    try {
+      if (!this.audiusSDK.playlists) {
+        throw new Error('Playlists API not initialized');
+      }
+      
+      // Build parameters for creating a playlist
+      const createParams: any = {
+        userId: params.userId,
+        playlistName: params.playlistName,
+        isPrivate: params.isPrivate || false,
+        isAlbum: params.isAlbum || false,
+        description: params.description || ''
+      };
+      
+      if (params.artworkFile) {
+        createParams.artwork = params.artworkFile;
+      }
+      
+      if (params.trackIds && params.trackIds.length > 0) {
+        createParams.trackIds = params.trackIds;
+      }
+      
+      const result = await this.audiusSDK.playlists.createPlaylist(createParams);
+      
+      return result.data;
+    } catch (error) {
+      console.error(`Error creating playlist for user ${params.userId}:`, error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Helper method to update a playlist
+   */
+  public async updatePlaylist(params: {
+    userId: string;
+    playlistId: string;
+    playlistName?: string;
+    isPrivate?: boolean;
+    description?: string;
+    artworkFile?: File;
+  }) {
+    try {
+      if (!this.audiusSDK.playlists) {
+        throw new Error('Playlists API not initialized');
+      }
+      
+      // Build parameters for updating a playlist
+      const updateParams: any = {
+        userId: params.userId,
+        playlistId: params.playlistId
+      };
+      
+      if (params.playlistName) updateParams.playlistName = params.playlistName;
+      if (params.description) updateParams.description = params.description;
+      if (params.isPrivate !== undefined) updateParams.isPrivate = params.isPrivate;
+      if (params.artworkFile) updateParams.artwork = params.artworkFile;
+      
+      const result = await this.audiusSDK.playlists.updatePlaylist(updateParams);
+      
+      return result.data;
+    } catch (error) {
+      console.error(`Error updating playlist ${params.playlistId}:`, error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Helper method to delete a playlist
+   */
+  public async deletePlaylist(playlistId: string, userId: string) {
+    try {
+      if (!this.audiusSDK.playlists) {
+        throw new Error('Playlists API not initialized');
+      }
+      
+      const result = await this.audiusSDK.playlists.deletePlaylist({
+        playlistId,
+        userId
+      });
+      
+      return result.data;
+    } catch (error) {
+      console.error(`Error deleting playlist ${playlistId}:`, error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Helper method to add tracks to a playlist
+   */
+  public async addTracksToPlaylist(playlistId: string, userId: string, trackIds: string[]) {
+    try {
+      if (!this.audiusSDK.playlists) {
+        throw new Error('Playlists API not initialized');
+      }
+      
+      const result = await this.audiusSDK.playlists.addPlaylistTrack({
+        playlistId,
+        userId,
+        trackIds
+      });
+      
+      return result.data;
+    } catch (error) {
+      console.error(`Error adding tracks to playlist ${playlistId}:`, error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Helper method to remove a track from a playlist
+   */
+  public async removeTrackFromPlaylist(playlistId: string, userId: string, trackId: string) {
+    try {
+      if (!this.audiusSDK.playlists) {
+        throw new Error('Playlists API not initialized');
+      }
+      
+      const result = await this.audiusSDK.playlists.deletePlaylistTrack({
+        playlistId,
+        userId,
+        trackId
+      });
+      
+      return result.data;
+    } catch (error) {
+      console.error(`Error removing track ${trackId} from playlist ${playlistId}:`, error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Helper method to reorder tracks in a playlist
+   */
+  public async reorderPlaylistTracks(playlistId: string, userId: string, trackIds: string[]) {
+    try {
+      if (!this.audiusSDK.playlists) {
+        throw new Error('Playlists API not initialized');
+      }
+      
+      const result = await this.audiusSDK.playlists.orderPlaylistTracks({
+        playlistId,
+        userId,
+        trackIds
+      });
+      
+      return result.data;
+    } catch (error) {
+      console.error(`Error reordering tracks in playlist ${playlistId}:`, error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Helper method to send a direct message
+   */
+  public async sendMessage(fromUserId: string, toUserId: string, message: string) {
+    try {
+      if (!this.audiusSDK.chats) {
+        throw new Error('Chats API not initialized');
+      }
+      
+      const result = await this.audiusSDK.chats.sendMessage({
+        fromUserId,
+        toUserId,
+        message
+      });
+      
+      return result.data;
+    } catch (error) {
+      console.error(`Error sending message from ${fromUserId} to ${toUserId}:`, error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Helper method to get messages between two users
+   */
+  public async getMessages(userId: string, withUserId: string, limit = 50) {
+    try {
+      if (!this.audiusSDK.chats) {
+        throw new Error('Chats API not initialized');
+      }
+      
+      const result = await this.audiusSDK.chats.getMessages({
+        userId,
+        withUserId,
+        limit
+      });
+      
+      return result.data || [];
+    } catch (error) {
+      console.error(`Error getting messages between ${userId} and ${withUserId}:`, error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Helper method to get a user's message threads
+   */
+  public async getMessageThreads(userId: string, limit = 20) {
+    try {
+      if (!this.audiusSDK.chats) {
+        throw new Error('Chats API not initialized');
+      }
+      
+      const result = await this.audiusSDK.chats.getMessageThreads({
+        userId,
+        limit
+      });
+      
+      return result.data || [];
+    } catch (error) {
+      console.error(`Error getting message threads for ${userId}:`, error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Helper method to mark a message as read
+   */
+  public async markMessageAsRead(userId: string, messageId: string) {
+    try {
+      if (!this.audiusSDK.chats) {
+        throw new Error('Chats API not initialized');
+      }
+      
+      const result = await this.audiusSDK.chats.markAsRead({
+        userId,
+        messageId
+      });
+      
+      return result.data;
+    } catch (error) {
+      console.error(`Error marking message ${messageId} as read:`, error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Helper method to get track listen counts
+   */
+  public async getTrackListenCounts(trackId: string) {
+    try {
+      if (!this.audiusSDK.tracks) {
+        throw new Error('Tracks API not initialized');
+      }
+      
+      const result = await this.audiusSDK.tracks.getTrackListenCount({
+        trackId
+      });
+      
+      return result.data;
+    } catch (error) {
+      console.error(`Error getting listen counts for track ${trackId}:`, error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Helper method to get user's track listen counts
+   */
+  public async getUserTrackListenCounts(userId: string) {
+    try {
+      if (!this.audiusSDK.users) {
+        throw new Error('Users API not initialized');
+      }
+      
+      const result = await this.audiusSDK.users.getUserTrackListenCounts({
+        userId
+      });
+      
+      return result.data;
+    } catch (error) {
+      console.error(`Error getting track listen counts for user ${userId}:`, error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Helper method to get top listeners for a track
+   */
+  public async getTrackTopListeners(trackId: string, limit = 10) {
+    try {
+      if (!this.audiusSDK.tracks) {
+        throw new Error('Tracks API not initialized');
+      }
+      
+      const result = await this.audiusSDK.tracks.getTopListeners({
+        trackId,
+        limit
+      });
+      
+      return result.data || [];
+    } catch (error) {
+      console.error(`Error getting top listeners for track ${trackId}:`, error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Helper method to get track listener insights (aggregate play data)
+   */
+  public async getTrackListenerInsights(trackId: string) {
+    try {
+      if (!this.audiusSDK.tracks) {
+        throw new Error('Tracks API not initialized');
+      }
+      
+      const result = await this.audiusSDK.tracks.getListenerInsights({
+        trackId
+      });
+      
+      // Aggregate result with different time periods
+      return result.data || {};
+    } catch (error) {
+      console.error(`Error getting listener insights for track ${trackId}:`, error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Helper method to get user's aggregate play metrics
+   */
+  public async getUserAggregatePlayMetrics(userId: string) {
+    try {
+      if (!this.audiusSDK.users) {
+        throw new Error('Users API not initialized');
+      }
+      
+      const result = await this.audiusSDK.users.getAggregatePlayMetrics({
+        userId
+      });
+      
+      return result.data || {};
+    } catch (error) {
+      console.error(`Error getting aggregate play metrics for user ${userId}:`, error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Helper method to get a user's supporter information
+   */
+  public async getUserSupporters(userId: string, limit = 10) {
+    try {
+      if (!this.audiusSDK.users) {
+        throw new Error('Users API not initialized');
+      }
+      
+      const result = await this.audiusSDK.users.getSupporters({
+        userId,
+        limit
+      });
+      
+      return result.data || [];
+    } catch (error) {
+      console.error(`Error getting supporters for user ${userId}:`, error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Helper method to get artists a user is supporting
+   */
+  public async getUserSupporting(userId: string, limit = 10) {
+    try {
+      if (!this.audiusSDK.users) {
+        throw new Error('Users API not initialized');
+      }
+      
+      const result = await this.audiusSDK.users.getSupporting({
+        userId,
+        limit
+      });
+      
+      return result.data || [];
+    } catch (error) {
+      console.error(`Error getting supporting info for user ${userId}:`, error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Helper method to get monthly trending data for a track
+   */
+  public async getTrackMonthlyTrending(trackId: string) {
+    try {
+      if (!this.audiusSDK.tracks) {
+        throw new Error('Tracks API not initialized');
+      }
+      
+      const result = await this.audiusSDK.tracks.getMonthlyTrending({
+        trackId
+      });
+      
+      return result.data || {};
+    } catch (error) {
+      console.error(`Error getting monthly trending data for track ${trackId}:`, error);
+      throw error;
+    }
+  }
 }
