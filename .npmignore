@@ -1,0 +1,33 @@
+# Source files
+src/
+test/
+
+# Configuration files
+.eslintrc*
+.prettierrc*
+.github/
+.vscode/
+.gitignore
+.git/
+tsconfig.json
+
+# Development files
+examples/
+MCP/
+test-cli.sh
+start-basic.sh
+CLAUDE.md
+LLM-GUIDE.md
+LLM-QUICKSTART.md
+test-plan.md
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment files
+.env
+.env.*

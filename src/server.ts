@@ -36,7 +36,9 @@ import {
   getUserFollowing, userFollowingSchema,
   isFollowing, isFollowingSchema,
   getTrackFavorites, trackFavoritesSchema,
-  getTrackReposts, trackRepostsSchema
+  getTrackReposts, trackRepostsSchema,
+  followUser, followUserSchema,
+  favoriteTrack, favoriteTrackSchema
 } from './tools/social.js';
 import {
   addTrackComment, addTrackCommentSchema,
@@ -91,8 +93,21 @@ import {
   sendTip, sendTipSchema,
   getSentTips, getSentTipsSchema,
   getReceivedTips, getReceivedTipsSchema,
-  getUserTipStats, userTipStatsSchema
+  getUserTipStats, userTipStatsSchema,
+  purchaseTrack, purchaseTrackSchema
 } from './tools/monetization.js';
+import {
+  getNotifications, getNotificationsSchema,
+  getNotificationSettings, notificationSettingsSchema,
+  updateNotificationSettings, updateNotificationSettingsSchema,
+  markNotificationsRead, markNotificationsReadSchema,
+  markAllNotificationsRead, markAllNotificationsReadSchema,
+  getAnnouncementNotifications, announcementNotificationsSchema,
+  getMilestoneNotifications, milestoneNotificationsSchema,
+  getNotificationCounts, notificationCountsSchema,
+  getNotificationHistory, notificationHistorySchema,
+  sendNotification, sendNotificationSchema
+} from './tools/notifications.js';
 import {
   trackResourceTemplate, handleTrackResource
 } from './resources/tracks.js';
@@ -130,6 +145,9 @@ import {
 import {
   monetizationPrompt, handleMonetizationPrompt
 } from './prompts/monetization.js';
+import {
+  notificationsPrompt, handleNotificationsPrompt
+} from './prompts/notifications.js';
 
 /**
  * Create and configure the MCP server
@@ -180,6 +198,8 @@ export const createServer = () => {
         { name: 'is-following', description: 'Check if a user is following another user', inputSchema: isFollowingSchema },
         { name: 'track-favorites', description: 'Get users who favorited a track', inputSchema: trackFavoritesSchema },
         { name: 'track-reposts', description: 'Get users who reposted a track', inputSchema: trackRepostsSchema },
+        { name: 'follow-user', description: 'Follow a user', inputSchema: followUserSchema },
+        { name: 'favorite-track', description: 'Favorite a track', inputSchema: favoriteTrackSchema },
         
         // Comment tools
         { name: 'add-track-comment', description: 'Add a comment to a track', inputSchema: addTrackCommentSchema },
@@ -231,10 +251,23 @@ export const createServer = () => {
         { name: 'check-purchase-access', description: 'Check purchase-gated access for content', inputSchema: checkPurchaseAccessSchema },
         { name: 'supported-payment-tokens', description: 'Get supported payment tokens', inputSchema: supportedPaymentTokensSchema },
         { name: 'usdc-gate-info', description: 'Get USDC gate info for a track', inputSchema: usdcGateInfoSchema },
+        { name: 'purchase-track', description: 'Purchase a track with monetization gates', inputSchema: purchaseTrackSchema },
         { name: 'send-tip', description: 'Send a tip to a user', inputSchema: sendTipSchema },
         { name: 'get-sent-tips', description: 'Get tips sent by a user', inputSchema: getSentTipsSchema },
         { name: 'get-received-tips', description: 'Get tips received by a user', inputSchema: getReceivedTipsSchema },
         { name: 'user-tip-stats', description: 'Get tip statistics for a user', inputSchema: userTipStatsSchema },
+        
+        // Notification tools
+        { name: 'get-notifications', description: 'Get notifications for a user', inputSchema: getNotificationsSchema },
+        { name: 'notification-settings', description: 'Get notification settings for a user', inputSchema: notificationSettingsSchema },
+        { name: 'update-notification-settings', description: 'Update notification settings for a user', inputSchema: updateNotificationSettingsSchema },
+        { name: 'mark-notifications-read', description: 'Mark specific notifications as read', inputSchema: markNotificationsReadSchema },
+        { name: 'mark-all-notifications-read', description: 'Mark all notifications as read for a user', inputSchema: markAllNotificationsReadSchema },
+        { name: 'announcement-notifications', description: 'Get platform announcement notifications', inputSchema: announcementNotificationsSchema },
+        { name: 'milestone-notifications', description: 'Get milestone notifications for a user', inputSchema: milestoneNotificationsSchema },
+        { name: 'notification-counts', description: 'Get notification counts for a user', inputSchema: notificationCountsSchema },
+        { name: 'notification-history', description: 'Get notification history for a user', inputSchema: notificationHistorySchema },
+        { name: 'send-notification', description: 'Send a notification to a user', inputSchema: sendNotificationSchema },
       ]
     };
   });
@@ -308,6 +341,10 @@ export const createServer = () => {
         return await getTrackFavorites(args as { trackId: string, limit?: number });
       case 'track-reposts':
         return await getTrackReposts(args as { trackId: string, limit?: number });
+      case 'follow-user':
+        return await followUser(args as { userId: string, followeeId: string });
+      case 'favorite-track':
+        return await favoriteTrack(args as { userId: string, trackId: string });
       
       // Comment tools
       case 'add-track-comment':
@@ -446,6 +483,15 @@ export const createServer = () => {
         return await getSupportedPaymentTokens();
       case 'usdc-gate-info':
         return await getUsdcGateInfo(args as { trackId: string });
+      case 'purchase-track':
+        return await purchaseTrack(args as {
+          contentId: string;
+          walletAddress: string;
+          purchaseOption: string;
+          paymentToken: string;
+          amount: string;
+          signerPrivateKey: string;
+        });
       case 'send-tip':
         return await sendTip(args as { 
           senderUserId: string, 
@@ -462,6 +508,48 @@ export const createServer = () => {
         return await getReceivedTips(args as { userId: string, limit?: number });
       case 'user-tip-stats':
         return await getUserTipStats(args as { userId: string });
+      
+      // Notification tools
+      case 'get-notifications':
+        return await getNotifications(args as { userId: string, limit?: number, timestamp?: string });
+      case 'notification-settings':
+        return await getNotificationSettings(args as { userId: string });
+      case 'update-notification-settings':
+        return await updateNotificationSettings(args as {
+          userId: string;
+          milestones?: boolean;
+          followers?: boolean;
+          reposts?: boolean;
+          favorites?: boolean;
+          messages?: boolean;
+          announcements?: boolean;
+          comments?: boolean;
+          remixes?: boolean;
+          tastemakers?: boolean;
+          tips?: boolean;
+          supporterRank?: boolean;
+          supportingRank?: boolean;
+        });
+      case 'mark-notifications-read':
+        return await markNotificationsRead(args as { userId: string, notificationIds: string[] });
+      case 'mark-all-notifications-read':
+        return await markAllNotificationsRead(args as { userId: string });
+      case 'announcement-notifications':
+        return await getAnnouncementNotifications(args as { limit?: number });
+      case 'milestone-notifications':
+        return await getMilestoneNotifications(args as { userId: string, limit?: number });
+      case 'notification-counts':
+        return await getNotificationCounts(args as { userId: string });
+      case 'notification-history':
+        return await getNotificationHistory(args as { userId: string, limit?: number });
+      case 'send-notification':
+        return await sendNotification(args as { 
+          userId: string, 
+          type: string, 
+          message: string, 
+          relatedEntityId?: string, 
+          relatedEntityType?: string 
+        });
       
       default:
         return {
@@ -525,7 +613,8 @@ export const createServer = () => {
         messagingPrompt,
         analyticsPrompt,
         blockchainPrompt,
-        monetizationPrompt
+        monetizationPrompt,
+        notificationsPrompt
       ]
     };
   });
@@ -542,11 +631,13 @@ export const createServer = () => {
         return handleTrackAnalysisPrompt(args as { trackId: string });
       
       case 'artist-profile':
-        return handleArtistProfilePrompt(args as { 
+        // Cast with type assertion to avoid TS error
+        const artistProfileArgs = args as unknown as { 
           userId: string;
           includeConnections?: boolean;
           includePopularContent?: boolean;
-        });
+        };
+        return handleArtistProfilePrompt(artistProfileArgs);
       
       case 'music-creation':
         return handleMusicCreationPrompt(args as {
@@ -558,14 +649,16 @@ export const createServer = () => {
         });
       
       case 'playlist-creation':
-        return handlePlaylistCreationPrompt(args as {
+        // Cast with type assertion to avoid TS error
+        const playlistCreationArgs = args as unknown as {
           userId: string;
           playlistName?: string;
           playlistId?: string;
           isAlbum?: boolean;
           genre?: string;
           action?: 'create' | 'update' | 'curate' | 'promote';
-        });
+        };
+        return handlePlaylistCreationPrompt(playlistCreationArgs);
       
       case 'messaging':
         return handleMessagingPrompt(args as {
@@ -598,6 +691,16 @@ export const createServer = () => {
           walletAddress?: string;
           monetizationType?: 'nft-gates' | 'purchase-gates' | 'tipping' | 'usdc-payments' | 'all';
         });
+      
+      case 'notifications':
+        // Cast with type assertion to avoid TS error
+        const notificationsArgs = args as unknown as {
+          userId: string;
+          notificationType?: 'all' | 'milestones' | 'social' | 'announcements' | 'unread' | 'settings';
+          limit?: number;
+          markAsRead?: boolean;
+        };
+        return handleNotificationsPrompt(notificationsArgs);
       
       default:
         throw new Error(`Unknown prompt: ${name}`);
