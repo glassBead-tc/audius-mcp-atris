@@ -81,6 +81,19 @@ import {
   sendTokens, sendTokensSchema
 } from './tools/blockchain.js';
 import {
+  getTrackAccessGates, trackAccessGatesSchema,
+  checkNftAccess, checkNftAccessSchema,
+  getNftGatedSignature, nftGatedSignatureSchema,
+  getPurchaseOptions, purchaseOptionsSchema,
+  checkPurchaseAccess, checkPurchaseAccessSchema,
+  getSupportedPaymentTokens, supportedPaymentTokensSchema,
+  getUsdcGateInfo, usdcGateInfoSchema,
+  sendTip, sendTipSchema,
+  getSentTips, getSentTipsSchema,
+  getReceivedTips, getReceivedTipsSchema,
+  getUserTipStats, userTipStatsSchema
+} from './tools/monetization.js';
+import {
   trackResourceTemplate, handleTrackResource
 } from './resources/tracks.js';
 import {
@@ -114,6 +127,9 @@ import {
 import {
   blockchainPrompt, handleBlockchainPrompt
 } from './prompts/blockchain.js';
+import {
+  monetizationPrompt, handleMonetizationPrompt
+} from './prompts/monetization.js';
 
 /**
  * Create and configure the MCP server
@@ -206,6 +222,19 @@ export const createServer = () => {
         { name: 'claim-tokens', description: 'Claim tokens for a challenge', inputSchema: claimTokensSchema },
         { name: 'token-balance', description: 'Get token balance for a wallet', inputSchema: tokenBalanceSchema },
         { name: 'send-tokens', description: 'Send tokens from one wallet to another', inputSchema: sendTokensSchema },
+        
+        // Monetization tools
+        { name: 'track-access-gates', description: 'Get access gates for a track', inputSchema: trackAccessGatesSchema },
+        { name: 'check-nft-access', description: 'Check NFT-gated access for a track', inputSchema: checkNftAccessSchema },
+        { name: 'nft-gated-signature', description: 'Get NFT-gated signature for a track', inputSchema: nftGatedSignatureSchema },
+        { name: 'purchase-options', description: 'Get purchase options for content', inputSchema: purchaseOptionsSchema },
+        { name: 'check-purchase-access', description: 'Check purchase-gated access for content', inputSchema: checkPurchaseAccessSchema },
+        { name: 'supported-payment-tokens', description: 'Get supported payment tokens', inputSchema: supportedPaymentTokensSchema },
+        { name: 'usdc-gate-info', description: 'Get USDC gate info for a track', inputSchema: usdcGateInfoSchema },
+        { name: 'send-tip', description: 'Send a tip to a user', inputSchema: sendTipSchema },
+        { name: 'get-sent-tips', description: 'Get tips sent by a user', inputSchema: getSentTipsSchema },
+        { name: 'get-received-tips', description: 'Get tips received by a user', inputSchema: getReceivedTipsSchema },
+        { name: 'user-tip-stats', description: 'Get tip statistics for a user', inputSchema: userTipStatsSchema },
       ]
     };
   });
@@ -398,6 +427,42 @@ export const createServer = () => {
           privateKey: string 
         });
       
+      // Monetization tools
+      case 'track-access-gates':
+        return await getTrackAccessGates(args as { trackId: string });
+      case 'check-nft-access':
+        return await checkNftAccess(args as { trackId: string, walletAddress: string });
+      case 'nft-gated-signature':
+        return await getNftGatedSignature(args as { trackId: string, walletAddress: string });
+      case 'purchase-options':
+        return await getPurchaseOptions(args as { contentId: string, contentType: 'track' | 'playlist' });
+      case 'check-purchase-access':
+        return await checkPurchaseAccess(args as { 
+          contentId: string, 
+          contentType: 'track' | 'playlist', 
+          walletAddress: string 
+        });
+      case 'supported-payment-tokens':
+        return await getSupportedPaymentTokens();
+      case 'usdc-gate-info':
+        return await getUsdcGateInfo(args as { trackId: string });
+      case 'send-tip':
+        return await sendTip(args as { 
+          senderUserId: string, 
+          receiverUserId: string, 
+          amount: string, 
+          tokenType: 'AUDIO' | 'USDC' | 'SOL', 
+          senderWalletAddress: string, 
+          signerPrivateKey: string, 
+          message?: string 
+        });
+      case 'get-sent-tips':
+        return await getSentTips(args as { userId: string, limit?: number });
+      case 'get-received-tips':
+        return await getReceivedTips(args as { userId: string, limit?: number });
+      case 'user-tip-stats':
+        return await getUserTipStats(args as { userId: string });
+      
       default:
         return {
           content: [{
@@ -459,7 +524,8 @@ export const createServer = () => {
         playlistCreationPrompt,
         messagingPrompt,
         analyticsPrompt,
-        blockchainPrompt
+        blockchainPrompt,
+        monetizationPrompt
       ]
     };
   });
@@ -523,6 +589,14 @@ export const createServer = () => {
           walletAddress?: string;
           blockchain?: 'ethereum' | 'solana' | 'both';
           focus?: 'wallets' | 'tokens' | 'transactions' | 'rewards' | 'general';
+        });
+      
+      case 'monetization':
+        return handleMonetizationPrompt(args as {
+          userId?: string;
+          trackId?: string;
+          walletAddress?: string;
+          monetizationType?: 'nft-gates' | 'purchase-gates' | 'tipping' | 'usdc-payments' | 'all';
         });
       
       default:

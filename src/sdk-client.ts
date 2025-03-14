@@ -1326,4 +1326,277 @@ export class AudiusClient {
       throw error;
     }
   }
+  
+  /**
+   * Helper method to check access to NFT-gated content
+   */
+  public async checkNftGatedAccess(trackId: string, walletAddress: string) {
+    try {
+      if (!this.audiusSDK.tracks) {
+        throw new Error('Tracks API not initialized');
+      }
+      
+      const result = await this.audiusSDK.tracks.checkNftAccess({
+        trackId,
+        walletAddress
+      });
+      
+      return result.data;
+    } catch (error) {
+      console.error(`Error checking NFT access for track ${trackId} with wallet ${walletAddress}:`, error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Helper method to get NFT signature for gated tracks
+   */
+  public async getNftGatedTrackSignature(trackId: string, walletAddress: string) {
+    try {
+      if (!this.audiusSDK.tracks) {
+        throw new Error('Tracks API not initialized');
+      }
+      
+      const result = await this.audiusSDK.tracks.getNftGatedTrackSignature({
+        trackId,
+        walletAddress
+      });
+      
+      return result.data;
+    } catch (error) {
+      console.error(`Error getting NFT signature for track ${trackId} with wallet ${walletAddress}:`, error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Helper method to get track access gates
+   */
+  public async getTrackAccessGates(trackId: string) {
+    try {
+      if (!this.audiusSDK.tracks) {
+        throw new Error('Tracks API not initialized');
+      }
+      
+      const result = await this.audiusSDK.tracks.getTrackAccessGates({
+        trackId
+      });
+      
+      return result.data;
+    } catch (error) {
+      console.error(`Error getting access gates for track ${trackId}:`, error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Helper method to check purchase gates for content access
+   */
+  public async checkPurchaseGatedAccess(contentId: string, contentType: 'track' | 'playlist', walletAddress: string) {
+    try {
+      if (!this.audiusSDK.purchaseGates) {
+        throw new Error('Purchase Gates API not initialized');
+      }
+      
+      const result = await this.audiusSDK.purchaseGates.checkAccess({
+        contentId,
+        contentType,
+        walletAddress
+      });
+      
+      return result.data;
+    } catch (error) {
+      console.error(`Error checking purchase gates for ${contentType} ${contentId} with wallet ${walletAddress}:`, error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Helper method to get available purchase options
+   */
+  public async getPurchaseOptions(contentId: string, contentType: 'track' | 'playlist') {
+    try {
+      if (!this.audiusSDK.purchaseGates) {
+        throw new Error('Purchase Gates API not initialized');
+      }
+      
+      const result = await this.audiusSDK.purchaseGates.getOptions({
+        contentId,
+        contentType
+      });
+      
+      return result.data;
+    } catch (error) {
+      console.error(`Error getting purchase options for ${contentType} ${contentId}:`, error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Helper method to execute purchase for content access
+   */
+  public async purchaseContent(params: {
+    contentId: string;
+    contentType: 'track' | 'playlist';
+    walletAddress: string;
+    purchaseOption: string;
+    paymentToken: string;
+    amount: string;
+    signerPrivateKey: string;
+  }) {
+    try {
+      if (!this.audiusSDK.purchaseGates) {
+        throw new Error('Purchase Gates API not initialized');
+      }
+      
+      const result = await this.audiusSDK.purchaseGates.executePurchase({
+        contentId: params.contentId,
+        contentType: params.contentType,
+        walletAddress: params.walletAddress,
+        purchaseOption: params.purchaseOption,
+        paymentToken: params.paymentToken,
+        amount: params.amount,
+        signerPrivateKey: params.signerPrivateKey
+      });
+      
+      return result.data;
+    } catch (error) {
+      console.error(`Error purchasing ${params.contentType} ${params.contentId}:`, error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Helper method to get supported payment tokens
+   */
+  public async getSupportedPaymentTokens() {
+    try {
+      if (!this.audiusSDK.purchaseGates) {
+        throw new Error('Purchase Gates API not initialized');
+      }
+      
+      const result = await this.audiusSDK.purchaseGates.getSupportedTokens();
+      
+      return result.data;
+    } catch (error) {
+      console.error('Error getting supported payment tokens:', error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Helper method to get USDC token gate info
+   */
+  public async getUsdcGateInfo(trackId: string) {
+    try {
+      if (!this.audiusSDK.tracks) {
+        throw new Error('Tracks API not initialized');
+      }
+      
+      const result = await this.audiusSDK.tracks.getUsdcGateInfo({
+        trackId
+      });
+      
+      return result.data;
+    } catch (error) {
+      console.error(`Error getting USDC gate info for track ${trackId}:`, error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Helper method to send a tip to a user
+   */
+  public async sendTip(params: {
+    senderUserId: string;
+    receiverUserId: string;
+    amount: string;
+    tokenType: 'AUDIO' | 'USDC' | 'SOL';
+    senderWalletAddress: string;
+    signerPrivateKey: string;
+    message?: string;
+  }) {
+    try {
+      if (!this.audiusSDK.tips) {
+        throw new Error('Tips API not initialized');
+      }
+      
+      const result = await this.audiusSDK.tips.sendTip({
+        senderUserId: params.senderUserId,
+        receiverUserId: params.receiverUserId,
+        amount: params.amount,
+        tokenType: params.tokenType,
+        senderWalletAddress: params.senderWalletAddress,
+        signerPrivateKey: params.signerPrivateKey,
+        message: params.message
+      });
+      
+      return result.data;
+    } catch (error) {
+      console.error(`Error sending tip from user ${params.senderUserId} to user ${params.receiverUserId}:`, error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Helper method to get a user's sent tips
+   */
+  public async getSentTips(userId: string, limit = 20) {
+    try {
+      if (!this.audiusSDK.tips) {
+        throw new Error('Tips API not initialized');
+      }
+      
+      const result = await this.audiusSDK.tips.getSentTips({
+        userId,
+        limit
+      });
+      
+      return result.data || [];
+    } catch (error) {
+      console.error(`Error getting sent tips for user ${userId}:`, error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Helper method to get a user's received tips
+   */
+  public async getReceivedTips(userId: string, limit = 20) {
+    try {
+      if (!this.audiusSDK.tips) {
+        throw new Error('Tips API not initialized');
+      }
+      
+      const result = await this.audiusSDK.tips.getReceivedTips({
+        userId,
+        limit
+      });
+      
+      return result.data || [];
+    } catch (error) {
+      console.error(`Error getting received tips for user ${userId}:`, error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Helper method to get tip stats for a user
+   */
+  public async getUserTipStats(userId: string) {
+    try {
+      if (!this.audiusSDK.tips) {
+        throw new Error('Tips API not initialized');
+      }
+      
+      const result = await this.audiusSDK.tips.getUserTipStats({
+        userId
+      });
+      
+      return result.data;
+    } catch (error) {
+      console.error(`Error getting tip stats for user ${userId}:`, error);
+      throw error;
+    }
+  }
 }
