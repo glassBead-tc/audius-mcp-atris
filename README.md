@@ -88,17 +88,23 @@ To use this server with Claude:
 
 1. Install [Claude for Desktop](https://claude.ai/download) or [Claude CLI](https://github.com/anthropics/claude-cli)
 
-For the Claude CLI using npm package:
-```
+### NPX Installation (Recommended)
+
+The easiest way to use this MCP server is with npx, which can run the package without installing it globally:
+
+#### For Claude CLI:
+```bash
 claude mcp add audius npx audius-mcp-atris
 ```
 
-Or with a local installation:
-```
-claude mcp add audius node /path/to/audius-mcp-atris/build/index.js
-```
+#### For Claude Desktop:
+Edit your `claude_mcp_config.json` file (location varies by platform):
 
-For Claude Desktop, edit the configuration file:
+- **macOS**: `~/Library/Application Support/Claude/claude_mcp_config.json`
+- **Windows**: `%APPDATA%\Claude\claude_mcp_config.json`
+- **Linux**: `~/.config/Claude/claude_mcp_config.json`
+
+Add this configuration:
 ```json
 {
   "mcpServers": {
@@ -107,6 +113,49 @@ For Claude Desktop, edit the configuration file:
       "args": [
         "audius-mcp-atris"
       ],
+      "env": {
+        "AUDIUS_API_KEY": "your_api_key_here",
+        "AUDIUS_API_SECRET": "your_api_secret_here"
+      }
+    }
+  }
+}
+```
+
+#### For Other LLM Applications:
+For applications that support Model Context Protocol, use this configuration in their respective config files:
+
+```json
+{
+  "audius": {
+    "command": "npx",
+    "args": [
+      "audius-mcp-atris"
+    ],
+    "env": {
+      "AUDIUS_API_KEY": "your_api_key_here",
+      "AUDIUS_API_SECRET": "your_api_secret_here"
+    }
+  }
+}
+```
+
+### Local Installation Method
+
+If you prefer a local installation:
+
+```bash
+# Install the package globally
+npm install -g audius-mcp-atris
+
+# Then configure Claude CLI
+claude mcp add audius audius-mcp-atris
+
+# Or for Claude Desktop, use this in your config:
+{
+  "mcpServers": {
+    "audius": {
+      "command": "audius-mcp-atris",
       "env": {
         "AUDIUS_API_KEY": "your_api_key_here",
         "AUDIUS_API_SECRET": "your_api_secret_here"
