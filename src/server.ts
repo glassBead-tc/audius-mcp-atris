@@ -72,6 +72,15 @@ import {
   getUserSupporting, userSupportingSchema
 } from './tools/analytics.js';
 import {
+  getUserWallets, userWalletsSchema,
+  getTransactionHistory, transactionHistorySchema,
+  getAvailableChallenges, availableChallengesSchema,
+  getUserClaimableTokens, userClaimableTokensSchema,
+  claimTokens, claimTokensSchema,
+  getTokenBalance, tokenBalanceSchema,
+  sendTokens, sendTokensSchema
+} from './tools/blockchain.js';
+import {
   trackResourceTemplate, handleTrackResource
 } from './resources/tracks.js';
 import {
@@ -102,6 +111,9 @@ import {
 import {
   analyticsPrompt, handleAnalyticsPrompt
 } from './prompts/analytics.js';
+import {
+  blockchainPrompt, handleBlockchainPrompt
+} from './prompts/blockchain.js';
 
 /**
  * Create and configure the MCP server
@@ -185,6 +197,15 @@ export const createServer = () => {
         { name: 'track-monthly-trending', description: 'Get monthly trending data for a track', inputSchema: trackMonthlyTrendingSchema },
         { name: 'user-supporters', description: 'Get supporters for a user', inputSchema: userSupportersSchema },
         { name: 'user-supporting', description: 'Get artists a user is supporting', inputSchema: userSupportingSchema },
+        
+        // Blockchain tools
+        { name: 'user-wallets', description: 'Get wallet information for a user', inputSchema: userWalletsSchema },
+        { name: 'transaction-history', description: 'Get transaction history for a user', inputSchema: transactionHistorySchema },
+        { name: 'available-challenges', description: 'Get available challenges and rewards', inputSchema: availableChallengesSchema },
+        { name: 'user-claimable-tokens', description: 'Get claimable tokens for a user', inputSchema: userClaimableTokensSchema },
+        { name: 'claim-tokens', description: 'Claim tokens for a challenge', inputSchema: claimTokensSchema },
+        { name: 'token-balance', description: 'Get token balance for a wallet', inputSchema: tokenBalanceSchema },
+        { name: 'send-tokens', description: 'Send tokens from one wallet to another', inputSchema: sendTokensSchema },
       ]
     };
   });
@@ -352,6 +373,31 @@ export const createServer = () => {
       case 'user-supporting':
         return await getUserSupporting(args as { userId: string, limit?: number });
       
+      // Blockchain tools
+      case 'user-wallets':
+        return await getUserWallets(args as { userId: string });
+      case 'transaction-history':
+        return await getTransactionHistory(args as { userId: string, limit?: number });
+      case 'available-challenges':
+        return await getAvailableChallenges();
+      case 'user-claimable-tokens':
+        return await getUserClaimableTokens(args as { userId: string });
+      case 'claim-tokens':
+        return await claimTokens(args as { userId: string, challengeId: string });
+      case 'token-balance':
+        return await getTokenBalance(args as { 
+          walletAddress: string, 
+          blockchain: 'ethereum' | 'solana', 
+          tokenMint?: string 
+        });
+      case 'send-tokens':
+        return await sendTokens(args as { 
+          senderWalletAddress: string, 
+          receiverWalletAddress: string, 
+          amount: string, 
+          privateKey: string 
+        });
+      
       default:
         return {
           content: [{
@@ -412,7 +458,8 @@ export const createServer = () => {
         musicCreationPrompt,
         playlistCreationPrompt,
         messagingPrompt,
-        analyticsPrompt
+        analyticsPrompt,
+        blockchainPrompt
       ]
     };
   });
@@ -468,6 +515,14 @@ export const createServer = () => {
           trackId?: string;
           insightType?: 'listeners' | 'trending' | 'supporters' | 'playMetrics' | 'comprehensive';
           timePeriod?: 'week' | 'month' | 'year' | 'allTime';
+        });
+      
+      case 'blockchain':
+        return handleBlockchainPrompt(args as {
+          userId?: string;
+          walletAddress?: string;
+          blockchain?: 'ethereum' | 'solana' | 'both';
+          focus?: 'wallets' | 'tokens' | 'transactions' | 'rewards' | 'general';
         });
       
       default:
