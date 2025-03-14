@@ -12,6 +12,63 @@ An MCP (Model Context Protocol) server that provides access to the Audius music 
 - **Resources**: Access track, user, playlist, and album data as structured resources
 - **Prompts**: Use guided experiences for music discovery, curation, and analysis
 
+## Natural Language Capabilities
+
+With Atris MCP, you can ask your LLM questions in natural language about Audius content. Examples include:
+
+### Music Discovery
+- "Find me electronic tracks with a high BPM"
+- "What are the trending tracks in the hip-hop genre this week?"
+- "Recommend artists similar to [artist name]"
+- "Help me discover underground artists in the jazz genre"
+- "Find tracks with a relaxing mood for a meditation playlist"
+
+### Artist Information
+- "Tell me about the artist [name]"
+- "Who are the most popular followers of [artist]?"
+- "What tracks has [artist] released recently?"
+- "Show me the analytics for [artist]'s most popular tracks"
+- "Which artists are similar to [artist name]?"
+
+### Playlist Management
+- "Create a playlist of upbeat electronic tracks"
+- "Add the top trending hip-hop tracks to my workout playlist"
+- "Remove track [title] from my playlist [name]"
+- "Reorder my playlist to create a better flow between songs"
+- "Help me curate a playlist for a party"
+
+### Track Analysis
+- "Analyze the listener demographics for [track]"
+- "Who are the top fans of [track]?"
+- "How is [track] performing compared to other tracks in its genre?"
+- "What's the listening trend for [track] over the past month?"
+- "Show me the engagement metrics for [track]"
+
+### Content Monetization
+- "Set up NFT gating for my new track"
+- "How much should I charge for my premium content?"
+- "Show me my tipping history and stats"
+- "Analyze my revenue streams across the platform"
+- "Help me understand the purchase options for [content]"
+
+### Social & Community Interactions
+- "Find fans who frequently engage with my music"
+- "Show me comments on my latest track"
+- "Help me compose a message to collaborate with [artist]"
+- "Who should I follow to grow my network in the [genre] scene?"
+- "Analyze my social engagement and suggest improvements"
+- "Find the most supportive fans who've tipped me"
+- "Track my notification history and prioritize important ones"
+
+### Workflow Automation & Creative Assistance
+- "Plan my next track release with a marketing timeline"
+- "Automate weekly playlist updates based on my listening habits"
+- "Schedule content announcements for optimal engagement"
+- "Generate descriptive tags for my new ambient track"
+- "Compare my genre categorization to similar artists"
+- "Suggest a pricing strategy based on my existing catalog performance"
+- "Help me craft an engaging artist bio for my profile"
+
 ## Prerequisites
 
 - Node.js 16 or higher
