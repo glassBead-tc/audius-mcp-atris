@@ -24,7 +24,10 @@ import {
   getAlbum, getAlbumSchema
 } from './tools/playlists.js';
 import {
-  searchAll, searchAllSchema
+  searchAll, searchAllSchema,
+  advancedSearch, advancedSearchSchema,
+  trendingDiscovery, trendingDiscoverySchema,
+  similarArtists, similarArtistsSchema
 } from './tools/search.js';
 import {
   trackResourceTemplate, handleTrackResource
@@ -80,6 +83,9 @@ export const createServer = () => {
         
         // Search tools
         { name: 'search-all', description: 'Search across all content types on Audius', inputSchema: searchAllSchema },
+        { name: 'advanced-search', description: 'Advanced search for tracks with filtering by genre, mood, BPM, etc.', inputSchema: advancedSearchSchema },
+        { name: 'trending-discovery', description: 'Discover trending or underground tracks with genre filtering', inputSchema: trendingDiscoverySchema },
+        { name: 'similar-artists', description: 'Find artists similar to a specified artist', inputSchema: similarArtistsSchema },
       ]
     };
   });
@@ -116,6 +122,27 @@ export const createServer = () => {
       // Search tools
       case 'search-all':
         return await searchAll(args as { query: string, limit?: number });
+      case 'advanced-search':
+        return await advancedSearch(args as { 
+          query: string;
+          limit?: number;
+          genres?: string[];
+          moods?: string[];
+          bpmMin?: number;
+          bpmMax?: number;
+          key?: string;
+          onlyDownloadable?: boolean;
+          sort?: 'relevant' | 'popular' | 'recent';
+        });
+      case 'trending-discovery':
+        return await trendingDiscovery(args as { 
+          genre?: string;
+          limit?: number;
+          timeFrame?: 'week' | 'month' | 'year' | 'allTime';
+          underground?: boolean;
+        });
+      case 'similar-artists':
+        return await similarArtists(args as { userId: string, limit?: number });
       
       default:
         return {

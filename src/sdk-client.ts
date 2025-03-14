@@ -86,13 +86,34 @@ export class AudiusClient {
   }
 
   /**
-   * Helper method to search for tracks
+   * Helper method to search for tracks with advanced filtering
    */
-  public async searchTracks(query: string, limit = 10) {
+  public async searchTracks(query: string, options: {
+    limit?: number;
+    genres?: string[];
+    moods?: string[];
+    bpmMin?: number;
+    bpmMax?: number;
+    key?: string;
+    onlyDownloadable?: boolean;
+    sort?: 'relevant' | 'popular' | 'recent';
+  } = {}) {
     try {
-      const result = await this.audiusSDK.tracks.searchTracks({
-        query
-      });
+      const limit = options.limit || 10;
+      
+      const params: any = { query };
+      
+      // Add optional filters
+      if (options.genres && options.genres.length > 0) params.genres = options.genres;
+      if (options.moods && options.moods.length > 0) params.moods = options.moods;
+      if (options.bpmMin) params.minBpm = options.bpmMin;
+      if (options.bpmMax) params.maxBpm = options.bpmMax;
+      if (options.key) params.key = options.key;
+      if (options.onlyDownloadable) params.onlyDownloadable = options.onlyDownloadable;
+      if (options.sort) params.sort = options.sort;
+      
+      const result = await this.audiusSDK.tracks.searchTracks(params);
+      
       // Apply limit client-side since the API might not support it correctly
       return result.data?.slice(0, limit) || [];
     } catch (error) {
@@ -336,6 +357,76 @@ export class AudiusClient {
       return result.data;
     } catch (error) {
       console.error(`Error getting comments for track ${trackId}:`, error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Helper method to get related artists
+   */
+  public async getRelatedArtists(userId: string, limit = 10) {
+    try {
+      if (!this.audiusSDK.users) {
+        throw new Error('Users API not initialized');
+      }
+      
+      const result = await this.audiusSDK.users.getRelatedUsers({
+        id: userId,
+        limit
+      });
+      
+      return result.data || [];
+    } catch (error) {
+      console.error(`Error getting related artists for user ${userId}:`, error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Helper method to get underground trending tracks
+   */
+  public async getUndergroundTrendingTracks(genre?: string, limit = 10) {
+    try {
+      console.error(`Requesting underground trending tracks${genre ? ` for genre: ${genre}` : ''}, limit: ${limit}`);
+      
+      if (!this.audiusSDK.tracks) {
+        throw new Error('Tracks API not initialized');
+      }
+      
+      const params: any = { limit };
+      if (genre) params.genre = genre;
+      
+      const result = await this.audiusSDK.tracks.getUndergroundTrendingTracks(params);
+      
+      if (result && result.data) {
+        console.error('Underground trending tracks API response successful');
+        return result.data.slice(0, limit);
+      }
+      
+      return [];
+    } catch (error) {
+      console.error('Error getting underground trending tracks:', error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Helper method to perform full search (tracks, users, playlists)
+   */
+  public async fullSearch(query: string, limit = 5) {
+    try {
+      if (!this.audiusSDK.general) {
+        throw new Error('General search API not initialized');
+      }
+      
+      const result = await this.audiusSDK.general.searchFull({ 
+        query,
+        limit 
+      });
+      
+      return result.data || { tracks: [], users: [], playlists: [], albums: [] };
+    } catch (error) {
+      console.error(`Error performing full search for "${query}":`, error);
       throw error;
     }
   }
