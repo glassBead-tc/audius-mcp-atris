@@ -1,12 +1,16 @@
-# Audius MCP Server
+# Atris MCP for Audius
 
 An MCP (Model Context Protocol) server that provides access to the Audius music platform via LLMs (Large Language Models).
 
 ## Features
 
-- **Tools**: Query tracks, users, playlists, albums, and perform searches on Audius
-- **Resources**: Access track, user, playlist, and album data as resources
-- **Prompts**: Use prompt templates for music discovery and track analysis
+- **Tools**: Access tracks, users, playlists, albums, and perform searches on Audius
+- **Content Creation**: Upload tracks, create playlists, manage your Audius content
+- **Social Features**: Follow users, favorite tracks, comment on content
+- **Monetization**: Access premium content, purchase tracks, send tips to artists
+- **Analytics**: Track play counts, trending data, and listener insights
+- **Resources**: Access track, user, playlist, and album data as structured resources
+- **Prompts**: Use guided experiences for music discovery, curation, and analysis
 
 ## Prerequisites
 
@@ -15,10 +19,26 @@ An MCP (Model Context Protocol) server that provides access to the Audius music 
 
 ## Installation
 
+### NPM Installation (Recommended)
+
+Install directly from npm:
+
+```
+npm install audius-mcp-atris
+```
+
+Or with yarn:
+
+```
+yarn add audius-mcp-atris
+```
+
+### Manual Installation
+
 1. Clone this repository:
 ```
-git clone https://github.com/yourusername/audius-mcp.git
-cd audius-mcp
+git clone https://github.com/glassBead/audius-mcp-atris.git
+cd audius-mcp-atris
 ```
 
 2. Install dependencies:
@@ -62,21 +82,30 @@ For development with automatic rebuilding:
 npm run dev
 ```
 
-### Connecting to Claude for Desktop
+### Connecting to Claude
 
-To use this server with Claude for Desktop:
+To use this server with Claude:
 
-1. Install [Claude for Desktop](https://claude.ai/download)
-2. Open Claude's configuration: `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows)
-3. Add the following configuration:
+1. Install [Claude for Desktop](https://claude.ai/download) or [Claude CLI](https://github.com/anthropics/claude-cli)
 
+For the Claude CLI using npm package:
+```
+claude mcp add audius npx audius-mcp-atris
+```
+
+Or with a local installation:
+```
+claude mcp add audius node /path/to/audius-mcp-atris/build/index.js
+```
+
+For Claude Desktop, edit the configuration file:
 ```json
 {
   "mcpServers": {
     "audius": {
-      "command": "node",
+      "command": "npx",
       "args": [
-        "/path/to/audius-mcp/build/index.js"
+        "audius-mcp-atris"
       ],
       "env": {
         "AUDIUS_API_KEY": "your_api_key_here",
@@ -87,29 +116,54 @@ To use this server with Claude for Desktop:
 }
 ```
 
-4. Restart Claude for Desktop
-
 ### Available Tools
 
-The server provides the following tools:
+The server provides the following functionality:
+
+#### Discovery Tools
+- **Search**: Find tracks, users, playlists with various filters
+- **Advanced Search**: Search with genre, mood, BPM, and other filters
+- **Trending Discovery**: Get trending or underground tracks
+- **Similar Artists**: Find artists similar to those you like
 
 #### Track Tools
-- `get-track`: Get detailed track information by ID
-- `search-tracks`: Search for tracks with various filters
-- `get-trending-tracks`: Get trending tracks
-- `get-track-comments`: Get comments for a track
+- **Get Track Info**: Detailed track information by ID
+- **Search Tracks**: Find tracks with various filters
+- **Trending Tracks**: Discover what's hot on Audius
+- **Track Comments**: View and add comments on tracks
+- **Track Analytics**: Listen counts, trending data, audience insights
 
 #### User Tools
-- `get-user`: Get user profile by ID
-- `search-users`: Search for users
-- `get-user-tracks`: Get tracks uploaded by a user
+- **User Profiles**: Get detailed user information
+- **User Tracks**: List tracks uploaded by a user
+- **Follow User**: Follow other users
+- **User Analytics**: Track play metrics, supporters, and more
 
-#### Playlist & Album Tools
-- `get-playlist`: Get playlist details
-- `get-album`: Get album details
+#### Content Creation
+- **Upload Track**: Add new tracks to Audius
+- **Update Track**: Modify existing track metadata
+- **Create Playlist**: Build collections of tracks
+- **Playlist Management**: Add, remove, and reorder tracks
 
-#### Search Tools
-- `search-all`: Search across tracks, users, playlists, and albums
+#### Social Interaction
+- **Follow Artists**: Connect with favorite creators
+- **Favorite Tracks**: Save and show appreciation for music
+- **Comments**: Add comments to tracks
+- **Reposts**: See who has reposted content
+- **Messaging**: Send and receive direct messages
+
+#### Monetization
+- **Premium Content**: Access and purchase gated content
+- **NFT-Gated Content**: Check and verify NFT-based access
+- **Purchase Tracks**: Buy premium content with various payment options
+- **Send Tips**: Support artists directly
+- **Track Transactions**: View tip history and stats
+
+#### Blockchain & Wallet
+- **Wallet Management**: Manage Ethereum and Solana wallets
+- **Token Balances**: Check cryptocurrency balances
+- **Transactions**: View history and execute transfers
+- **Rewards**: Access Audius platform rewards and challenges
 
 ### Resources
 
@@ -122,10 +176,18 @@ Access Audius data using these URI templates:
 
 ### Prompts
 
-Use these prompt templates for common music-related tasks:
+The server offers guided experiences for common music-related tasks:
 
-- `discover-music`: Get music recommendations based on genre, artist, and mood preferences
-- `track-analysis`: Analyze a track's characteristics and get insights
+- **Music Discovery**: Find recommendations based on preferences
+- **Track Analysis**: Analyze track characteristics and get insights
+- **Artist Profiles**: Generate comprehensive artist overviews
+- **Music Creation**: Assist with track creation and publishing
+- **Playlist Curation**: Help with creating and promoting playlists
+- **Messaging**: Guide interactions with other users
+- **Analytics**: Generate reports and insights on music performance
+- **Blockchain**: Assist with crypto and token operations
+- **Monetization**: Guide premium content setup and purchases
+- **Notifications**: Manage and organize platform notifications
 
 ## Development
 
@@ -138,17 +200,84 @@ Use these prompt templates for common music-related tasks:
 │   ├── config.ts         # Configuration handling
 │   ├── sdk-client.ts     # Audius SDK client wrapper
 │   ├── tools/            # MCP tool implementations
-│   │   ├── tracks.ts     # Track-related tools
-│   │   ├── users.ts      # User-related tools
-│   │   ├── playlists.ts  # Playlist-related tools
-│   │   └── search.ts     # Search-related tools
+│   │   ├── tracks.ts               # Track-related tools
+│   │   ├── users.ts                # User-related tools
+│   │   ├── playlists.ts            # Playlist-related tools
+│   │   ├── search.ts               # Search-related tools
+│   │   ├── social.ts               # Social interaction tools
+│   │   ├── comments.ts             # Comment management tools
+│   │   ├── track-management.ts     # Track upload and management
+│   │   ├── playlist-management.ts  # Playlist creation and management
+│   │   ├── messaging.ts            # Direct messaging tools
+│   │   ├── analytics.ts            # Analytics and metrics tools
+│   │   ├── blockchain.ts           # Cryptocurrency and blockchain tools
+│   │   ├── monetization.ts         # Premium content and payment tools
+│   │   └── notifications.ts        # Platform notification tools
 │   ├── resources/        # MCP resource implementations
 │   │   ├── tracks.ts     # Track-related resources
 │   │   ├── users.ts      # User-related resources
 │   │   └── playlists.ts  # Playlist-related resources
 │   └── prompts/          # MCP prompt implementations
-│       ├── music-search.ts  # Music search prompts
-│       └── track-info.ts    # Track info prompts
+│       ├── music-search.ts      # Music discovery prompts
+│       ├── track-info.ts        # Track analysis prompts
+│       ├── artist-profile.ts    # Artist profile prompts
+│       ├── music-creation.ts    # Music creation prompts
+│       ├── playlist-creation.ts # Playlist creation prompts
+│       ├── messaging.ts         # Messaging prompts
+│       ├── analytics.ts         # Analytics prompts
+│       ├── blockchain.ts        # Blockchain prompts
+│       ├── monetization.ts      # Monetization prompts
+│       └── notifications.ts     # Notification prompts
+```
+
+### Example Workflows
+
+#### Music Discovery
+```javascript
+// Search for electronic tracks
+search-tracks --query "electronic" --limit 5
+
+// Get trending tracks in a genre
+get-trending-tracks --genre "House" --limit 10
+
+// Find artists similar to a specific one
+similar-artists --userId "123456"
+```
+
+#### Content Creation
+```javascript
+// Upload a new track
+upload-track --userId "123" --title "Summer Vibes" --genre "Electronic" --audioFileUrl "https://example.com/track.mp3"
+
+// Create a playlist
+create-playlist --userId "123" --playlistName "Chillout Mix" --description "Perfect for relaxing"
+
+// Add tracks to a playlist
+add-tracks-to-playlist --userId "123" --playlistId "456" --trackIds ["789", "101", "102"]
+```
+
+#### Social Features
+```javascript
+// Follow a user
+follow-user --userId "123" --followeeId "456"
+
+// Favorite a track
+favorite-track --userId "123" --trackId "789"
+
+// Add a comment
+add-track-comment --trackId "789" --userId "123" --comment "Great track!"
+```
+
+#### Monetization
+```javascript
+// Check track access gates
+track-access-gates --trackId "789"
+
+// View purchase options
+purchase-options --contentId "789" --contentType "track"
+
+// Purchase a track
+purchase-track --contentId "789" --walletAddress "0x123..." --purchaseOption "option1" --paymentToken "USDC" --amount "4.99" --signerPrivateKey "privateKey"
 ```
 
 ### Testing

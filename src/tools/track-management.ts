@@ -200,7 +200,7 @@ export const updateTrack = async (args: {
       await audiusClient.getUser(args.userId);
       
       // Check if user is the track owner
-      if (track.user.id !== args.userId) {
+      if (!track || !track.user || track.user.id !== args.userId) {
         return {
           content: [{
             type: 'text',
@@ -291,7 +291,7 @@ export const deleteTrack = async (args: {
       await audiusClient.getUser(args.userId);
       
       // Check if user is the track owner
-      if (track.user.id !== args.userId) {
+      if (!track || !track.user || track.user.id !== args.userId) {
         return {
           content: [{
             type: 'text',

@@ -1,7 +1,7 @@
 {
-  "name": "audius-mcp",
+  "name": "audius-mcp-atris",
   "version": "1.0.0",
-  "description": "MCP server for Audius SDK integration",
+  "description": "Atris MCP - Model Context Protocol integration for Audius music platform",
   "main": "build/index.js",
   "type": "module",
   "scripts": {
@@ -9,18 +9,35 @@
     "start": "node build/index.js",
     "dev": "tsc && node build/index.js",
     "lint": "eslint . --ext .ts",
-    "test-client": "cd test && tsc test-client.ts && node test-client.js"
+    "test-client": "cd test && tsc test-client.ts && node test-client.js",
+    "prepublishOnly": "npm run build"
   },
   "keywords": [
     "mcp",
     "audius",
-    "music"
+    "music",
+    "atris",
+    "ai",
+    "sdk"
   ],
-  "author": "",
+  "author": "glassBead",
   "license": "MIT",
+  "homepage": "https://github.com/glassBead/audius-mcp-atris",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/glassBead/audius-mcp-atris.git"
+  },
+  "bugs": {
+    "url": "https://github.com/glassBead/audius-mcp-atris/issues"
+  },
+  "files": [
+    "build/**/*",
+    "README.md",
+    "LICENSE"
+  ],
   "dependencies": {
-    "@audius/sdk": "latest",
-    "@modelcontextprotocol/sdk": "latest",
+    "@audius/sdk": "^8.0.1",
+    "@modelcontextprotocol/sdk": "^1.7.0",
     "dotenv": "^16.3.1",
     "zod": "^3.22.4"
   },

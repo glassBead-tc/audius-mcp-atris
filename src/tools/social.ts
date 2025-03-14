@@ -416,3 +416,208 @@ export const getTrackReposts = async (args: { trackId: string, limit?: number })
     };
   }
 };
+
+// Schema for follow-user tool
+export const followUserSchema = {
+  type: 'object',
+  properties: {
+    userId: {
+      type: 'string',
+      description: 'ID of the user who wants to follow someone',
+    },
+    followeeId: {
+      type: 'string',
+      description: 'ID of the user to follow',
+    },
+  },
+  required: ['userId', 'followeeId'],
+};
+
+// Implementation of follow-user tool
+export const followUser = async (args: { userId: string, followeeId: string }) => {
+  try {
+    const audiusClient = AudiusClient.getInstance();
+    
+    // First verify both users exist
+    const [follower, followee] = await Promise.all([
+      audiusClient.getUser(args.userId),
+      audiusClient.getUser(args.followeeId)
+    ]);
+    
+    if (!follower) {
+      return {
+        content: [{
+          type: 'text',
+          text: `Error: Follower user ID ${args.userId} not found`,
+        }],
+        isError: true
+      };
+    }
+    
+    if (!followee) {
+      return {
+        content: [{
+          type: 'text',
+          text: `Error: Followee user ID ${args.followeeId} not found`,
+        }],
+        isError: true
+      };
+    }
+    
+    // Check if already following
+    const isAlreadyFollowing = await audiusClient.isUserFollowing(args.userId, args.followeeId);
+    
+    if (isAlreadyFollowing) {
+      return {
+        content: [{
+          type: 'text',
+          text: JSON.stringify({
+            status: "already_following",
+            follower: {
+              id: args.userId,
+              name: follower.name
+            },
+            followee: {
+              id: args.followeeId,
+              name: followee.name
+            }
+          }, null, 2),
+        }],
+      };
+    }
+    
+    // Follow the user
+    const result = await audiusClient.followUser(args.userId, args.followeeId);
+    
+    return {
+      content: [{
+        type: 'text',
+        text: JSON.stringify({
+          status: "success",
+          follower: {
+            id: args.userId,
+            name: follower.name
+          },
+          followee: {
+            id: args.followeeId,
+            name: followee.name
+          },
+          timestamp: new Date().toISOString()
+        }, null, 2),
+      }],
+    };
+  } catch (error) {
+    console.error('Error in follow-user tool:', error);
+    return {
+      content: [{
+        type: 'text',
+        text: `Error following user: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      }],
+      isError: true
+    };
+  }
+};
+
+// Schema for favorite-track tool
+export const favoriteTrackSchema = {
+  type: 'object',
+  properties: {
+    userId: {
+      type: 'string',
+      description: 'ID of the user who wants to favorite the track',
+    },
+    trackId: {
+      type: 'string',
+      description: 'ID of the track to favorite',
+    },
+  },
+  required: ['userId', 'trackId'],
+};
+
+// Implementation of favorite-track tool
+export const favoriteTrack = async (args: { userId: string, trackId: string }) => {
+  try {
+    const audiusClient = AudiusClient.getInstance();
+    
+    // First verify both user and track exist
+    const [user, track] = await Promise.all([
+      audiusClient.getUser(args.userId),
+      audiusClient.getTrack(args.trackId)
+    ]);
+    
+    if (!user) {
+      return {
+        content: [{
+          type: 'text',
+          text: `Error: User ID ${args.userId} not found`,
+        }],
+        isError: true
+      };
+    }
+    
+    if (!track) {
+      return {
+        content: [{
+          type: 'text',
+          text: `Error: Track ID ${args.trackId} not found`,
+        }],
+        isError: true
+      };
+    }
+    
+    // Get user favorites to check if already favorited
+    const favorites = await audiusClient.getUserFavorites(args.userId);
+    const isAlreadyFavorited = favorites.some((fav: any) => fav.id === args.trackId);
+    
+    if (isAlreadyFavorited) {
+      return {
+        content: [{
+          type: 'text',
+          text: JSON.stringify({
+            status: "already_favorited",
+            user: {
+              id: args.userId,
+              name: user.name
+            },
+            track: {
+              id: args.trackId,
+              title: track.title,
+              artist: track.user?.name || 'Unknown Artist'
+            }
+          }, null, 2),
+        }],
+      };
+    }
+    
+    // Favorite the track
+    const result = await audiusClient.favoriteTrack(args.userId, args.trackId);
+    
+    return {
+      content: [{
+        type: 'text',
+        text: JSON.stringify({
+          status: "success",
+          user: {
+            id: args.userId,
+            name: user.name
+          },
+          track: {
+            id: args.trackId,
+            title: track.title,
+            artist: track.user?.name || 'Unknown Artist'
+          },
+          timestamp: new Date().toISOString()
+        }, null, 2),
+      }],
+    };
+  } catch (error) {
+    console.error('Error in favorite-track tool:', error);
+    return {
+      content: [{
+        type: 'text',
+        text: `Error favoriting track: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      }],
+      isError: true
+    };
+  }
+};

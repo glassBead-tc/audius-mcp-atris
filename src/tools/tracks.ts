@@ -99,7 +99,7 @@ export const searchTracks = async (args: { query: string, limit?: number }) => {
   try {
     const audiusClient = AudiusClient.getInstance();
     const limit = args.limit || 10;
-    const results = await audiusClient.searchTracks(args.query, limit);
+    const results = await audiusClient.searchTracks(args.query, { limit });
     
     if (!results || results.length === 0) {
       return {

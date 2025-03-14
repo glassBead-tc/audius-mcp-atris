@@ -841,3 +841,152 @@ export const getUserTipStats = async (args: {
     };
   }
 };
+
+// Schema for purchase-track tool
+export const purchaseTrackSchema = {
+  type: 'object',
+  properties: {
+    contentId: {
+      type: 'string',
+      description: 'ID of the track to purchase',
+    },
+    walletAddress: {
+      type: 'string',
+      description: 'Wallet address of the purchaser',
+    },
+    purchaseOption: {
+      type: 'string',
+      description: 'Purchase option ID from the available options',
+    },
+    paymentToken: {
+      type: 'string',
+      description: 'Token to use for payment (e.g., USDC)',
+    },
+    amount: {
+      type: 'string',
+      description: 'Amount to pay',
+    },
+    signerPrivateKey: {
+      type: 'string',
+      description: 'Private key of the purchaser wallet (IMPORTANT: only use for testing!)',
+    },
+  },
+  required: ['contentId', 'walletAddress', 'purchaseOption', 'paymentToken', 'amount', 'signerPrivateKey'],
+};
+
+// Implementation of purchase-track tool
+export const purchaseTrack = async (args: {
+  contentId: string;
+  walletAddress: string;
+  purchaseOption: string;
+  paymentToken: string;
+  amount: string;
+  signerPrivateKey: string;
+}) => {
+  try {
+    const audiusClient = AudiusClient.getInstance();
+    
+    // Verify track exists
+    try {
+      await audiusClient.getTrack(args.contentId);
+    } catch (error) {
+      return {
+        content: [{
+          type: 'text',
+          text: `Unable to verify track. Please check the provided track ID.`,
+        }],
+        isError: true
+      };
+    }
+    
+    // Verify the purchase options exist for this track
+    const purchaseOptions = await audiusClient.getPurchaseOptions(args.contentId, 'track');
+    if (!purchaseOptions || purchaseOptions.length === 0) {
+      return {
+        content: [{
+          type: 'text',
+          text: `No purchase options found for track ${args.contentId}.`,
+        }],
+        isError: true
+      };
+    }
+    
+    // Verify that the purchase option provided is valid
+    const validOption = purchaseOptions.some((option: any) => option.id === args.purchaseOption);
+    if (!validOption) {
+      return {
+        content: [{
+          type: 'text',
+          text: `Invalid purchase option. Please check the available options with the purchase-options tool.`,
+        }],
+        isError: true
+      };
+    }
+    
+    // Verify the payment token is supported
+    const supportedTokens = await audiusClient.getSupportedPaymentTokens();
+    const validToken = supportedTokens.some((token: any) => token.symbol === args.paymentToken);
+    if (!validToken) {
+      return {
+        content: [{
+          type: 'text',
+          text: `Invalid payment token. Please check the supported tokens with the supported-payment-tokens tool.`,
+        }],
+        isError: true
+      };
+    }
+    
+    // IMPORTANT NOTE: In a real implementation, you would NEVER handle private keys directly.
+    // This is just for demonstration purposes and should use a secure wallet connection method.
+    
+    // Execute the purchase
+    const result = await audiusClient.purchaseContent({
+      contentId: args.contentId,
+      contentType: 'track',
+      walletAddress: args.walletAddress,
+      purchaseOption: args.purchaseOption,
+      paymentToken: args.paymentToken,
+      amount: args.amount,
+      signerPrivateKey: args.signerPrivateKey
+    });
+    
+    if (!result) {
+      return {
+        content: [{
+          type: 'text',
+          text: `Failed to purchase track.`,
+        }],
+        isError: true
+      };
+    }
+    
+    // Format results
+    const formattedResults = {
+      contentId: args.contentId,
+      contentType: 'track',
+      walletAddress: args.walletAddress,
+      purchaseOption: args.purchaseOption,
+      paymentToken: args.paymentToken,
+      amount: args.amount,
+      timestamp: new Date().toISOString(),
+      status: 'purchased',
+      purchaseDetails: result
+    };
+    
+    return {
+      content: [{
+        type: 'text',
+        text: JSON.stringify(formattedResults, null, 2),
+      }],
+    };
+  } catch (error) {
+    console.error('Error in purchase-track tool:', error);
+    return {
+      content: [{
+        type: 'text',
+        text: `Error purchasing track: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      }],
+      isError: true
+    };
+  }
+};
