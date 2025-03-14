@@ -1117,4 +1117,213 @@ export class AudiusClient {
       throw error;
     }
   }
+  
+  /**
+   * Helper method to get Solana wallet info for a user
+   */
+  public async getUserSolanaWallets(userId: string) {
+    try {
+      if (!this.audiusSDK.users) {
+        throw new Error('Users API not initialized');
+      }
+      
+      const result = await this.audiusSDK.users.getConnectedWallets({
+        id: userId
+      });
+      
+      return result.data || [];
+    } catch (error) {
+      console.error(`Error getting Solana wallets for user ${userId}:`, error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Helper method to get associated Ethereum wallet for a user
+   */
+  public async getUserEthereumWallet(userId: string) {
+    try {
+      if (!this.audiusSDK.users) {
+        throw new Error('Users API not initialized');
+      }
+      
+      const result = await this.audiusSDK.users.getAssociatedEthWallet({
+        id: userId
+      });
+      
+      return result.data;
+    } catch (error) {
+      console.error(`Error getting Ethereum wallet for user ${userId}:`, error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Helper method to get transaction history for a user
+   */
+  public async getUserTransactionHistory(userId: string, limit = 20) {
+    try {
+      if (!this.audiusSDK.transactions) {
+        throw new Error('Transactions API not initialized');
+      }
+      
+      const result = await this.audiusSDK.transactions.getTransactionHistory({
+        userId,
+        limit
+      });
+      
+      return result.data || [];
+    } catch (error) {
+      console.error(`Error getting transaction history for user ${userId}:`, error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Helper method to get token claims for a user
+   */
+  public async getUserClaimableTokens(userId: string) {
+    try {
+      if (!this.audiusSDK.rewards) {
+        throw new Error('Rewards API not initialized');
+      }
+      
+      const result = await this.audiusSDK.rewards.getClaimableTokens({
+        userId
+      });
+      
+      return result.data || [];
+    } catch (error) {
+      console.error(`Error getting claimable tokens for user ${userId}:`, error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Helper method to claim tokens
+   */
+  public async claimTokens(userId: string, challengeId: string) {
+    try {
+      if (!this.audiusSDK.rewards) {
+        throw new Error('Rewards API not initialized');
+      }
+      
+      const result = await this.audiusSDK.rewards.claimChallengeReward({
+        userId,
+        challengeId
+      });
+      
+      return result.data;
+    } catch (error) {
+      console.error(`Error claiming tokens for user ${userId} and challenge ${challengeId}:`, error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Helper method to get available challenges
+   */
+  public async getAvailableChallenges() {
+    try {
+      if (!this.audiusSDK.challenges) {
+        throw new Error('Challenges API not initialized');
+      }
+      
+      const result = await this.audiusSDK.challenges.getAvailableChallenges();
+      
+      return result.data || [];
+    } catch (error) {
+      console.error('Error getting available challenges:', error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Helper method to get undisbursed challenges for a user
+   */
+  public async getUserUndisbursedChallenges(userId: string) {
+    try {
+      if (!this.audiusSDK.challenges) {
+        throw new Error('Challenges API not initialized');
+      }
+      
+      const result = await this.audiusSDK.challenges.getUndisbursedChallenges({
+        userId
+      });
+      
+      return result.data || [];
+    } catch (error) {
+      console.error(`Error getting undisbursed challenges for user ${userId}:`, error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Helper method to check AUDIO token balance
+   */
+  public async getAudioTokenBalance(walletAddress: string) {
+    try {
+      if (!this.audiusSDK.tokens) {
+        throw new Error('Tokens API not initialized');
+      }
+      
+      const result = await this.audiusSDK.tokens.getAudioBalance({
+        address: walletAddress
+      });
+      
+      return result.data;
+    } catch (error) {
+      console.error(`Error getting AUDIO token balance for wallet ${walletAddress}:`, error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Helper method to send AUDIO tokens
+   */
+  public async sendAudioTokens(params: {
+    senderWalletAddress: string;
+    receiverWalletAddress: string;
+    amount: string;
+    privateKey: string;
+  }) {
+    try {
+      if (!this.audiusSDK.tokens) {
+        throw new Error('Tokens API not initialized');
+      }
+      
+      const result = await this.audiusSDK.tokens.sendTokens({
+        senderAddress: params.senderWalletAddress,
+        receiverAddress: params.receiverWalletAddress,
+        amount: params.amount,
+        privateKey: params.privateKey
+      });
+      
+      return result.data;
+    } catch (error) {
+      console.error(`Error sending AUDIO tokens from ${params.senderWalletAddress} to ${params.receiverWalletAddress}:`, error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Helper method to get Solana SPL token balance
+   */
+  public async getSolanaTokenBalance(walletAddress: string, tokenMint: string) {
+    try {
+      if (!this.audiusSDK.solana) {
+        throw new Error('Solana API not initialized');
+      }
+      
+      const result = await this.audiusSDK.solana.getTokenBalance({
+        address: walletAddress,
+        mint: tokenMint
+      });
+      
+      return result.data;
+    } catch (error) {
+      console.error(`Error getting Solana token balance for wallet ${walletAddress}:`, error);
+      throw error;
+    }
+  }
 }
