@@ -1,29 +1,53 @@
 #!/usr/bin/env node
-import { initializeServer } from "./server/server-config.js";
-import { RouteRegistry } from "./server/route-registry.js";
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { createServer } from './server.js';
+import { config } from './config.js';
 
+// Redirect console.log to console.error to avoid interfering with JSON-RPC
+const originalConsoleLog = console.log;
+console.log = function(...args: any[]) {
+  console.error(...args);
+};
+
+// Display basic info
+console.error(`Starting ${config.server.name} v${config.server.version}`);
+console.error(`Environment: ${config.audius.environment}`);
+
+// Main function
 async function main() {
   try {
-    // Initialize server with configuration
-    const serverInstance = await initializeServer();
-    const sdk = serverInstance.getAudiusSdk();
-    const managerFactory = serverInstance.getManagerFactory();
+    // Create MCP server
+    const server = createServer();
     
-    // Only register routes if we have a valid SDK instance
-    if (sdk && managerFactory) {
-      const routeRegistry = new RouteRegistry(
-        serverInstance.getServer(),
-        sdk,
-        managerFactory
-      );
-      routeRegistry.registerRoutes();
-    }
-
-    console.error('Audius MCP server running on stdio');
+    // Create the transport layer
+    const transport = new StdioServerTransport();
+    
+    // Connect the server to the transport
+    await server.connect(transport);
+    
+    console.error('MCP Server running with stdio transport...');
+    
+    // Handle process termination
+    const cleanup = async () => {
+      console.error('Shutting down...');
+      try {
+        await server.close();
+        console.error('Server closed successfully');
+      } catch (error) {
+        console.error('Error during shutdown:', error);
+      }
+      process.exit(0);
+    };
+    
+    // Register signal handlers
+    process.on('SIGINT', cleanup);
+    process.on('SIGTERM', cleanup);
+    
   } catch (error) {
-    console.error('Failed to start server:', error);
+    console.error('Fatal server error:', error);
     process.exit(1);
   }
 }
 
-main().catch(console.error);
+// Start the server
+main();
