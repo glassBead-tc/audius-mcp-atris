@@ -20,6 +20,7 @@ CLAUDE.md
 LLM-GUIDE.md
 LLM-QUICKSTART.md
 test-plan.md
+node_modules/
 
 # Logs
 logs/

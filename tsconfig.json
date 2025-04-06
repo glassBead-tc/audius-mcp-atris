@@ -17,6 +17,6 @@
     "noEmitOnError": false,
     "ignoreDeprecations": "5.0"
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "sdk"],
   "exclude": ["node_modules", "src/test-client.ts", "src/http-server.ts"]
 }
