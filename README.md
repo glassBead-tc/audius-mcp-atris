@@ -1,5 +1,7 @@
 # Atris MCP for Audius
 
+[![smithery badge](https://smithery.ai/badge/@glassBead-tc/audius-mcp-atris)](https://smithery.ai/server/@glassBead-tc/audius-mcp-atris)
+
 An MCP (Model Context Protocol) server that provides access to the Audius music platform via LLMs (Large Language Models).
 
 ## Features
@@ -76,6 +78,14 @@ With Atris MCP, you can ask your LLM questions in natural language about Audius 
 - An Audius API key (optional, but recommended for production use)
 
 ## Installation
+
+### Installing via Smithery
+
+To install Atris for Claude Desktop automatically via [Smithery](https://smithery.ai/server/@glassBead-tc/audius-mcp-atris):
+
+```bash
+npx -y @smithery/cli install @glassBead-tc/audius-mcp-atris --client claude
+```
 
 ### NPM Installation (Recommended)
 

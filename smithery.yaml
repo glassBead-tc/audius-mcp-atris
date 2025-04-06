@@ -1,0 +1,37 @@
+# Smithery configuration file: https://smithery.ai/docs/config#smitheryyaml
+
+startCommand:
+  type: stdio
+  configSchema:
+    # JSON Schema defining the configuration options for the MCP.
+    type: object
+    required:
+      - audiusApiKey
+      - audiusApiSecret
+    properties:
+      audiusApiKey:
+        type: string
+        description: Audius API Key for authenticating to the Audius API.
+      audiusApiSecret:
+        type: string
+        description: Audius API Secret for authenticating to the Audius API.
+      audiusEnvironment:
+        type: string
+        default: production
+        description: Audius Environment (production, staging, or development).
+  commandFunction:
+    # A JS function that produces the CLI command based on the given config to start the MCP on stdio.
+    |-
+    (config) => ({
+      command: 'node',
+      args: ['build/index.js'],
+      env: {
+        AUDIUS_API_KEY: config.audiusApiKey,
+        AUDIUS_API_SECRET: config.audiusApiSecret,
+        AUDIUS_ENVIRONMENT: config.audiusEnvironment || 'production'
+      }
+    })
+  exampleConfig:
+    audiusApiKey: dummy_api_key
+    audiusApiSecret: dummy_api_secret
+    audiusEnvironment: production
