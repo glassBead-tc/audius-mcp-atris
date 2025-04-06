@@ -119,6 +119,48 @@ npm install
 npm run build
 ```
 
+### Docker Installation
+
+You can also build and run the MCP server using Docker:
+
+1. Build the Docker image:
+```
+docker build -t audius-mcp-atris .
+```
+
+2. Run the container:
+```
+docker run -it --rm \
+  -e AUDIUS_API_KEY=your_api_key_here \
+  -e AUDIUS_API_SECRET=your_api_secret_here \
+  -e AUDIUS_ENVIRONMENT=production \
+  audius-mcp-atris
+```
+
+Note: Setting AUDIUS_ENVIRONMENT to "production" ensures the SDK connects to public Audius discovery nodes instead of trying to use local nodes.
+
+3. For Claude Desktop, configure your `claude_mcp_config.json` to use Docker:
+```json
+{
+  "mcpServers": {
+    "audius": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "audius-mcp-atris"
+      ],
+      "env": {
+        "AUDIUS_API_KEY": "your_api_key_here",
+        "AUDIUS_API_SECRET": "your_api_secret_here",
+        "AUDIUS_ENVIRONMENT": "production"
+      }
+    }
+  }
+}
+```
+
 ## Configuration
 
 Create a `.env` file in the root directory based on the provided `.env.example`:
