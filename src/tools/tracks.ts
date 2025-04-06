@@ -197,5 +197,110 @@ export const getTrackComments = async (args: { trackId: string, limit?: number }
       }],
       isError: true
     };
+}
+    
+  }
+
+// Schema for stream-track tool
+const streamTrackSchema = {
+  type: 'object',
+  properties: {
+    trackId: {
+      type: 'string',
+      description: 'Audius track ID to stream'
+    },
+    userId: {
+      type: 'string',
+      description: 'Optional user ID'
+    },
+    apiKey: {
+      type: 'string',
+      description: 'Optional API key'
+    },
+    preview: {
+      type: 'boolean',
+      description: 'If true, stream a preview clip'
+    },
+    skipPlayCount: {
+      type: 'boolean',
+      description: 'If true, do not increment play count'
+    }
+  },
+  required: ['trackId'],
+  description: 'Streams raw audio bytes for a given Audius track ID. Response is an audio/mpeg stream.'
+};
+
+// Implementation of stream-track tool
+const streamTrack = async (
+  args: {
+    trackId: string,
+    userId?: string,
+    apiKey?: string,
+    preview?: boolean,
+    skipPlayCount?: boolean
+  },
+  context: { res: any }
+) => {
+  try {
+    const audiusClient = AudiusClient.getInstance();
+    const sdk = audiusClient.getSDK();
+
+    const stream = await import('../utils/fetchAudiusTrackStream.js').then(m => m.fetchAudiusTrackStream(
+      sdk,
+      args.trackId,
+      {
+        userId: args.userId,
+        apiKey: args.apiKey,
+        preview: args.preview,
+        skipPlayCount: args.skipPlayCount
+      }
+    ));
+
+    context.res.setHeader('Content-Type', 'audio/mpeg');
+    context.res.setHeader('Transfer-Encoding', 'chunked');
+
+    if (typeof (stream as any).pipe === 'function') {
+      (stream as any).pipe(context.res);
+    } else if (typeof (stream as any).getReader === 'function') {
+      const reader = (stream as any).getReader();
+      const writer = context.res.getWriter ? context.res.getWriter() : null;
+      context.res.setHeader('Transfer-Encoding', 'chunked');
+      const pump = async () => {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          context.res.write(value);
+        }
+        context.res.end();
+      };
+      pump().catch((err: any) => {
+        console.error('Stream piping error:', err);
+        if (!context.res.headersSent) {
+          context.res.statusCode = 500;
+          context.res.end('Stream error');
+        }
+      });
+    } else {
+      throw new Error('Unsupported stream type');
+    }
+
+    // Return a special marker indicating streaming response
+    return { content: [{ type: 'stream', text: 'Streaming audio...' }] };
+  } catch (error: any) {
+    console.error('Error in stream-track tool:', error);
+    if (context?.res?.headersSent !== true) {
+      context.res.statusCode = 500;
+      context.res.setHeader('Content-Type', 'application/json');
+      context.res.end(JSON.stringify({ error: error.message || 'Unknown error' }));
+    }
+    return {
+      content: [{
+        type: 'text',
+        text: `Error streaming track: ${error.message || 'Unknown error'}`
+      }],
+      isError: true
+    };
   }
 };
+
+export { streamTrackSchema, streamTrack };

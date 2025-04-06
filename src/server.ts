@@ -149,6 +149,9 @@ import {
   notificationsPrompt, handleNotificationsPrompt
 } from './prompts/notifications.js';
 
+import { AudiusClient } from './sdk-client.js';
+import { StreamTrackTool } from './stream-server.js';
+
 /**
  * Create and configure the MCP server
  */
@@ -164,11 +167,43 @@ export const createServer = () => {
       prompts: {}
     }
   });
+  
+  // We'll get the Express app from the server if possible, otherwise we'll handle
+  // the stream endpoint ourselves in a separate Express app
+  let app;
+  try {
+    // This is implementation-specific and may not be available
+    // @ts-ignore - Ignore TypeScript errors since getExpressApp may not be typed
+    app = server.getExpressApp?.();
+  } catch (error) {
+    console.warn('Could not access Express app from MCP server. Stream endpoint will be handled by stream-server.js');
+  }
+  
+  // If we have access to the Express app, add our stream endpoint
+  if (app) {
+    // Add redirect to streaming server for backward compatibility
+    app.get('/stream/:trackId', (req, res) => {
+      const trackId = req.params.trackId;
+      const streamServerPort = process.env.STREAM_SERVER_PORT || '7070';
+      const streamServerUrl = `http://localhost:${streamServerPort}/stream/${trackId}`;
+      
+      // Forward any query parameters
+      if (req.url.includes('?')) {
+        const queryString = req.url.substring(req.url.indexOf('?'));
+        res.redirect(streamServerUrl + queryString);
+      } else {
+        res.redirect(streamServerUrl);
+      }
+    });
+  }
 
   // Register tool handlers
   server.setRequestHandler(ListToolsRequestSchema, async () => {
     return {
       tools: [
+        // Streaming tool
+        { name: 'stream-track', description: 'Stream an Audius track as audio', inputSchema: StreamTrackTool.schema },
+        
         // Track tools
         { name: 'get-track', description: 'Get details for a specific track', inputSchema: getTrackSchema },
         { name: 'search-tracks', description: 'Search for tracks by keyword', inputSchema: searchTracksSchema },
@@ -277,6 +312,10 @@ export const createServer = () => {
     const { name, arguments: args } = request.params;
     
     switch (name) {
+      // Streaming tool
+      case 'stream-track':
+        return await StreamTrackTool.execute(args as any);
+      
       // Track tools
       case 'get-track':
         return await getTrack(args as { trackId: string });

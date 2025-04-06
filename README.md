@@ -5,6 +5,7 @@ An MCP (Model Context Protocol) server that provides access to the Audius music 
 ## Features
 
 - **Tools**: Access tracks, users, playlists, albums, and perform searches on Audius
+- **Audio Streaming**: Stream audio content directly from Audius to AI applications
 - **Content Creation**: Upload tracks, create playlists, manage your Audius content
 - **Social Features**: Follow users, favorite tracks, comment on content
 - **Monetization**: Access premium content, purchase tracks, send tips to artists
@@ -133,10 +134,12 @@ Start the server:
 npm start
 ```
 
-For development with automatic rebuilding:
+This will automatically start both the main MCP server and the audio streaming server. The audio streaming server runs on port 7070 by default (configurable via STREAM_SERVER_PORT environment variable).
+
+If you need to start only the streaming server for testing or development:
 
 ```
-npm run dev
+node start-stream-server.js
 ```
 
 ### Connecting to Claude
@@ -233,6 +236,7 @@ The server provides the following functionality:
 - **Similar Artists**: Find artists similar to those you like
 
 #### Track Tools
+- **Stream Track**: Stream audio from Audius tracks directly
 - **Get Track Info**: Detailed track information by ID
 - **Search Tracks**: Find tracks with various filters
 - **Trending Tracks**: Discover what's hot on Audius
@@ -342,6 +346,9 @@ The server offers guided experiences for common music-related tasks:
 ```javascript
 // Search for electronic tracks
 search-tracks --query "electronic" --limit 5
+
+// Stream an audio track
+stream-track --trackId "123456"
 
 // Get trending tracks in a genre
 get-trending-tracks --genre "House" --limit 10
