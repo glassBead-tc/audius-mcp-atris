@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { z } from 'zod';
 
 // Use the transport without explicitly referring to ClientTransport interface
 import { spawn } from 'child_process';
@@ -34,12 +35,12 @@ async function main() {
   });
   
   console.log('Creating client...');
-  // Create an MCP client
-  const client = new Client(transport);
+  // Create an MCP client with implementation info
+  const client = new Client({ name: "test-client", version: "1.0.0" });
   
-  console.log('Starting transport...');
-  // The StdioClientTransport needs to be started
-  await transport.start();
+  console.log('Connecting to server...');
+  // Connect the client to the transport
+  await client.connect(transport);
   
   console.log('Connecting to server...');
   
@@ -48,25 +49,37 @@ async function main() {
     
     // List available tools
     console.log('Getting list of tools...');
-    const toolsResponse = await client.request({
-      method: 'list_tools',
-      params: {}
-    });
+    // Define a schema for the list_tools response (array of objects with at least a name property)
+    const listToolsSchema = z.array(z.object({
+      name: z.string(),
+      // Add more fields as needed based on your tool definition
+    }).passthrough());
+
+    const toolsResponse = await client.request(
+      { method: 'list_tools', params: {} },
+      listToolsSchema
+    );
     console.log('Available tools:', JSON.stringify(toolsResponse, null, 2));
     
     // Test search-tracks tool
     console.log('\nTesting search-tracks tool...');
     try {
-      const searchResult = await client.request({
-        method: 'call_tool',
-        params: {
-          name: 'search-tracks',
-          arguments: {
-            query: 'test',
-            limit: 3
+      // Define a generic schema for tool results (can be refined if you know the structure)
+      const toolResultSchema = z.any();
+
+      const searchResult = await client.request(
+        {
+          method: 'call_tool',
+          params: {
+            name: 'search-tracks',
+            arguments: {
+              query: 'test',
+              limit: 3
+            }
           }
-        }
-      });
+        },
+        toolResultSchema
+      );
       console.log('Search tracks result:', JSON.stringify(searchResult, null, 2));
     } catch (error) {
       console.error('Error testing search-tracks:', error);
