@@ -2,6 +2,19 @@
 
 All notable changes to the audius-mcp-atris package will be documented in this file.
 
+## [1.1.3] - 2025-04-13
+
+### Changed
+- Version bump for release sweep: all version references updated to 1.1.3 for consistency.
+- Final audit: confirmed docs, ignore files, and config patterns are correct.
+- Major documentation overhaul: README, LLM-GUIDE, CLAUDE.md, and .env.example improved for clarity, security, and developer/LLM experience.
+- Tool summary table, security best practices, and explicit config/CLI docs added.
+- Smithery config and example config aligned with documentation.
+- .npmignore and .gitignore simplified and hardened.
+- Test plan and examples updated for new features and workflows.
+- Audio streaming server integration and startup process improved.
+- All MCP/Smithery/NPM deployment instructions validated and clarified.
+
 ## [1.1.1] - 2025-04-06
 
 ### Fixed

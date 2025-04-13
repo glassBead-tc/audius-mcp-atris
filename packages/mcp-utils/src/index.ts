@@ -1,6 +1,6 @@
 /**
  * Audius MCP Utilities
- * 
+ *
  * This package provides common utilities for the Audius MCP integration.
  */
 
@@ -10,3 +10,9 @@ export * from './stream-transport.js';
 export * from './types.js';
 export * from './helpers/validation.js';
 export * from './helpers/error.js';
+
+// Export the schemas
+export * from './schemas/index.js';
+
+// Export tool registry
+export * from './tools/registry.js';

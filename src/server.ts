@@ -1,14 +1,32 @@
+import { zodToJsonSchema } from 'zod-to-json-schema';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { 
-  CallToolRequestSchema, 
+import {
+  CallToolRequestSchema,
   ListToolsRequestSchema,
   ListResourcesRequestSchema,
   ReadResourceRequestSchema,
   ListPromptsRequestSchema,
   GetPromptRequestSchema
 } from '@modelcontextprotocol/sdk/types.js';
+import { startAudioStreamServer, stopAudioStreamServer } from './stream-server.js';
 import { config } from './config.js';
-import { 
+import { StreamTrackTool } from './stream-server.js';
+
+// Determine baseUrl for the stream server tool
+const baseUrl =
+  (config && (config as any).baseUrl)
+    ? (config as any).baseUrl
+    : `http://localhost:${(config && (config as any).port) ? (config as any).port : 7070}`;
+
+// Create a single instance for use in tool execution
+const streamTrackTool = new StreamTrackTool(baseUrl);
+import {
+  getAllToolDefinitions,
+  getToolDefinition,
+  ToolDefinition
+} from './utils/tool-registry.js';
+import { validateToolInput } from './utils/validation.js';
+import {
   getTrack, getTrackSchema,
   searchTracks, searchTracksSchema,
   getTrendingTracks, getTrendingTracksSchema,
@@ -150,7 +168,6 @@ import {
 } from './prompts/notifications.js';
 
 import { AudiusClient } from './sdk-client.js';
-import { StreamTrackTool } from './stream-server.js';
 
 /**
  * Create and configure the MCP server
@@ -199,126 +216,56 @@ export const createServer = () => {
 
   // Register tool handlers
   server.setRequestHandler(ListToolsRequestSchema, async () => {
+    // Get all registered tools from the registry
+    const registeredTools = getAllToolDefinitions();
+    
+    // Convert to the format expected by MCP
+    const toolsList = registeredTools.map(tool => ({
+      name: tool.name,
+      description: tool.description,
+      // Convert Zod schema to JSON Schema for MCP compatibility
+      inputSchema: zodToJsonSchema(tool.schema)
+    }));
+    
     return {
-      tools: [
-        // Streaming tool
-        { name: 'stream-track', description: 'Stream an Audius track as audio', inputSchema: StreamTrackTool.schema },
-        
-        // Track tools
-        { name: 'get-track', description: 'Get details for a specific track', inputSchema: getTrackSchema },
-        { name: 'search-tracks', description: 'Search for tracks by keyword', inputSchema: searchTracksSchema },
-        { name: 'get-trending-tracks', description: 'Get trending tracks on Audius', inputSchema: getTrendingTracksSchema },
-        { name: 'get-track-comments', description: 'Get comments for a specific track', inputSchema: getTrackCommentsSchema },
-        
-        // User tools
-        { name: 'get-user', description: 'Get details for a specific user', inputSchema: getUserSchema },
-        { name: 'search-users', description: 'Search for users by keyword', inputSchema: searchUsersSchema },
-        { name: 'get-user-tracks', description: 'Get tracks uploaded by a specific user', inputSchema: getUserTracksSchema },
-        
-        // Playlist & Album tools
-        { name: 'get-playlist', description: 'Get details for a specific playlist', inputSchema: getPlaylistSchema },
-        { name: 'get-album', description: 'Get details for a specific album', inputSchema: getAlbumSchema },
-        
-        // Search tools
-        { name: 'search-all', description: 'Search across all content types on Audius', inputSchema: searchAllSchema },
-        { name: 'advanced-search', description: 'Advanced search for tracks with filtering by genre, mood, BPM, etc.', inputSchema: advancedSearchSchema },
-        { name: 'trending-discovery', description: 'Discover trending or underground tracks with genre filtering', inputSchema: trendingDiscoverySchema },
-        { name: 'similar-artists', description: 'Find artists similar to a specified artist', inputSchema: similarArtistsSchema },
-        
-        // Social tools
-        { name: 'user-favorites', description: 'Get tracks favorited by a user', inputSchema: userFavoritesSchema },
-        { name: 'user-reposts', description: 'Get content reposted by a user', inputSchema: userRepostsSchema },
-        { name: 'user-followers', description: 'Get followers of a user', inputSchema: userFollowersSchema },
-        { name: 'user-following', description: 'Get users followed by a user', inputSchema: userFollowingSchema },
-        { name: 'is-following', description: 'Check if a user is following another user', inputSchema: isFollowingSchema },
-        { name: 'track-favorites', description: 'Get users who favorited a track', inputSchema: trackFavoritesSchema },
-        { name: 'track-reposts', description: 'Get users who reposted a track', inputSchema: trackRepostsSchema },
-        { name: 'follow-user', description: 'Follow a user', inputSchema: followUserSchema },
-        { name: 'favorite-track', description: 'Favorite a track', inputSchema: favoriteTrackSchema },
-        
-        // Comment tools
-        { name: 'add-track-comment', description: 'Add a comment to a track', inputSchema: addTrackCommentSchema },
-        { name: 'delete-track-comment', description: 'Delete a comment from a track', inputSchema: deleteTrackCommentSchema },
-        
-        // Track management tools
-        { name: 'upload-track', description: 'Upload a new track', inputSchema: uploadTrackSchema },
-        { name: 'update-track', description: 'Update an existing track', inputSchema: updateTrackSchema },
-        { name: 'delete-track', description: 'Delete a track', inputSchema: deleteTrackSchema },
-        
-        // Playlist management tools
-        { name: 'create-playlist', description: 'Create a new playlist or album', inputSchema: createPlaylistSchema },
-        { name: 'update-playlist', description: 'Update an existing playlist', inputSchema: updatePlaylistSchema },
-        { name: 'delete-playlist', description: 'Delete a playlist', inputSchema: deletePlaylistSchema },
-        { name: 'add-tracks-to-playlist', description: 'Add tracks to a playlist', inputSchema: addTracksToPlaylistSchema },
-        { name: 'remove-track-from-playlist', description: 'Remove a track from a playlist', inputSchema: removeTrackFromPlaylistSchema },
-        { name: 'reorder-playlist-tracks', description: 'Reorder tracks in a playlist', inputSchema: reorderPlaylistTracksSchema },
-        
-        // Messaging tools
-        { name: 'send-message', description: 'Send a direct message to a user', inputSchema: sendMessageSchema },
-        { name: 'get-messages', description: 'Get messages between two users', inputSchema: getMessagesSchema },
-        { name: 'get-message-threads', description: 'Get message threads for a user', inputSchema: getMessageThreadsSchema },
-        { name: 'mark-message-read', description: 'Mark a message as read', inputSchema: markMessageReadSchema },
-        
-        // Analytics tools
-        { name: 'track-listen-counts', description: 'Get listen counts for a track', inputSchema: trackListenCountsSchema },
-        { name: 'user-track-listen-counts', description: 'Get listen counts for a user\'s tracks', inputSchema: userTrackListenCountsSchema },
-        { name: 'track-top-listeners', description: 'Get top listeners for a track', inputSchema: trackTopListenersSchema },
-        { name: 'track-listener-insights', description: 'Get listener insights for a track', inputSchema: trackListenerInsightsSchema },
-        { name: 'user-play-metrics', description: 'Get aggregate play metrics for a user', inputSchema: userPlayMetricsSchema },
-        { name: 'track-monthly-trending', description: 'Get monthly trending data for a track', inputSchema: trackMonthlyTrendingSchema },
-        { name: 'user-supporters', description: 'Get supporters for a user', inputSchema: userSupportersSchema },
-        { name: 'user-supporting', description: 'Get artists a user is supporting', inputSchema: userSupportingSchema },
-        
-        // Blockchain tools
-        { name: 'user-wallets', description: 'Get wallet information for a user', inputSchema: userWalletsSchema },
-        { name: 'transaction-history', description: 'Get transaction history for a user', inputSchema: transactionHistorySchema },
-        { name: 'available-challenges', description: 'Get available challenges and rewards', inputSchema: availableChallengesSchema },
-        { name: 'user-claimable-tokens', description: 'Get claimable tokens for a user', inputSchema: userClaimableTokensSchema },
-        { name: 'claim-tokens', description: 'Claim tokens for a challenge', inputSchema: claimTokensSchema },
-        { name: 'token-balance', description: 'Get token balance for a wallet', inputSchema: tokenBalanceSchema },
-        { name: 'send-tokens', description: 'Send tokens from one wallet to another', inputSchema: sendTokensSchema },
-        
-        // Monetization tools
-        { name: 'track-access-gates', description: 'Get access gates for a track', inputSchema: trackAccessGatesSchema },
-        { name: 'check-nft-access', description: 'Check NFT-gated access for a track', inputSchema: checkNftAccessSchema },
-        { name: 'nft-gated-signature', description: 'Get NFT-gated signature for a track', inputSchema: nftGatedSignatureSchema },
-        { name: 'purchase-options', description: 'Get purchase options for content', inputSchema: purchaseOptionsSchema },
-        { name: 'check-purchase-access', description: 'Check purchase-gated access for content', inputSchema: checkPurchaseAccessSchema },
-        { name: 'supported-payment-tokens', description: 'Get supported payment tokens', inputSchema: supportedPaymentTokensSchema },
-        { name: 'usdc-gate-info', description: 'Get USDC gate info for a track', inputSchema: usdcGateInfoSchema },
-        { name: 'purchase-track', description: 'Purchase a track with monetization gates', inputSchema: purchaseTrackSchema },
-        { name: 'send-tip', description: 'Send a tip to a user', inputSchema: sendTipSchema },
-        { name: 'get-sent-tips', description: 'Get tips sent by a user', inputSchema: getSentTipsSchema },
-        { name: 'get-received-tips', description: 'Get tips received by a user', inputSchema: getReceivedTipsSchema },
-        { name: 'user-tip-stats', description: 'Get tip statistics for a user', inputSchema: userTipStatsSchema },
-        
-        // Notification tools
-        { name: 'get-notifications', description: 'Get notifications for a user', inputSchema: getNotificationsSchema },
-        { name: 'notification-settings', description: 'Get notification settings for a user', inputSchema: notificationSettingsSchema },
-        { name: 'update-notification-settings', description: 'Update notification settings for a user', inputSchema: updateNotificationSettingsSchema },
-        { name: 'mark-notifications-read', description: 'Mark specific notifications as read', inputSchema: markNotificationsReadSchema },
-        { name: 'mark-all-notifications-read', description: 'Mark all notifications as read for a user', inputSchema: markAllNotificationsReadSchema },
-        { name: 'announcement-notifications', description: 'Get platform announcement notifications', inputSchema: announcementNotificationsSchema },
-        { name: 'milestone-notifications', description: 'Get milestone notifications for a user', inputSchema: milestoneNotificationsSchema },
-        { name: 'notification-counts', description: 'Get notification counts for a user', inputSchema: notificationCountsSchema },
-        { name: 'notification-history', description: 'Get notification history for a user', inputSchema: notificationHistorySchema },
-        { name: 'send-notification', description: 'Send a notification to a user', inputSchema: sendNotificationSchema },
-      ]
+      tools: toolsList
     };
   });
 
   // Handle tool execution
-  server.setRequestHandler(CallToolRequestSchema, async (request) => {
+  server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
     const { name, arguments: args } = request.params;
     
+    // Get the tool definition from the registry
+    const toolDefinition = getToolDefinition(name);
+    
+    if (toolDefinition) {
+      try {
+        // Validate the input against the tool's schema
+        const validatedArgs = validateToolInput(toolDefinition.schema, args);
+        
+        // Execute the tool with validated arguments
+        // Ensure the result is a plain object (not a class instance)
+        const result = await toolDefinition.execute(validatedArgs);
+        // Convert to a plain object with index signature for type compatibility
+        return JSON.parse(JSON.stringify(result));
+      } catch (error) {
+        console.error(`Error executing tool ${name}:`, error);
+        return {
+          content: [{
+            type: 'text',
+            text: `Error executing tool: ${error instanceof Error ? error.message : 'Unknown error'}`
+          }],
+          isError: true
+        };
+      }
+    }
+    
+    // Fall back to the legacy switch statement if needed
     switch (name) {
-      // Streaming tool
+      // Special case for stream-track which needs context
       case 'stream-track':
-        return await StreamTrackTool.execute(args as any);
-      
-      // Track tools
-      case 'get-track':
-        return await getTrack(args as { trackId: string });
+        return await streamTrackTool.execute(args as any);
       case 'search-tracks':
         return await searchTracks(args as { query: string, limit?: number });
       case 'get-trending-tracks':
@@ -747,4 +694,55 @@ export const createServer = () => {
   });
 
   return server;
+  return server;
 };
+
+/**
+ * Start both the MCP server and the audio streaming server, with clean shutdown.
+ * Reads config from environment variables (no hardcoded secrets).
+ */
+export async function startServers() {
+  // Load config from environment variables or config abstraction
+  const mcpConfig = config;
+  const streamPort = process.env.STREAM_SERVER_PORT ? parseInt(process.env.STREAM_SERVER_PORT, 10) : 7070;
+  const streamBaseUrl = process.env.STREAM_SERVER_BASE_URL || `http://localhost:${streamPort}`;
+
+  // Optionally, pass logger if needed
+  const logger = console;
+
+  // Start MCP server
+  const mcpServer = createServer();
+
+  // Start streaming server
+  await startAudioStreamServer({
+    port: streamPort,
+    baseUrl: streamBaseUrl,
+    logger
+  });
+
+  // Clean shutdown handler
+  const shutdown = async (signal) => {
+    logger.info?.(`[Shutdown] Received ${signal}, shutting down servers...`);
+    // Gracefully close MCP server if supported
+    if (typeof mcpServer.close === 'function') {
+      try {
+        await mcpServer.close();
+      } catch (err) {
+        logger.error?.('Error closing MCP server:', err);
+      }
+    }
+    try {
+      await stopAudioStreamServer();
+    } catch (err) {
+      logger.error?.('Error shutting down streaming server:', err);
+    }
+    process.exit(0);
+  };
+
+  process.on('SIGINT', () => shutdown('SIGINT'));
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+
+  logger.info?.('All servers started. MCP and streaming endpoints are live.');
+  return { mcpServer };
+}
+

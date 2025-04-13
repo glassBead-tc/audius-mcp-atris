@@ -19,6 +19,42 @@ startCommand:
         type: string
         default: production
         description: Audius Environment (production, staging, or development).
+      streamServerPort:
+        type: number
+        default: 7070
+        description: Port on which the streaming server will listen.
+      logLevel:
+        type: string
+        enum: [error, warn, info, debug, verbose]
+        default: info
+        description: Log level for application logging.
+      streamingConfig:
+        type: object
+        description: Configuration options for streaming functionality.
+        properties:
+          enableCaching:
+            type: boolean
+            default: true
+            description: Whether to enable caching for streaming data.
+          maxCacheSize:
+            type: number
+            default: 100
+            description: Maximum number of items to store in the cache.
+          cacheDirectory:
+            type: string
+            default: "./cache"
+            description: Directory where cache files will be stored.
+      authConfig:
+        type: object
+        description: Configuration options for authentication.
+        properties:
+          enabled:
+            type: boolean
+            default: false
+            description: Whether authentication is enabled.
+          authServerUrl:
+            type: string
+            description: URL of the authentication server.
   commandFunction:
     # A JS function that produces the CLI command based on the given config to start the MCP on stdio.
     |-
@@ -28,10 +64,22 @@ startCommand:
       env: {
         AUDIUS_API_KEY: config.audiusApiKey,
         AUDIUS_API_SECRET: config.audiusApiSecret,
-        AUDIUS_ENVIRONMENT: config.audiusEnvironment || 'production'
+        AUDIUS_ENVIRONMENT: config.audiusEnvironment || 'production',
+        STREAM_SERVER_PORT: config.streamServerPort || 7070,
+        LOG_LEVEL: config.logLevel || 'info',
+        STREAMING_CONFIG: config.streamingConfig ? JSON.stringify(config.streamingConfig) : '',
+        AUTH_CONFIG: config.authConfig ? JSON.stringify(config.authConfig) : ''
       }
     })
   exampleConfig:
     audiusApiKey: dummy_api_key
     audiusApiSecret: dummy_api_secret
     audiusEnvironment: production
+    streamServerPort: 7070
+    logLevel: info
+    streamingConfig:
+      enableCaching: true
+      maxCacheSize: 100
+      cacheDirectory: "./cache"
+    authConfig:
+      enabled: false

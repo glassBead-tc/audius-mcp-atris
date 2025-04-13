@@ -54,6 +54,35 @@ export class ValidationError extends AudiusMcpError {
 }
 
 /**
+ * Input validation error class specifically for Zod schema validation failures
+ */
+export class InputValidationError extends ValidationError {
+  constructor(message: string, details?: Record<string, any>) {
+    super(message, details);
+    this.errorCode = 'INPUT_VALIDATION_ERROR';
+    Object.setPrototypeOf(this, InputValidationError.prototype);
+  }
+
+  /**
+   * Create an InputValidationError from Zod validation errors
+   * @param errors Array of validation issues
+   * @returns A new InputValidationError instance with formatted details
+   */
+  static fromZodError(errors: any[]): InputValidationError {
+    const formattedErrors = errors.map(err => ({
+      path: err.path.join('.'),
+      message: err.message,
+      code: err.code
+    }));
+
+    return new InputValidationError(
+      'Invalid input parameters',
+      { validationErrors: formattedErrors }
+    );
+  }
+}
+
+/**
  * Not found error class for resources that don't exist
  */
 export class NotFoundError extends AudiusMcpError {

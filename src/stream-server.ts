@@ -8,6 +8,10 @@ import { fetchAudiusTrackStream } from './utils/fetchAudiusTrackStream.js'
 /**
  * Class definition for MCP-compatible streaming tool
  */
+/**
+ * Modular, configurable streaming tool for Audius tracks.
+ * Construct with a base URL for the stream server.
+ */
 class StreamTrackTool {
   static schema = {
     type: 'object',
@@ -33,10 +37,21 @@ class StreamTrackTool {
     description: 'Streams raw audio bytes for a given Audius track ID. Provides an audio/mpeg stream URL.'
   }
 
+  private baseUrl: string
+
+  /**
+   * @param baseUrl {string} The base URL for the stream server (e.g., http://localhost:7070)
+   */
+  constructor(baseUrl: string) {
+    this.baseUrl = baseUrl
+  }
+
   /**
    * Handle stream track tool execution
+   * @param args Tool arguments
+   * @returns Stream URL object
    */
-  static async execute(args: {
+  async execute(args: {
     trackId: string,
     userId?: string,
     preview?: boolean,
@@ -44,16 +59,16 @@ class StreamTrackTool {
   }) {
     try {
       // Generate a streamable URL
-      const streamUrl = `${process.env.MCP_BASE_URL || 'http://localhost:7070'}/stream/${args.trackId}`;
-      
+      const streamUrl = `${this.baseUrl}/stream/${args.trackId}`
+
       // Add any query parameters
-      const urlObj = new URL(streamUrl);
-      if (args.userId) urlObj.searchParams.set('userId', args.userId);
-      if (args.preview) urlObj.searchParams.set('preview', 'true');
-      if (args.skipPlayCount) urlObj.searchParams.set('skipPlayCount', 'true');
-      
-      const finalStreamUrl = urlObj.toString();
-      
+      const urlObj = new URL(streamUrl)
+      if (args.userId) urlObj.searchParams.set('userId', args.userId)
+      if (args.preview) urlObj.searchParams.set('preview', 'true')
+      if (args.skipPlayCount) urlObj.searchParams.set('skipPlayCount', 'true')
+
+      const finalStreamUrl = urlObj.toString()
+
       // Return the stream URL in a format compatible with audio players
       return {
         content: [{
@@ -64,54 +79,79 @@ class StreamTrackTool {
             trackId: args.trackId
           })
         }]
-      };
+      }
     } catch (error: any) {
-      console.error('Error in stream-track tool:', error);
+      console.error('Error in stream-track tool:', error)
       return {
         content: [{
           type: 'text',
           text: `Error creating stream URL: ${error.message || 'Unknown error'}`
         }],
         isError: true
-      };
+      }
     }
   }
 }
 
 /**
- * Create and configure a dedicated streaming server
+ * Audio Stream Server instance and state
  */
-async function startStreamServer() {
-  const audiusSdk = await AudiusClient.getInstance();
-  
-  // Create an Express app
-  const app = express();
-  
+let httpServer: http.Server | null = null
+
+/**
+ * Start the audio streaming server programmatically.
+ * @param config { port, cacheOptions, logger }
+ * @returns {Promise<http.Server>}
+ */
+/**
+ * Start the audio streaming server programmatically.
+ * @param config { port, cacheOptions, logger, baseUrl }
+ * @returns {Promise<http.Server>}
+ */
+async function startAudioStreamServer(config: {
+  port?: number,
+  cacheOptions?: any, // placeholder for future cache config
+  logger?: { info: (...args: any[]) => void, error: (...args: any[]) => void },
+  baseUrl?: string // required for StreamTrackTool
+} = {}) {
+  if (httpServer) {
+    throw new Error('Audio stream server is already running.')
+  }
+
+  const logger = config.logger || console
+  const port = config.port || 7070
+  const baseUrl = config.baseUrl || `http://localhost:${port}` // fallback to localhost if not provided
+
+  // cacheOptions is not yet used, but included for future extensibility
+
+  const audiusSdk = await AudiusClient.getInstance()
+  const app = express()
+
   // Set up streaming endpoint
   app.get('/stream/:trackId', async (req, res) => {
     try {
-      const trackId = req.params.trackId;
-      console.log(`Streaming request for track ${trackId}`);
-      
+      const trackId = req.params.trackId
+      logger.info?.(`Streaming request for track ${trackId}`)
+
       // Parse optional query parameters
-      const userId = req.query.userId?.toString();
-      const preview = req.query.preview === 'true';
-      const skipPlayCount = req.query.skipPlayCount === 'true';
-      
+      const userId = req.query.userId?.toString()
+      const preview = req.query.preview === 'true'
+      const skipPlayCount = req.query.skipPlayCount === 'true'
+
       // Get the stream from Audius
       const stream = await fetchAudiusTrackStream(audiusSdk, trackId, {
         userId,
         preview,
         skipPlayCount
-      });
-      
+      })
+
       // Set appropriate headers
       res.writeHead(200, {
         'Content-Type': 'audio/mpeg',
         'Access-Control-Allow-Origin': '*',
         'Transfer-Encoding': 'chunked'
-      });
-      
+      })
+
       // Handle different stream types
       if (
         stream &&
@@ -123,7 +163,7 @@ async function startStreamServer() {
         const nodeStream = stream as NodeJS.ReadableStream
         nodeStream.pipe(res)
         nodeStream.on('error', (err: any) => {
-          console.error('Stream error:', err)
+          logger.error?.('Stream error:', err)
           if (!res.headersSent) {
             res.statusCode = 500
             res.end('Internal server error')
@@ -136,7 +176,7 @@ async function startStreamServer() {
         const nodeStream = Readable.fromWeb(stream as any)
         nodeStream.pipe(res)
         nodeStream.on('error', (err: any) => {
-          console.error('Stream error:', err)
+          logger.error?.('Stream error:', err)
           if (!res.headersSent) {
             res.statusCode = 500
             res.end('Internal server error')
@@ -149,8 +189,8 @@ async function startStreamServer() {
         res.end('Unsupported stream type')
       }
     } catch (err: any) {
-      console.error('Error streaming track:', err);
-      
+      logger.error?.('Error streaming track:', err)
+
       if (
         err.message &&
         (err.message.includes('not found') || err.message.includes('404'))
@@ -158,60 +198,70 @@ async function startStreamServer() {
         res.statusCode = 404
         res.end('Track not found')
       } else {
-        console.error('Error fetching stream:', err)
+        logger.error?.('Error fetching stream:', err)
         res.statusCode = 500
         res.end('Internal server error')
       }
     }
-  });
+  })
 
   // Add healthcheck endpoint
   app.get('/healthcheck', (req, res) => {
-    res.status(200).json({ status: 'ok', service: 'audius-streaming-mcp' });
-  });
-  
+    res.status(200).json({ status: 'ok', service: 'audius-streaming-mcp' })
+  })
+
+  // Create a StreamTrackTool instance with the configured baseUrl
+  const streamTrackTool = new StreamTrackTool(baseUrl)
+
   // Add tool endpoint
   app.post('/tool/stream-track', express.json(), async (req, res) => {
     try {
-      const result = await StreamTrackTool.execute(req.body);
-      res.json(result);
+      const result = await streamTrackTool.execute(req.body)
+      res.json(result)
     } catch (error: any) {
-      console.error('Error executing stream-track tool:', error);
+      logger.error?.('Error executing stream-track tool:', error)
       res.status(500).json({
         content: [{
           type: 'text',
           text: `Error: ${error.message || 'Unknown error'}`
         }],
         isError: true
-      });
+      })
     }
-  });
-  
-  // Set up standalone HTTP server for streaming
-  const httpServer = http.createServer(app);
-  
-  const port = process.env.STREAM_SERVER_PORT
-    ? parseInt(process.env.STREAM_SERVER_PORT, 10)
-    : 7070;
+  })
 
-  // Start the server
-  httpServer.listen(port, () => {
-    console.log(`Audius Stream Server listening on port ${port}`);
-    console.log(`Stream URL format: http://localhost:${port}/stream/:trackId`);
-    console.log(`API endpoints:`);
-    console.log(`  - /healthcheck - Server health status`);
-    console.log(`  - /tool/stream-track - Streaming tool API`);
-  });
-  
-  return httpServer;
+  httpServer = http.createServer(app)
+
+  await new Promise<void>((resolve) => {
+    httpServer!.listen(port, () => {
+      logger.info?.(`Audius Stream Server listening on port ${port}`)
+      logger.info?.(`Stream URL format: ${baseUrl}/stream/:trackId`)
+      logger.info?.(`API endpoints:`)
+      logger.info?.(`  - /healthcheck - Server health status`)
+      logger.info?.(`  - /tool/stream-track - Streaming tool API`)
+      resolve()
+    })
+  })
+
+  return httpServer
 }
 
-// Start the streaming server when this module is run directly
-if (import.meta.url === `file://${process.argv[1]}`) {
-  startStreamServer().catch((err) => {
-    console.error('Failed to start stream server:', err);
-    process.exit(1);
-  });
+/**
+ * Stop the audio streaming server gracefully.
+ */
+async function stopAudioStreamServer() {
+  if (!httpServer) return
+  await new Promise<void>((resolve, reject) => {
+    httpServer!.close((err) => {
+      if (err) reject(err)
+      else resolve()
+    })
+  })
+  httpServer = null
 }
 
-export { startStreamServer, StreamTrackTool };
+export {
+  startAudioStreamServer,
+  stopAudioStreamServer,
+  StreamTrackTool
+}

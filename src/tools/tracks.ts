@@ -1,8 +1,21 @@
 import { z } from 'zod';
 import { AudiusClient } from '../sdk-client.js';
+import {
+  ToolDefinition,
+  registerTool,
+  MCPToolResponse
+} from '../utils/tool-registry.js';
+import {
+  getTrackSchema as getTrackZodSchema,
+  searchTracksSchema as searchTracksZodSchema,
+  getTrendingTracksSchema as getTrendingTracksZodSchema,
+  getTrackCommentsSchema as getTrackCommentsZodSchema,
+  streamTrackSchema as streamTrackZodSchema
+} from '../utils/schemas/tracks.js';
+import { validateToolInput } from '../utils/validation.js';
 
-// Schema for get-track tool
-export const getTrackSchema = {
+// Legacy JSON Schema for MCP compatibility (will be phased out)
+const getTrackLegacySchema = {
   type: 'object',
   properties: {
     trackId: {
@@ -13,8 +26,11 @@ export const getTrackSchema = {
   required: ['trackId'],
 };
 
-// Schema for search-tracks tool
-export const searchTracksSchema = {
+// Convert legacy JSON schemas to toolDefinitions that use Zod schemas
+
+
+// Legacy JSON Schema for search-tracks (will be phased out)
+const searchTracksLegacySchema = {
   type: 'object',
   properties: {
     query: {
@@ -29,8 +45,8 @@ export const searchTracksSchema = {
   required: ['query'],
 };
 
-// Schema for get-trending-tracks tool
-export const getTrendingTracksSchema = {
+// Legacy JSON Schema for get-trending-tracks (will be phased out)
+const getTrendingTracksLegacySchema = {
   type: 'object',
   properties: {
     genre: {
@@ -44,8 +60,8 @@ export const getTrendingTracksSchema = {
   },
 };
 
-// Schema for get-track-comments tool
-export const getTrackCommentsSchema = {
+// Legacy JSON Schema for get-track-comments (will be phased out)
+const getTrackCommentsLegacySchema = {
   type: 'object',
   properties: {
     trackId: {
@@ -60,8 +76,8 @@ export const getTrackCommentsSchema = {
   required: ['trackId'],
 };
 
-// Implementation of get-track tool
-export const getTrack = async (args: { trackId: string }) => {
+// Implementation of get-track tool execution logic
+const getTrackExecute = async (args: z.infer<typeof getTrackZodSchema>): Promise<MCPToolResponse> => {
   try {
     const audiusClient = AudiusClient.getInstance();
     const track = await audiusClient.getTrack(args.trackId);
@@ -94,8 +110,8 @@ export const getTrack = async (args: { trackId: string }) => {
   }
 };
 
-// Implementation of search-tracks tool
-export const searchTracks = async (args: { query: string, limit?: number }) => {
+// Implementation of search-tracks execution logic
+const searchTracksExecute = async (args: z.infer<typeof searchTracksZodSchema>): Promise<MCPToolResponse> => {
   try {
     const audiusClient = AudiusClient.getInstance();
     const limit = args.limit || 10;
@@ -128,8 +144,8 @@ export const searchTracks = async (args: { query: string, limit?: number }) => {
   }
 };
 
-// Implementation of get-trending-tracks tool
-export const getTrendingTracks = async (args: { genre?: string, limit?: number }) => {
+// Implementation of get-trending-tracks execution logic
+const getTrendingTracksExecute = async (args: z.infer<typeof getTrendingTracksZodSchema>): Promise<MCPToolResponse> => {
   try {
     const audiusClient = AudiusClient.getInstance();
     const limit = args.limit || 10;
@@ -166,8 +182,8 @@ export const getTrendingTracks = async (args: { genre?: string, limit?: number }
   }
 };
 
-// Implementation of get-track-comments tool
-export const getTrackComments = async (args: { trackId: string, limit?: number }) => {
+// Implementation of get-track-comments execution logic
+const getTrackCommentsExecute = async (args: z.infer<typeof getTrackCommentsZodSchema>): Promise<MCPToolResponse> => {
   try {
     const audiusClient = AudiusClient.getInstance();
     const limit = args.limit || 10;
@@ -201,8 +217,8 @@ export const getTrackComments = async (args: { trackId: string, limit?: number }
     
   }
 
-// Schema for stream-track tool
-const streamTrackSchema = {
+// Legacy JSON Schema for stream-track (will be phased out)
+const streamTrackLegacySchema = {
   type: 'object',
   properties: {
     trackId: {
@@ -230,17 +246,11 @@ const streamTrackSchema = {
   description: 'Streams raw audio bytes for a given Audius track ID. Response is an audio/mpeg stream.'
 };
 
-// Implementation of stream-track tool
-const streamTrack = async (
-  args: {
-    trackId: string,
-    userId?: string,
-    apiKey?: string,
-    preview?: boolean,
-    skipPlayCount?: boolean
-  },
+// Implementation of stream-track execution logic
+const streamTrackExecute = async (
+  args: z.infer<typeof streamTrackZodSchema>,
   context: { res: any }
-) => {
+): Promise<MCPToolResponse> => {
   try {
     const audiusClient = AudiusClient.getInstance();
     const sdk = audiusClient.getSDK();
@@ -303,4 +313,64 @@ const streamTrack = async (
   }
 };
 
-export { streamTrackSchema, streamTrack };
+// Define the tool objects using ToolDefinition interface
+const getTrackTool: ToolDefinition<typeof getTrackZodSchema> = {
+  name: 'get-track',
+  description: 'Get details for a specific track',
+  schema: getTrackZodSchema,
+  execute: getTrackExecute
+};
+
+const searchTracksTool: ToolDefinition<typeof searchTracksZodSchema> = {
+  name: 'search-tracks',
+  description: 'Search for tracks by keyword',
+  schema: searchTracksZodSchema,
+  execute: searchTracksExecute
+};
+
+const getTrendingTracksTool: ToolDefinition<typeof getTrendingTracksZodSchema> = {
+  name: 'get-trending-tracks',
+  description: 'Get trending tracks on Audius',
+  schema: getTrendingTracksZodSchema,
+  execute: getTrendingTracksExecute
+};
+
+const getTrackCommentsTool: ToolDefinition<typeof getTrackCommentsZodSchema> = {
+  name: 'get-track-comments',
+  description: 'Get comments for a specific track',
+  schema: getTrackCommentsZodSchema,
+  execute: getTrackCommentsExecute
+};
+
+// The streamTrack tool is special because it requires context
+// We'll still define it but note that it might need special handling in the server
+const streamTrackTool: ToolDefinition<typeof streamTrackZodSchema> = {
+  name: 'stream-track',
+  description: 'Stream an Audius track as audio',
+  schema: streamTrackZodSchema,
+  execute: (args) => streamTrackExecute(args, { res: null }) // Note: This is a placeholder, the actual implementation will need context
+};
+
+// Register all tools with the registry
+registerTool(getTrackTool);
+registerTool(searchTracksTool);
+registerTool(getTrendingTracksTool);
+registerTool(getTrackCommentsTool);
+registerTool(streamTrackTool);
+
+// For backward compatibility, we'll export the legacy schemas and functions
+// These will be removed once the migration to the new system is complete
+export {
+  getTrackLegacySchema as getTrackSchema,
+  searchTracksLegacySchema as searchTracksSchema,
+  getTrendingTracksLegacySchema as getTrendingTracksSchema,
+  getTrackCommentsLegacySchema as getTrackCommentsSchema,
+  streamTrackLegacySchema as streamTrackSchema,
+  
+  // Legacy function exports
+  getTrackExecute as getTrack,
+  searchTracksExecute as searchTracks,
+  getTrendingTracksExecute as getTrendingTracks,
+  getTrackCommentsExecute as getTrackComments,
+  streamTrackExecute as streamTrack
+};

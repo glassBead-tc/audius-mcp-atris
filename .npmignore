@@ -1,8 +1,12 @@
-# Source files
+# Exclude source and test files
 src/
 test/
+examples/
+MCP/
+test-cli.sh
+start-basic.sh
 
-# Configuration files
+# Exclude configuration and dev files
 .eslintrc*
 .prettierrc*
 .github/
@@ -10,25 +14,20 @@ test/
 .gitignore
 .git/
 tsconfig.json
-
-# Development files
-examples/
-MCP/
-test-cli.sh
-start-basic.sh
+CHANGELOG.md
 CLAUDE.md
 LLM-GUIDE.md
 LLM-QUICKSTART.md
 test-plan.md
-node_modules/
 
-# Logs
+# Exclude logs and node_modules
 logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+node_modules/
 
-# Environment files
+# Exclude environment files
 .env
 .env.*

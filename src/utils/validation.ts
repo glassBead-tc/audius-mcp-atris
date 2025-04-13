@@ -6,7 +6,44 @@
  */
 
 import { z } from 'zod';
-import { InputValidationError } from './error.js';
+
+/**
+ * Error class for handling validation failures
+ */
+export class InputValidationError extends Error {
+  statusCode: number;
+  errorCode: string;
+  details?: Record<string, any>;
+
+  constructor(message: string, details?: Record<string, any>) {
+    super(message);
+    this.name = 'InputValidationError';
+    this.statusCode = 400;
+    this.errorCode = 'VALIDATION_ERROR';
+    this.details = details;
+    
+    // Ensures proper inheritance in ES5
+    Object.setPrototypeOf(this, InputValidationError.prototype);
+  }
+
+  /**
+   * Create an InputValidationError from a Zod validation error
+   * @param errors Zod validation errors
+   * @returns An InputValidationError
+   */
+  static fromZodError(errors: z.ZodIssue[]): InputValidationError {
+    const formattedErrors = errors.map(err => ({
+      path: err.path.join('.'),
+      message: err.message,
+      code: err.code
+    }));
+    
+    return new InputValidationError(
+      'Invalid input parameters',
+      { validationErrors: formattedErrors }
+    );
+  }
+}
 
 /**
  * Create a validated configuration object from schema and raw data
