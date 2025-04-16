@@ -2,10 +2,9 @@
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { createServer } from './server.js';
 import { config } from './config.js';
-import { startStreamServer } from './stream-server.js';
 
 // Redirect console.log to console.error to avoid interfering with JSON-RPC
-const originalConsoleLog = console.log;
+
 console.log = function(...args: any[]) {
   console.error(...args);
 };
@@ -20,13 +19,6 @@ async function main() {
     // Create MCP server
     const server = createServer();
     
-    // Start the streaming server in the background
-    console.error('Starting audio streaming server...');
-    const streamServer = await startStreamServer().catch(err => {
-      console.error('Warning: Audio streaming server failed to start:', err.message);
-      console.error('MCP server will continue without streaming functionality');
-      return null;
-    });
     
     // Create the transport layer
     const transport = new StdioServerTransport();
@@ -43,12 +35,6 @@ async function main() {
         // Close the MCP server
         await server.close();
         
-        // Close the streaming server if it was started
-        if (streamServer) {
-          streamServer.close(() => {
-            console.error('Streaming server closed successfully');
-          });
-        }
         
         console.error('Server closed successfully');
       } catch (error) {

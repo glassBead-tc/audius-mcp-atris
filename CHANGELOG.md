@@ -2,6 +2,15 @@
 
 All notable changes to the audius-mcp-atris package will be documented in this file.
 
+## [1.3.0] - 2025-04-16
+
+### Added
+- Docker support (Dockerfile, build/run commands, fixes)
+- Smithery configuration (`smithery.yaml`)
+- Audio streaming support (`fetchAudiusTrackStream.ts`)
+- Updated README with more details and natural language capabilities section.
+
+
 ## [1.1.1] - 2025-04-06
 
 ### Fixed

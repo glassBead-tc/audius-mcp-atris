@@ -21,3 +21,15 @@ yarn-error.log
 
 #SDK Reference
 audius-protocol
+
+mcp-client-development-guide.md
+mcp-server-development-guide.md
+mcpSchema.ts
+CLAUDE.md
+llms.txt
+smithery-deployments.txt
+.roomodes
+start-basic.sh
+start-stream-server.js
+test-cli.sh
+test-plan.md

@@ -1,5 +1,7 @@
 import { z } from 'zod';
 import { AudiusClient } from '../sdk-client.js';
+import { fetchAudiusTrackStream } from '../utils/fetchAudiusTrackStream.js';
+import { Readable } from 'stream'; // Import Readable from stream
 
 // Schema for get-track tool
 export const getTrackSchema = {
@@ -227,10 +229,42 @@ const streamTrackSchema = {
     }
   },
   required: ['trackId'],
-  description: 'Streams raw audio bytes for a given Audius track ID. Response is an audio/mpeg stream.'
+  description: 'Fetches an Audius track and returns its content as Base64 encoded audio/mpeg data.'
 };
 
 // Implementation of stream-track tool
+// Helper function to convert stream to buffer
+async function streamToBuffer(stream: ReadableStream<Uint8Array> | NodeJS.ReadableStream): Promise<Buffer> {
+  const chunks: Buffer[] = [];
+  return new Promise((resolve, reject) => {
+    // Check if it's a Web ReadableStream by looking for getReader
+    if (typeof (stream as any).getReader === 'function') {
+      const reader = (stream as ReadableStream<Uint8Array>).getReader();
+      const pump = async () => {
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) {
+              resolve(Buffer.concat(chunks));
+              break;
+            }
+            chunks.push(Buffer.from(value));
+          }
+        } catch (err) {
+          reject(err);
+        }
+      };
+      pump(); // Start the async pump function
+    } else if (stream instanceof Readable) {
+      // Handle Node.js Readable stream
+      stream.on('data', (chunk) => chunks.push(Buffer.from(chunk)));
+      stream.on('error', (err) => reject(err));
+      stream.on('end', () => resolve(Buffer.concat(chunks)));
+    } else {
+      reject(new Error('Unsupported stream type provided to streamToBuffer'));
+    }
+  });
+}
 const streamTrack = async (
   args: {
     trackId: string,
@@ -238,14 +272,13 @@ const streamTrack = async (
     apiKey?: string,
     preview?: boolean,
     skipPlayCount?: boolean
-  },
-  context: { res: any }
+  }
 ) => {
   try {
     const audiusClient = AudiusClient.getInstance();
     const sdk = audiusClient.getSDK();
 
-    const stream = await import('../utils/fetchAudiusTrackStream.js').then(m => m.fetchAudiusTrackStream(
+    const stream = await fetchAudiusTrackStream(
       sdk,
       args.trackId,
       {
@@ -254,45 +287,21 @@ const streamTrack = async (
         preview: args.preview,
         skipPlayCount: args.skipPlayCount
       }
-    ));
+    );
 
-    context.res.setHeader('Content-Type', 'audio/mpeg');
-    context.res.setHeader('Transfer-Encoding', 'chunked');
+    const audioBuffer = await streamToBuffer(stream);
+    const base64Audio = audioBuffer.toString('base64');
 
-    if (typeof (stream as any).pipe === 'function') {
-      (stream as any).pipe(context.res);
-    } else if (typeof (stream as any).getReader === 'function') {
-      const reader = (stream as any).getReader();
-      const writer = context.res.getWriter ? context.res.getWriter() : null;
-      context.res.setHeader('Transfer-Encoding', 'chunked');
-      const pump = async () => {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          context.res.write(value);
-        }
-        context.res.end();
-      };
-      pump().catch((err: any) => {
-        console.error('Stream piping error:', err);
-        if (!context.res.headersSent) {
-          context.res.statusCode = 500;
-          context.res.end('Stream error');
-        }
-      });
-    } else {
-      throw new Error('Unsupported stream type');
-    }
+    return {
+      content: [{
+        type: 'blob',
+        mimeType: 'audio/mpeg',
+        data: base64Audio
+      }],
+    };
 
-    // Return a special marker indicating streaming response
-    return { content: [{ type: 'stream', text: 'Streaming audio...' }] };
   } catch (error: any) {
     console.error('Error in stream-track tool:', error);
-    if (context?.res?.headersSent !== true) {
-      context.res.statusCode = 500;
-      context.res.setHeader('Content-Type', 'application/json');
-      context.res.end(JSON.stringify({ error: error.message || 'Unknown error' }));
-    }
     return {
       content: [{
         type: 'text',
