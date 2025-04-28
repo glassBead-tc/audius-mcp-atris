@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { AudiusClient } from '../sdk-client.js';
 import { createTextResponse } from '../utils/response.js';
-import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
+import { RequestHandlerExtra } from '../types/index.js';
 
 // Schema for user-favorites tool
 export const userFavoritesSchema = {

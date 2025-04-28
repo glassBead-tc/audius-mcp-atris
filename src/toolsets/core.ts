@@ -1,6 +1,6 @@
 import { McpServer, ToolCallback } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
+import { RequestHandlerExtra, ToolHandler, McpToolDefinition } from '../types/index.js';
 import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 
 /**
@@ -47,10 +47,27 @@ export function createServerTool(
 /**
  * Converts JSON Schema to Zod schema for tool registration
  */
-export const jsonSchemaToZod = (schema: any): z.ZodRawShape => {
+export const jsonSchemaToZod = (schema: any): any => {
+  // If already a Zod object, return it directly
+  if (schema instanceof z.ZodType) {
+    return schema;
+  }
+  
+  // If it's a direct object with Zod validators, like { param1: z.string() }
+  if (schema && typeof schema === 'object' && !schema.type) {
+    // Check if it contains any Zod validators
+    const hasZodValidator = Object.values(schema).some(
+      val => val instanceof z.ZodType
+    );
+    
+    if (hasZodValidator) {
+      return schema; // Return it directly
+    }
+  }
+  
   // Similar to the existing implementation in server.ts
-  if (schema.type === 'object' && schema.properties) {
-    const zodProps: z.ZodRawShape = {};
+  if (schema && schema.type === 'object' && schema.properties) {
+    const zodProps: Record<string, z.ZodTypeAny> = {};
     
     for (const [key, prop] of Object.entries(schema.properties) as [string, any][]) {
       if (prop.type === 'string') {
@@ -88,8 +105,8 @@ export const jsonSchemaToZod = (schema: any): z.ZodRawShape => {
       } else if (prop.enum) {
         // Handle enum types
         zodProps[key] = schema.required?.includes(key)
-          ? z.enum(prop.enum)
-          : z.enum(prop.enum).optional();
+          ? z.enum(prop.enum as [string, ...string[]])
+          : z.enum(prop.enum as [string, ...string[]]).optional();
       } else {
         // For simplicity, treat other types as passthrough
         zodProps[key] = schema.required?.includes(key) 
@@ -98,12 +115,12 @@ export const jsonSchemaToZod = (schema: any): z.ZodRawShape => {
       }
     }
     
-    // Return the raw shape object for use with tool registration
+    // Return the properties as a simple object
     return zodProps;
   }
   
   // Fallback for other schema types
-  return {}; // Return empty object as ZodRawShape
+  return {};
 };
 
 /**
@@ -210,25 +227,43 @@ export class Toolset {
 
     // Register read tools
     for (const tool of this.readTools) {
-      // Use the overload that takes name, description, schema, and handler
-      server.tool(
-        tool.name,
-        tool.description,
-        tool.schema,
-        tool.handler
-      );
+      try {
+        // Convert JSON Schema to Zod schema
+        const zodSchema = jsonSchemaToZod(tool.schema);
+        
+        // Register the tool with the MCP server
+        server.tool(
+          tool.name,  // Name of the tool
+          tool.description,  // Description
+          zodSchema,  // Schema as a simple object with Zod validators
+          async (args) => {  // Handler function 
+            return await tool.handler(args, {} as any);
+          }
+        );
+      } catch (error) {
+        console.error(`Error registering tool ${tool.name}:`, error);
+      }
     }
 
     // Register write tools if not in read-only mode
     if (!this.readOnly) {
       for (const tool of this.writeTools) {
-        // Use the overload that takes name, description, schema, and handler
-        server.tool(
-          tool.name,
-          tool.description,
-          tool.schema,
-          tool.handler
-        );
+        try {
+          // Convert JSON Schema to Zod schema
+          const zodSchema = jsonSchemaToZod(tool.schema);
+          
+          // Register the tool with the MCP server
+          server.tool(
+            tool.name,  // Name of the tool
+            tool.description,  // Description
+            zodSchema,  // Schema as a simple object with Zod validators
+            async (args) => {  // Handler function
+              return await tool.handler(args, {} as any);
+            }
+          );
+        } catch (error) {
+          console.error(`Error registering tool ${tool.name}:`, error);
+        }
       }
     }
   }

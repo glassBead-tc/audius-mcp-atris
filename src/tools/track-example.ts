@@ -1,5 +1,5 @@
 import { AudiusClient } from '../sdk-client.js';
-import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
+import { RequestHandlerExtra } from '../types/index.js';
 import { createTextResponse, createMixedResponse } from '../utils/response.js';
 import { requiredParam, optionalNumberParam, paginationParams } from '../toolsets/params.js';
 

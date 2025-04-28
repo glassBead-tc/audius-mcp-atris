@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { AudiusClient } from '../sdk-client.js';
-import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
+import { RequestHandlerExtra } from '../types/index.js';
 import { createTextResponse, createMixedResponse } from '../utils/response.js';
 
 // Schema for get-track tool
@@ -63,7 +63,7 @@ export const getTrackCommentsSchema = {
 };
 
 // Implementation of get-track tool
-export const getTrack = async (args: { trackId: string }) => {
+export const getTrack = async (args: { trackId: string }, extra: RequestHandlerExtra) => {
   try {
     const audiusClient = AudiusClient.getInstance();
     const track = await audiusClient.getTrack(args.trackId);
@@ -99,7 +99,7 @@ export const getTrack = async (args: { trackId: string }) => {
 export const searchTracks = async (args: { 
   query: string, 
   limit?: number 
-}) => {
+}, extra: RequestHandlerExtra) => {
   try {
     const audiusClient = AudiusClient.getInstance();
     const searchResults = await audiusClient.searchTracks(args.query, { limit: args.limit || 10 });
@@ -130,7 +130,7 @@ export const searchTracks = async (args: {
 export const getTrendingTracks = async (args: { 
   genre?: string, 
   limit?: number 
-}) => {
+}, extra: RequestHandlerExtra) => {
   try {
     const audiusClient = AudiusClient.getInstance();
     const genreMessage = args.genre ? ` for genre "${args.genre}"` : '';
@@ -166,7 +166,7 @@ export const getTrendingTracks = async (args: {
 export const getTrackComments = async (args: { 
   trackId: string, 
   limit?: number 
-}) => {
+}, extra: RequestHandlerExtra) => {
   try {
     const audiusClient = AudiusClient.getInstance();
     
