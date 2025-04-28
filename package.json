@@ -1,6 +1,6 @@
 {
   "name": "audius-mcp-atris",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Atris MCP - STDIO-based Model Context Protocol integration for Audius music platform",
   "main": "build/index.js",
   "type": "module",

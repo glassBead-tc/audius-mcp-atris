@@ -1,5 +1,20 @@
 # Changelog
 
+## 2.0.1 (2025-04-29)
+
+### New Features
+- Added toolsets pattern for better organization and control
+- Implemented parameter validation helpers for consistent error handling
+- Added ability to enable/disable specific toolsets
+- Added support for read-only mode for sensitive environments
+- Created documentation for toolsets pattern (TOOLSETS.md)
+
+### Improvements
+- Fixed TypeScript type errors in toolset implementation
+- Updated server version displays to match package version
+- Better structured codebase with logical tool groupings
+- Improved error handling with standardized parameter validation
+
 ## 2.0.0 (2025-04-28)
 
 ### Breaking Changes

@@ -13,7 +13,7 @@ const configSchema = z.object({
   }),
   server: z.object({
     name: z.string().default('audius-mcp'),
-    version: z.string().default('1.0.0'),
+    version: z.string().default('2.0.1'),
   }),
 });
 
@@ -28,7 +28,7 @@ const createConfig = () => {
       },
       server: {
         name: process.env.SERVER_NAME || 'audius-mcp',
-        version: process.env.SERVER_VERSION || '1.0.0',
+        version: process.env.SERVER_VERSION || '2.0.1',
       },
     });
     
