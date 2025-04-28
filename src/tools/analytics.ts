@@ -1,5 +1,7 @@
 import { z } from 'zod';
 import { AudiusClient } from '../sdk-client.js';
+import { createTextResponse } from '../utils/response.js';
+import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
 
 // Schema for track-listen-counts tool
 export const trackListenCountsSchema = {
@@ -16,7 +18,7 @@ export const trackListenCountsSchema = {
 // Implementation of track-listen-counts tool
 export const getTrackListenCounts = async (args: { 
   trackId: string;
-}) => {
+}, extra: RequestHandlerExtra) => {
   try {
     const audiusClient = AudiusClient.getInstance();
     
@@ -24,25 +26,14 @@ export const getTrackListenCounts = async (args: {
     try {
       await audiusClient.getTrack(args.trackId);
     } catch (error) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Unable to verify track. Please check the provided track ID.`,
-        }],
-        isError: true
-      };
+      return createTextResponse(`Unable to verify track. Please check the provided track ID.`, true);
     }
     
     // Get listen counts
     const listenCounts = await audiusClient.getTrackListenCounts(args.trackId);
     
     if (!listenCounts) {
-      return {
-        content: [{
-          type: 'text',
-          text: `No listen count data available for track ${args.trackId}.`,
-        }],
-      };
+      return createTextResponse(`No listen count data available for track ${args.trackId}.`);
     }
     
     // Format results
@@ -51,21 +42,13 @@ export const getTrackListenCounts = async (args: {
       listenCounts: listenCounts,
     };
     
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(formattedResults, null, 2),
-      }],
-    };
+    return createTextResponse(JSON.stringify(formattedResults, null, 2));
   } catch (error) {
     console.error('Error in track-listen-counts tool:', error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error getting track listen counts: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
-      isError: true
-    };
+    return createTextResponse(
+      `Error getting track listen counts: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
   }
 };
 
@@ -84,7 +67,7 @@ export const userTrackListenCountsSchema = {
 // Implementation of user-track-listen-counts tool
 export const getUserTrackListenCounts = async (args: { 
   userId: string;
-}) => {
+}, extra: RequestHandlerExtra) => {
   try {
     const audiusClient = AudiusClient.getInstance();
     
@@ -92,25 +75,14 @@ export const getUserTrackListenCounts = async (args: {
     try {
       await audiusClient.getUser(args.userId);
     } catch (error) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Unable to verify user. Please check the provided user ID.`,
-        }],
-        isError: true
-      };
+      return createTextResponse(`Unable to verify user. Please check the provided user ID.`, true);
     }
     
     // Get user track listen counts
     const listenCounts = await audiusClient.getUserTrackListenCounts(args.userId);
     
     if (!listenCounts || Object.keys(listenCounts).length === 0) {
-      return {
-        content: [{
-          type: 'text',
-          text: `No listen count data available for user ${args.userId}.`,
-        }],
-      };
+      return createTextResponse(`No listen count data available for user ${args.userId}.`);
     }
     
     // Format results
@@ -119,21 +91,13 @@ export const getUserTrackListenCounts = async (args: {
       trackListenCounts: listenCounts,
     };
     
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(formattedResults, null, 2),
-      }],
-    };
+    return createTextResponse(JSON.stringify(formattedResults, null, 2));
   } catch (error) {
     console.error('Error in user-track-listen-counts tool:', error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error getting user track listen counts: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
-      isError: true
-    };
+    return createTextResponse(
+      `Error getting user track listen counts: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
   }
 };
 
@@ -157,7 +121,7 @@ export const trackTopListenersSchema = {
 export const getTrackTopListeners = async (args: { 
   trackId: string;
   limit?: number;
-}) => {
+}, extra: RequestHandlerExtra) => {
   try {
     const audiusClient = AudiusClient.getInstance();
     const limit = args.limit || 10;
@@ -166,25 +130,14 @@ export const getTrackTopListeners = async (args: {
     try {
       await audiusClient.getTrack(args.trackId);
     } catch (error) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Unable to verify track. Please check the provided track ID.`,
-        }],
-        isError: true
-      };
+      return createTextResponse(`Unable to verify track. Please check the provided track ID.`, true);
     }
     
     // Get top listeners
     const topListeners = await audiusClient.getTrackTopListeners(args.trackId, limit);
     
     if (!topListeners || topListeners.length === 0) {
-      return {
-        content: [{
-          type: 'text',
-          text: `No top listener data available for track ${args.trackId}.`,
-        }],
-      };
+      return createTextResponse(`No top listener data available for track ${args.trackId}.`);
     }
     
     // Format results
@@ -194,21 +147,13 @@ export const getTrackTopListeners = async (args: {
       topListeners: topListeners,
     };
     
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(formattedResults, null, 2),
-      }],
-    };
+    return createTextResponse(JSON.stringify(formattedResults, null, 2));
   } catch (error) {
     console.error('Error in track-top-listeners tool:', error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error getting track top listeners: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
-      isError: true
-    };
+    return createTextResponse(
+      `Error getting track top listeners: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
   }
 };
 
@@ -227,7 +172,7 @@ export const trackListenerInsightsSchema = {
 // Implementation of track-listener-insights tool
 export const getTrackListenerInsights = async (args: { 
   trackId: string;
-}) => {
+}, extra: RequestHandlerExtra) => {
   try {
     const audiusClient = AudiusClient.getInstance();
     
@@ -235,25 +180,14 @@ export const getTrackListenerInsights = async (args: {
     try {
       await audiusClient.getTrack(args.trackId);
     } catch (error) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Unable to verify track. Please check the provided track ID.`,
-        }],
-        isError: true
-      };
+      return createTextResponse(`Unable to verify track. Please check the provided track ID.`, true);
     }
     
     // Get listener insights
     const insights = await audiusClient.getTrackListenerInsights(args.trackId);
     
     if (!insights || Object.keys(insights).length === 0) {
-      return {
-        content: [{
-          type: 'text',
-          text: `No listener insight data available for track ${args.trackId}.`,
-        }],
-      };
+      return createTextResponse(`No listener insight data available for track ${args.trackId}.`);
     }
     
     // Format results
@@ -262,21 +196,13 @@ export const getTrackListenerInsights = async (args: {
       listenerInsights: insights,
     };
     
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(formattedResults, null, 2),
-      }],
-    };
+    return createTextResponse(JSON.stringify(formattedResults, null, 2));
   } catch (error) {
     console.error('Error in track-listener-insights tool:', error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error getting track listener insights: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
-      isError: true
-    };
+    return createTextResponse(
+      `Error getting track listener insights: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
   }
 };
 
@@ -295,7 +221,7 @@ export const userPlayMetricsSchema = {
 // Implementation of user-play-metrics tool
 export const getUserPlayMetrics = async (args: { 
   userId: string;
-}) => {
+}, extra: RequestHandlerExtra) => {
   try {
     const audiusClient = AudiusClient.getInstance();
     
@@ -303,25 +229,14 @@ export const getUserPlayMetrics = async (args: {
     try {
       await audiusClient.getUser(args.userId);
     } catch (error) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Unable to verify user. Please check the provided user ID.`,
-        }],
-        isError: true
-      };
+      return createTextResponse(`Unable to verify user. Please check the provided user ID.`, true);
     }
     
     // Get user play metrics
     const metrics = await audiusClient.getUserAggregatePlayMetrics(args.userId);
     
     if (!metrics || Object.keys(metrics).length === 0) {
-      return {
-        content: [{
-          type: 'text',
-          text: `No aggregate play metrics available for user ${args.userId}.`,
-        }],
-      };
+      return createTextResponse(`No aggregate play metrics available for user ${args.userId}.`);
     }
     
     // Format results
@@ -330,21 +245,13 @@ export const getUserPlayMetrics = async (args: {
       playMetrics: metrics,
     };
     
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(formattedResults, null, 2),
-      }],
-    };
+    return createTextResponse(JSON.stringify(formattedResults, null, 2));
   } catch (error) {
     console.error('Error in user-play-metrics tool:', error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error getting user play metrics: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
-      isError: true
-    };
+    return createTextResponse(
+      `Error getting user play metrics: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
   }
 };
 
@@ -363,7 +270,7 @@ export const trackMonthlyTrendingSchema = {
 // Implementation of track-monthly-trending tool
 export const getTrackMonthlyTrending = async (args: { 
   trackId: string;
-}) => {
+}, extra: RequestHandlerExtra) => {
   try {
     const audiusClient = AudiusClient.getInstance();
     
@@ -371,25 +278,14 @@ export const getTrackMonthlyTrending = async (args: {
     try {
       await audiusClient.getTrack(args.trackId);
     } catch (error) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Unable to verify track. Please check the provided track ID.`,
-        }],
-        isError: true
-      };
+      return createTextResponse(`Unable to verify track. Please check the provided track ID.`, true);
     }
     
     // Get monthly trending data
     const trendingData = await audiusClient.getTrackMonthlyTrending(args.trackId);
     
     if (!trendingData || Object.keys(trendingData).length === 0) {
-      return {
-        content: [{
-          type: 'text',
-          text: `No monthly trending data available for track ${args.trackId}.`,
-        }],
-      };
+      return createTextResponse(`No monthly trending data available for track ${args.trackId}.`);
     }
     
     // Format results
@@ -398,21 +294,13 @@ export const getTrackMonthlyTrending = async (args: {
       monthlyTrending: trendingData,
     };
     
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(formattedResults, null, 2),
-      }],
-    };
+    return createTextResponse(JSON.stringify(formattedResults, null, 2));
   } catch (error) {
     console.error('Error in track-monthly-trending tool:', error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error getting track monthly trending data: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
-      isError: true
-    };
+    return createTextResponse(
+      `Error getting track monthly trending data: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
   }
 };
 
@@ -436,7 +324,7 @@ export const userSupportersSchema = {
 export const getUserSupporters = async (args: { 
   userId: string;
   limit?: number;
-}) => {
+}, extra: RequestHandlerExtra) => {
   try {
     const audiusClient = AudiusClient.getInstance();
     const limit = args.limit || 10;
@@ -445,25 +333,14 @@ export const getUserSupporters = async (args: {
     try {
       await audiusClient.getUser(args.userId);
     } catch (error) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Unable to verify user. Please check the provided user ID.`,
-        }],
-        isError: true
-      };
+      return createTextResponse(`Unable to verify user. Please check the provided user ID.`, true);
     }
     
     // Get user supporters
     const supporters = await audiusClient.getUserSupporters(args.userId, limit);
     
     if (!supporters || supporters.length === 0) {
-      return {
-        content: [{
-          type: 'text',
-          text: `No supporter data available for user ${args.userId}.`,
-        }],
-      };
+      return createTextResponse(`No supporter data available for user ${args.userId}.`);
     }
     
     // Format results
@@ -473,21 +350,13 @@ export const getUserSupporters = async (args: {
       supporters: supporters,
     };
     
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(formattedResults, null, 2),
-      }],
-    };
+    return createTextResponse(JSON.stringify(formattedResults, null, 2));
   } catch (error) {
     console.error('Error in user-supporters tool:', error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error getting user supporters: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
-      isError: true
-    };
+    return createTextResponse(
+      `Error getting user supporters: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
   }
 };
 
@@ -511,7 +380,7 @@ export const userSupportingSchema = {
 export const getUserSupporting = async (args: { 
   userId: string;
   limit?: number;
-}) => {
+}, extra: RequestHandlerExtra) => {
   try {
     const audiusClient = AudiusClient.getInstance();
     const limit = args.limit || 10;
@@ -520,25 +389,14 @@ export const getUserSupporting = async (args: {
     try {
       await audiusClient.getUser(args.userId);
     } catch (error) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Unable to verify user. Please check the provided user ID.`,
-        }],
-        isError: true
-      };
+      return createTextResponse(`Unable to verify user. Please check the provided user ID.`, true);
     }
     
     // Get user supporting
     const supporting = await audiusClient.getUserSupporting(args.userId, limit);
     
     if (!supporting || supporting.length === 0) {
-      return {
-        content: [{
-          type: 'text',
-          text: `No supporting data available for user ${args.userId}.`,
-        }],
-      };
+      return createTextResponse(`No supporting data available for user ${args.userId}.`);
     }
     
     // Format results
@@ -548,20 +406,12 @@ export const getUserSupporting = async (args: {
       supporting: supporting,
     };
     
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(formattedResults, null, 2),
-      }],
-    };
+    return createTextResponse(JSON.stringify(formattedResults, null, 2));
   } catch (error) {
     console.error('Error in user-supporting tool:', error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error getting user supporting info: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
-      isError: true
-    };
+    return createTextResponse(
+      `Error getting user supporting info: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
   }
 };

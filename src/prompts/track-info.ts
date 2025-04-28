@@ -23,12 +23,12 @@ export const handleTrackAnalysisPrompt = (args: { trackId: string }) => {
 
 Please make your analysis detailed and insightful for music fans.`;
   
-  // Create messages for the prompt
+  // Create messages for the prompt with proper typing
   const messages = [
     {
-      role: 'user',
+      role: "user" as const,
       content: {
-        type: 'text',
+        type: "text" as const,
         text: userMessage,
       },
     },

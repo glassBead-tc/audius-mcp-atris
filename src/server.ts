@@ -1,12 +1,5 @@
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { 
-  CallToolRequestSchema, 
-  ListToolsRequestSchema,
-  ListResourcesRequestSchema,
-  ReadResourceRequestSchema,
-  ListPromptsRequestSchema,
-  GetPromptRequestSchema
-} from '@modelcontextprotocol/sdk/types.js';
+import { McpServer, ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { z } from 'zod';
 import { config } from './config.js';
 import { 
   getTrack, getTrackSchema,
@@ -109,603 +102,713 @@ import {
   sendNotification, sendNotificationSchema
 } from './tools/notifications.js';
 import {
-  trackResourceTemplate, handleTrackResource
+  handleTrackResource
 } from './resources/tracks.js';
 import {
-  userResourceTemplate, handleUserResource
+  handleUserResource
 } from './resources/users.js';
 import {
-  playlistResourceTemplate, handlePlaylistResource,
-  albumResourceTemplate, handleAlbumResource
+  handlePlaylistResource,
+  handleAlbumResource
 } from './resources/playlists.js';
 import {
-  discoverMusicPrompt, handleDiscoverMusicPrompt
+  handleDiscoverMusicPrompt
 } from './prompts/music-search.js';
 import {
-  trackAnalysisPrompt, handleTrackAnalysisPrompt
+  handleTrackAnalysisPrompt
 } from './prompts/track-info.js';
 import {
-  artistProfilePrompt, handleArtistProfilePrompt
+  handleArtistProfilePrompt
 } from './prompts/artist-profile.js';
 import {
-  musicCreationPrompt, handleMusicCreationPrompt
+  handleMusicCreationPrompt
 } from './prompts/music-creation.js';
 import {
-  playlistCreationPrompt, handlePlaylistCreationPrompt
+  handlePlaylistCreationPrompt
 } from './prompts/playlist-creation.js';
 import {
-  messagingPrompt, handleMessagingPrompt
+  handleMessagingPrompt
 } from './prompts/messaging.js';
 import {
-  analyticsPrompt, handleAnalyticsPrompt
+  handleAnalyticsPrompt
 } from './prompts/analytics.js';
 import {
-  blockchainPrompt, handleBlockchainPrompt
+  handleBlockchainPrompt
 } from './prompts/blockchain.js';
 import {
-  monetizationPrompt, handleMonetizationPrompt
+  handleMonetizationPrompt
 } from './prompts/monetization.js';
 import {
-  notificationsPrompt, handleNotificationsPrompt
+  handleNotificationsPrompt
 } from './prompts/notifications.js';
+
+// Helper to convert JSON Schema to Zod schema
+const jsonSchemaToZod = (schema: any) => {
+  // In a complete implementation, this would convert JSON Schema to Zod schema
+  // For now, we'll extract properties and create a Zod object schema
+  if (schema.type === 'object' && schema.properties) {
+    const zodProps: Record<string, z.ZodTypeAny> = {};
+    
+    for (const [key, prop] of Object.entries(schema.properties) as [string, any][]) {
+      if (prop.type === 'string') {
+        zodProps[key] = schema.required?.includes(key) 
+          ? z.string() 
+          : z.string().optional();
+      } else if (prop.type === 'number') {
+        zodProps[key] = schema.required?.includes(key) 
+          ? z.number() 
+          : z.number().optional();
+      } else if (prop.type === 'boolean') {
+        zodProps[key] = schema.required?.includes(key) 
+          ? z.boolean() 
+          : z.boolean().optional();
+      } else if (prop.type === 'array') {
+        // Handle array types
+        let itemType: z.ZodTypeAny = z.any();
+        if (prop.items?.type === 'string') {
+          itemType = z.string();
+        } else if (prop.items?.type === 'number') {
+          itemType = z.number();
+        } else if (prop.items?.type === 'boolean') {
+          itemType = z.boolean();
+        }
+        
+        zodProps[key] = schema.required?.includes(key)
+          ? z.array(itemType)
+          : z.array(itemType).optional();
+      } else if (prop.type === 'object' && prop.properties) {
+        // Handle nested objects recursively
+        const nestedProps = jsonSchemaToZod(prop);
+        zodProps[key] = schema.required?.includes(key)
+          ? z.object(nestedProps)
+          : z.object(nestedProps).optional();
+      } else if (prop.enum) {
+        // Handle enum types
+        zodProps[key] = schema.required?.includes(key)
+          ? z.enum(prop.enum)
+          : z.enum(prop.enum).optional();
+      } else {
+        // For simplicity, treat other types as passthrough
+        zodProps[key] = schema.required?.includes(key) 
+          ? z.any() 
+          : z.any().optional();
+      }
+    }
+    
+    // Return the raw shape object for use with tool registration
+    return zodProps;
+  }
+  
+  // Fallback for other schema types
+  return {}; // Return empty object as ZodRawShape
+};
 
 /**
  * Create and configure the MCP server
  */
 export const createServer = () => {
-  // Initialize server with configuration
-  const server = new Server({
+  // Initialize server with McpServer
+  const server = new McpServer({
     name: config.server.name,
     version: config.server.version,
-  }, {
-    capabilities: {
-      tools: {},
-      resources: {},
-      prompts: {}
-    }
   });
 
-  // Register tool handlers
-  server.setRequestHandler(ListToolsRequestSchema, async () => {
-    return {
-      tools: [
-        // Track tools
-        { name: 'get-track', description: 'Get details for a specific track', inputSchema: getTrackSchema },
-        { name: 'search-tracks', description: 'Search for tracks by keyword', inputSchema: searchTracksSchema },
-        { name: 'get-trending-tracks', description: 'Get trending tracks on Audius', inputSchema: getTrendingTracksSchema },
-        { name: 'get-track-comments', description: 'Get comments for a specific track', inputSchema: getTrackCommentsSchema },
-        
-        // User tools
-        { name: 'get-user', description: 'Get details for a specific user', inputSchema: getUserSchema },
-        { name: 'search-users', description: 'Search for users by keyword', inputSchema: searchUsersSchema },
-        { name: 'get-user-tracks', description: 'Get tracks uploaded by a specific user', inputSchema: getUserTracksSchema },
-        
-        // Playlist & Album tools
-        { name: 'get-playlist', description: 'Get details for a specific playlist', inputSchema: getPlaylistSchema },
-        { name: 'get-album', description: 'Get details for a specific album', inputSchema: getAlbumSchema },
-        
-        // Search tools
-        { name: 'search-all', description: 'Search across all content types on Audius', inputSchema: searchAllSchema },
-        { name: 'advanced-search', description: 'Advanced search for tracks with filtering by genre, mood, BPM, etc.', inputSchema: advancedSearchSchema },
-        { name: 'trending-discovery', description: 'Discover trending or underground tracks with genre filtering', inputSchema: trendingDiscoverySchema },
-        { name: 'similar-artists', description: 'Find artists similar to a specified artist', inputSchema: similarArtistsSchema },
-        
-        // Social tools
-        { name: 'user-favorites', description: 'Get tracks favorited by a user', inputSchema: userFavoritesSchema },
-        { name: 'user-reposts', description: 'Get content reposted by a user', inputSchema: userRepostsSchema },
-        { name: 'user-followers', description: 'Get followers of a user', inputSchema: userFollowersSchema },
-        { name: 'user-following', description: 'Get users followed by a user', inputSchema: userFollowingSchema },
-        { name: 'is-following', description: 'Check if a user is following another user', inputSchema: isFollowingSchema },
-        { name: 'track-favorites', description: 'Get users who favorited a track', inputSchema: trackFavoritesSchema },
-        { name: 'track-reposts', description: 'Get users who reposted a track', inputSchema: trackRepostsSchema },
-        { name: 'follow-user', description: 'Follow a user', inputSchema: followUserSchema },
-        { name: 'favorite-track', description: 'Favorite a track', inputSchema: favoriteTrackSchema },
-        
-        // Comment tools
-        { name: 'add-track-comment', description: 'Add a comment to a track', inputSchema: addTrackCommentSchema },
-        { name: 'delete-track-comment', description: 'Delete a comment from a track', inputSchema: deleteTrackCommentSchema },
-        
-        // Track management tools
-        { name: 'upload-track', description: 'Upload a new track', inputSchema: uploadTrackSchema },
-        { name: 'update-track', description: 'Update an existing track', inputSchema: updateTrackSchema },
-        { name: 'delete-track', description: 'Delete a track', inputSchema: deleteTrackSchema },
-        
-        // Playlist management tools
-        { name: 'create-playlist', description: 'Create a new playlist or album', inputSchema: createPlaylistSchema },
-        { name: 'update-playlist', description: 'Update an existing playlist', inputSchema: updatePlaylistSchema },
-        { name: 'delete-playlist', description: 'Delete a playlist', inputSchema: deletePlaylistSchema },
-        { name: 'add-tracks-to-playlist', description: 'Add tracks to a playlist', inputSchema: addTracksToPlaylistSchema },
-        { name: 'remove-track-from-playlist', description: 'Remove a track from a playlist', inputSchema: removeTrackFromPlaylistSchema },
-        { name: 'reorder-playlist-tracks', description: 'Reorder tracks in a playlist', inputSchema: reorderPlaylistTracksSchema },
-        
-        // Messaging tools
-        { name: 'send-message', description: 'Send a direct message to a user', inputSchema: sendMessageSchema },
-        { name: 'get-messages', description: 'Get messages between two users', inputSchema: getMessagesSchema },
-        { name: 'get-message-threads', description: 'Get message threads for a user', inputSchema: getMessageThreadsSchema },
-        { name: 'mark-message-read', description: 'Mark a message as read', inputSchema: markMessageReadSchema },
-        
-        // Analytics tools
-        { name: 'track-listen-counts', description: 'Get listen counts for a track', inputSchema: trackListenCountsSchema },
-        { name: 'user-track-listen-counts', description: 'Get listen counts for a user\'s tracks', inputSchema: userTrackListenCountsSchema },
-        { name: 'track-top-listeners', description: 'Get top listeners for a track', inputSchema: trackTopListenersSchema },
-        { name: 'track-listener-insights', description: 'Get listener insights for a track', inputSchema: trackListenerInsightsSchema },
-        { name: 'user-play-metrics', description: 'Get aggregate play metrics for a user', inputSchema: userPlayMetricsSchema },
-        { name: 'track-monthly-trending', description: 'Get monthly trending data for a track', inputSchema: trackMonthlyTrendingSchema },
-        { name: 'user-supporters', description: 'Get supporters for a user', inputSchema: userSupportersSchema },
-        { name: 'user-supporting', description: 'Get artists a user is supporting', inputSchema: userSupportingSchema },
-        
-        // Blockchain tools
-        { name: 'user-wallets', description: 'Get wallet information for a user', inputSchema: userWalletsSchema },
-        { name: 'transaction-history', description: 'Get transaction history for a user', inputSchema: transactionHistorySchema },
-        { name: 'available-challenges', description: 'Get available challenges and rewards', inputSchema: availableChallengesSchema },
-        { name: 'user-claimable-tokens', description: 'Get claimable tokens for a user', inputSchema: userClaimableTokensSchema },
-        { name: 'claim-tokens', description: 'Claim tokens for a challenge', inputSchema: claimTokensSchema },
-        { name: 'token-balance', description: 'Get token balance for a wallet', inputSchema: tokenBalanceSchema },
-        { name: 'send-tokens', description: 'Send tokens from one wallet to another', inputSchema: sendTokensSchema },
-        
-        // Monetization tools
-        { name: 'track-access-gates', description: 'Get access gates for a track', inputSchema: trackAccessGatesSchema },
-        { name: 'check-nft-access', description: 'Check NFT-gated access for a track', inputSchema: checkNftAccessSchema },
-        { name: 'nft-gated-signature', description: 'Get NFT-gated signature for a track', inputSchema: nftGatedSignatureSchema },
-        { name: 'purchase-options', description: 'Get purchase options for content', inputSchema: purchaseOptionsSchema },
-        { name: 'check-purchase-access', description: 'Check purchase-gated access for content', inputSchema: checkPurchaseAccessSchema },
-        { name: 'supported-payment-tokens', description: 'Get supported payment tokens', inputSchema: supportedPaymentTokensSchema },
-        { name: 'usdc-gate-info', description: 'Get USDC gate info for a track', inputSchema: usdcGateInfoSchema },
-        { name: 'purchase-track', description: 'Purchase a track with monetization gates', inputSchema: purchaseTrackSchema },
-        { name: 'send-tip', description: 'Send a tip to a user', inputSchema: sendTipSchema },
-        { name: 'get-sent-tips', description: 'Get tips sent by a user', inputSchema: getSentTipsSchema },
-        { name: 'get-received-tips', description: 'Get tips received by a user', inputSchema: getReceivedTipsSchema },
-        { name: 'user-tip-stats', description: 'Get tip statistics for a user', inputSchema: userTipStatsSchema },
-        
-        // Notification tools
-        { name: 'get-notifications', description: 'Get notifications for a user', inputSchema: getNotificationsSchema },
-        { name: 'notification-settings', description: 'Get notification settings for a user', inputSchema: notificationSettingsSchema },
-        { name: 'update-notification-settings', description: 'Update notification settings for a user', inputSchema: updateNotificationSettingsSchema },
-        { name: 'mark-notifications-read', description: 'Mark specific notifications as read', inputSchema: markNotificationsReadSchema },
-        { name: 'mark-all-notifications-read', description: 'Mark all notifications as read for a user', inputSchema: markAllNotificationsReadSchema },
-        { name: 'announcement-notifications', description: 'Get platform announcement notifications', inputSchema: announcementNotificationsSchema },
-        { name: 'milestone-notifications', description: 'Get milestone notifications for a user', inputSchema: milestoneNotificationsSchema },
-        { name: 'notification-counts', description: 'Get notification counts for a user', inputSchema: notificationCountsSchema },
-        { name: 'notification-history', description: 'Get notification history for a user', inputSchema: notificationHistorySchema },
-        { name: 'send-notification', description: 'Send a notification to a user', inputSchema: sendNotificationSchema },
-      ]
-    };
-  });
-
-  // Handle tool execution
-  server.setRequestHandler(CallToolRequestSchema, async (request) => {
-    const { name, arguments: args } = request.params;
-    
-    switch (name) {
-      // Track tools
-      case 'get-track':
-        return await getTrack(args as { trackId: string });
-      case 'search-tracks':
-        return await searchTracks(args as { query: string, limit?: number });
-      case 'get-trending-tracks':
-        return await getTrendingTracks(args as { genre?: string, limit?: number });
-      case 'get-track-comments':
-        return await getTrackComments(args as { trackId: string, limit?: number });
-      
-      // User tools
-      case 'get-user':
-        return await getUser(args as { userId: string });
-      case 'search-users':
-        return await searchUsers(args as { query: string, limit?: number });
-      case 'get-user-tracks':
-        return await getUserTracks(args as { userId: string, limit?: number });
-      
-      // Playlist & Album tools
-      case 'get-playlist':
-        return await getPlaylist(args as { playlistId: string });
-      case 'get-album':
-        return await getAlbum(args as { albumId: string });
-      
-      // Search tools
-      case 'search-all':
-        return await searchAll(args as { query: string, limit?: number });
-      case 'advanced-search':
-        return await advancedSearch(args as { 
-          query: string;
-          limit?: number;
-          genres?: string[];
-          moods?: string[];
-          bpmMin?: number;
-          bpmMax?: number;
-          key?: string;
-          onlyDownloadable?: boolean;
-          sort?: 'relevant' | 'popular' | 'recent';
-        });
-      case 'trending-discovery':
-        return await trendingDiscovery(args as { 
-          genre?: string;
-          limit?: number;
-          timeFrame?: 'week' | 'month' | 'year' | 'allTime';
-          underground?: boolean;
-        });
-      case 'similar-artists':
-        return await similarArtists(args as { userId: string, limit?: number });
-      
-      // Social tools
-      case 'user-favorites':
-        return await getUserFavorites(args as { userId: string, limit?: number });
-      case 'user-reposts':
-        return await getUserReposts(args as { userId: string, limit?: number });
-      case 'user-followers':
-        return await getUserFollowers(args as { userId: string, limit?: number });
-      case 'user-following':
-        return await getUserFollowing(args as { userId: string, limit?: number });
-      case 'is-following':
-        return await isFollowing(args as { userId: string, followeeId: string });
-      case 'track-favorites':
-        return await getTrackFavorites(args as { trackId: string, limit?: number });
-      case 'track-reposts':
-        return await getTrackReposts(args as { trackId: string, limit?: number });
-      case 'follow-user':
-        return await followUser(args as { userId: string, followeeId: string });
-      case 'favorite-track':
-        return await favoriteTrack(args as { userId: string, trackId: string });
-      
-      // Comment tools
-      case 'add-track-comment':
-        return await addTrackComment(args as { trackId: string, userId: string, comment: string });
-      case 'delete-track-comment':
-        return await deleteTrackComment(args as { commentId: string, userId: string });
-      
-      // Track management tools
-      case 'upload-track':
-        return await uploadTrack(args as {
-          userId: string;
-          title: string;
-          description?: string;
-          genre?: string;
-          mood?: string;
-          tags?: string[];
-          audioFileUrl: string;
-          artworkUrl?: string;
-          isDownloadable?: boolean;
-          isPrivate?: boolean;
-        });
-      case 'update-track':
-        return await updateTrack(args as {
-          trackId: string;
-          userId: string;
-          title?: string;
-          description?: string;
-          genre?: string;
-          mood?: string;
-          tags?: string[];
-          artworkUrl?: string;
-          isDownloadable?: boolean;
-          isPrivate?: boolean;
-        });
-      case 'delete-track':
-        return await deleteTrack(args as { trackId: string, userId: string });
-      
-      // Playlist management tools
-      case 'create-playlist':
-        return await createPlaylist(args as {
-          userId: string;
-          playlistName: string;
-          isPrivate?: boolean;
-          isAlbum?: boolean;
-          description?: string;
-          artworkUrl?: string;
-          trackIds?: string[];
-        });
-      case 'update-playlist':
-        return await updatePlaylist(args as {
-          userId: string;
-          playlistId: string;
-          playlistName?: string;
-          isPrivate?: boolean;
-          description?: string;
-          artworkUrl?: string;
-        });
-      case 'delete-playlist':
-        return await deletePlaylist(args as { userId: string, playlistId: string });
-      case 'add-tracks-to-playlist':
-        return await addTracksToPlaylist(args as { userId: string, playlistId: string, trackIds: string[] });
-      case 'remove-track-from-playlist':
-        return await removeTrackFromPlaylist(args as { userId: string, playlistId: string, trackId: string });
-      case 'reorder-playlist-tracks':
-        return await reorderPlaylistTracks(args as { userId: string, playlistId: string, trackIds: string[] });
-      
-      // Messaging tools
-      case 'send-message':
-        return await sendMessage(args as { fromUserId: string, toUserId: string, message: string });
-      case 'get-messages':
-        return await getMessages(args as { userId: string, withUserId: string, limit?: number });
-      case 'get-message-threads':
-        return await getMessageThreads(args as { userId: string, limit?: number });
-      case 'mark-message-read':
-        return await markMessageRead(args as { userId: string, messageId: string });
-      
-      // Analytics tools
-      case 'track-listen-counts':
-        return await getTrackListenCounts(args as { trackId: string });
-      case 'user-track-listen-counts':
-        return await getUserTrackListenCounts(args as { userId: string });
-      case 'track-top-listeners':
-        return await getTrackTopListeners(args as { trackId: string, limit?: number });
-      case 'track-listener-insights':
-        return await getTrackListenerInsights(args as { trackId: string });
-      case 'user-play-metrics':
-        return await getUserPlayMetrics(args as { userId: string });
-      case 'track-monthly-trending':
-        return await getTrackMonthlyTrending(args as { trackId: string });
-      case 'user-supporters':
-        return await getUserSupporters(args as { userId: string, limit?: number });
-      case 'user-supporting':
-        return await getUserSupporting(args as { userId: string, limit?: number });
-      
-      // Blockchain tools
-      case 'user-wallets':
-        return await getUserWallets(args as { userId: string });
-      case 'transaction-history':
-        return await getTransactionHistory(args as { userId: string, limit?: number });
-      case 'available-challenges':
-        return await getAvailableChallenges();
-      case 'user-claimable-tokens':
-        return await getUserClaimableTokens(args as { userId: string });
-      case 'claim-tokens':
-        return await claimTokens(args as { userId: string, challengeId: string });
-      case 'token-balance':
-        return await getTokenBalance(args as { 
-          walletAddress: string, 
-          blockchain: 'ethereum' | 'solana', 
-          tokenMint?: string 
-        });
-      case 'send-tokens':
-        return await sendTokens(args as { 
-          senderWalletAddress: string, 
-          receiverWalletAddress: string, 
-          amount: string, 
-          privateKey: string 
-        });
-      
-      // Monetization tools
-      case 'track-access-gates':
-        return await getTrackAccessGates(args as { trackId: string });
-      case 'check-nft-access':
-        return await checkNftAccess(args as { trackId: string, walletAddress: string });
-      case 'nft-gated-signature':
-        return await getNftGatedSignature(args as { trackId: string, walletAddress: string });
-      case 'purchase-options':
-        return await getPurchaseOptions(args as { contentId: string, contentType: 'track' | 'playlist' });
-      case 'check-purchase-access':
-        return await checkPurchaseAccess(args as { 
-          contentId: string, 
-          contentType: 'track' | 'playlist', 
-          walletAddress: string 
-        });
-      case 'supported-payment-tokens':
-        return await getSupportedPaymentTokens();
-      case 'usdc-gate-info':
-        return await getUsdcGateInfo(args as { trackId: string });
-      case 'purchase-track':
-        return await purchaseTrack(args as {
-          contentId: string;
-          walletAddress: string;
-          purchaseOption: string;
-          paymentToken: string;
-          amount: string;
-          signerPrivateKey: string;
-        });
-      case 'send-tip':
-        return await sendTip(args as { 
-          senderUserId: string, 
-          receiverUserId: string, 
-          amount: string, 
-          tokenType: 'AUDIO' | 'USDC' | 'SOL', 
-          senderWalletAddress: string, 
-          signerPrivateKey: string, 
-          message?: string 
-        });
-      case 'get-sent-tips':
-        return await getSentTips(args as { userId: string, limit?: number });
-      case 'get-received-tips':
-        return await getReceivedTips(args as { userId: string, limit?: number });
-      case 'user-tip-stats':
-        return await getUserTipStats(args as { userId: string });
-      
-      // Notification tools
-      case 'get-notifications':
-        return await getNotifications(args as { userId: string, limit?: number, timestamp?: string });
-      case 'notification-settings':
-        return await getNotificationSettings(args as { userId: string });
-      case 'update-notification-settings':
-        return await updateNotificationSettings(args as {
-          userId: string;
-          milestones?: boolean;
-          followers?: boolean;
-          reposts?: boolean;
-          favorites?: boolean;
-          messages?: boolean;
-          announcements?: boolean;
-          comments?: boolean;
-          remixes?: boolean;
-          tastemakers?: boolean;
-          tips?: boolean;
-          supporterRank?: boolean;
-          supportingRank?: boolean;
-        });
-      case 'mark-notifications-read':
-        return await markNotificationsRead(args as { userId: string, notificationIds: string[] });
-      case 'mark-all-notifications-read':
-        return await markAllNotificationsRead(args as { userId: string });
-      case 'announcement-notifications':
-        return await getAnnouncementNotifications(args as { limit?: number });
-      case 'milestone-notifications':
-        return await getMilestoneNotifications(args as { userId: string, limit?: number });
-      case 'notification-counts':
-        return await getNotificationCounts(args as { userId: string });
-      case 'notification-history':
-        return await getNotificationHistory(args as { userId: string, limit?: number });
-      case 'send-notification':
-        return await sendNotification(args as { 
-          userId: string, 
-          type: string, 
-          message: string, 
-          relatedEntityId?: string, 
-          relatedEntityType?: string 
-        });
-      
-      default:
-        return {
-          content: [{
-            type: 'text',
-            text: `Unknown tool: ${name}`,
-          }],
-          isError: true
-        };
-    }
-  });
-
-  // Register resource handlers
-  server.setRequestHandler(ListResourcesRequestSchema, async () => {
-    return {
-      resources: [
-        trackResourceTemplate,
-        userResourceTemplate,
-        playlistResourceTemplate,
-        albumResourceTemplate
-      ]
-    };
-  });
-
-  // Handle resource reading
-  server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
-    const { uri } = request.params;
-    let content;
-    
-    try {
-      if (uri.startsWith('audius://track/')) {
-        content = await handleTrackResource(uri);
-      } else if (uri.startsWith('audius://user/')) {
-        content = await handleUserResource(uri);
-      } else if (uri.startsWith('audius://playlist/')) {
-        content = await handlePlaylistResource(uri);
-      } else if (uri.startsWith('audius://album/')) {
-        content = await handleAlbumResource(uri);
-      } else {
-        throw new Error(`Unsupported resource URI: ${uri}`);
-      }
-      
-      return {
-        contents: [content]
-      };
-    } catch (error) {
-      console.error(`Error reading resource ${uri}:`, error);
-      throw error;
-    }
-  });
-
-  // Register prompt handlers
-  server.setRequestHandler(ListPromptsRequestSchema, async () => {
-    return {
-      prompts: [
-        discoverMusicPrompt,
-        trackAnalysisPrompt,
-        artistProfilePrompt,
-        musicCreationPrompt,
-        playlistCreationPrompt,
-        messagingPrompt,
-        analyticsPrompt,
-        blockchainPrompt,
-        monetizationPrompt,
-        notificationsPrompt
-      ]
-    };
-  });
-
-  // Handle prompt execution
-  server.setRequestHandler(GetPromptRequestSchema, async (request) => {
-    const { name, arguments: args } = request.params;
-    
-    switch (name) {
-      case 'discover-music':
-        return handleDiscoverMusicPrompt(args as { genre: string, artist?: string, mood?: string });
-      
-      case 'track-analysis':
-        return handleTrackAnalysisPrompt(args as { trackId: string });
-      
-      case 'artist-profile':
-        // Cast with type assertion to avoid TS error
-        const artistProfileArgs = args as unknown as { 
-          userId: string;
-          includeConnections?: boolean;
-          includePopularContent?: boolean;
-        };
-        return handleArtistProfilePrompt(artistProfileArgs);
-      
-      case 'music-creation':
-        return handleMusicCreationPrompt(args as {
-          trackTitle: string;
-          userId: string;
-          genre?: string;
-          mood?: string;
-          creationGoal?: 'publish-track' | 'remix-track' | 'collaborate' | 'plan-release';
-        });
-      
-      case 'playlist-creation':
-        // Cast with type assertion to avoid TS error
-        const playlistCreationArgs = args as unknown as {
-          userId: string;
-          playlistName?: string;
-          playlistId?: string;
-          isAlbum?: boolean;
-          genre?: string;
-          action?: 'create' | 'update' | 'curate' | 'promote';
-        };
-        return handlePlaylistCreationPrompt(playlistCreationArgs);
-      
-      case 'messaging':
-        return handleMessagingPrompt(args as {
-          userId: string;
-          recipientId?: string;
-          initialMessage?: string;
-          purpose?: 'collaboration' | 'feedback' | 'networking' | 'fanInteraction' | 'viewThreads';
-        });
-      
-      case 'analytics':
-        return handleAnalyticsPrompt(args as {
-          userId?: string;
-          trackId?: string;
-          insightType?: 'listeners' | 'trending' | 'supporters' | 'playMetrics' | 'comprehensive';
-          timePeriod?: 'week' | 'month' | 'year' | 'allTime';
-        });
-      
-      case 'blockchain':
-        return handleBlockchainPrompt(args as {
-          userId?: string;
-          walletAddress?: string;
-          blockchain?: 'ethereum' | 'solana' | 'both';
-          focus?: 'wallets' | 'tokens' | 'transactions' | 'rewards' | 'general';
-        });
-      
-      case 'monetization':
-        return handleMonetizationPrompt(args as {
-          userId?: string;
-          trackId?: string;
-          walletAddress?: string;
-          monetizationType?: 'nft-gates' | 'purchase-gates' | 'tipping' | 'usdc-payments' | 'all';
-        });
-      
-      case 'notifications':
-        // Cast with type assertion to avoid TS error
-        const notificationsArgs = args as unknown as {
-          userId: string;
-          notificationType?: 'all' | 'milestones' | 'social' | 'announcements' | 'unread' | 'settings';
-          limit?: number;
-          markAsRead?: boolean;
-        };
-        return handleNotificationsPrompt(notificationsArgs);
-      
-      default:
-        throw new Error(`Unknown prompt: ${name}`);
-    }
-  });
+  // Register Resources
+  
+  // Track resource
+  server.resource(
+    'track',
+    new ResourceTemplate('audius://track/{id}', { list: undefined }),
+    handleTrackResource
+  );
+  
+  // User resource
+  server.resource(
+    'user',
+    new ResourceTemplate('audius://user/{id}', { list: undefined }),
+    handleUserResource
+  );
+  
+  // Playlist resource
+  server.resource(
+    'playlist',
+    new ResourceTemplate('audius://playlist/{id}', { list: undefined }),
+    handlePlaylistResource
+  );
+  
+  // Album resource
+  server.resource(
+    'album',
+    new ResourceTemplate('audius://album/{id}', { list: undefined }),
+    handleAlbumResource
+  );
+  
+  // Register Track Tools
+  server.tool(
+    'get-track',
+    jsonSchemaToZod(getTrackSchema),
+    getTrack
+  );
+  
+  server.tool(
+    'search-tracks',
+    jsonSchemaToZod(searchTracksSchema),
+    searchTracks
+  );
+  
+  server.tool(
+    'get-trending-tracks',
+    jsonSchemaToZod(getTrendingTracksSchema),
+    getTrendingTracks
+  );
+  
+  server.tool(
+    'get-track-comments',
+    jsonSchemaToZod(getTrackCommentsSchema),
+    getTrackComments
+  );
+  
+  // Register User Tools
+  server.tool(
+    'get-user',
+    jsonSchemaToZod(getUserSchema),
+    getUser
+  );
+  
+  server.tool(
+    'search-users',
+    jsonSchemaToZod(searchUsersSchema),
+    searchUsers
+  );
+  
+  server.tool(
+    'get-user-tracks',
+    jsonSchemaToZod(getUserTracksSchema),
+    getUserTracks
+  );
+  
+  // Register Playlist & Album Tools
+  server.tool(
+    'get-playlist',
+    jsonSchemaToZod(getPlaylistSchema),
+    getPlaylist
+  );
+  
+  server.tool(
+    'get-album',
+    jsonSchemaToZod(getAlbumSchema),
+    getAlbum
+  );
+  
+  // Register Search Tools
+  server.tool(
+    'search-all',
+    jsonSchemaToZod(searchAllSchema),
+    searchAll
+  );
+  
+  server.tool(
+    'advanced-search',
+    jsonSchemaToZod(advancedSearchSchema),
+    advancedSearch
+  );
+  
+  server.tool(
+    'trending-discovery',
+    jsonSchemaToZod(trendingDiscoverySchema),
+    trendingDiscovery
+  );
+  
+  server.tool(
+    'similar-artists',
+    jsonSchemaToZod(similarArtistsSchema),
+    similarArtists
+  );
+  
+  // Register Social Tools
+  server.tool(
+    'user-favorites',
+    jsonSchemaToZod(userFavoritesSchema),
+    getUserFavorites
+  );
+  
+  server.tool(
+    'user-reposts',
+    jsonSchemaToZod(userRepostsSchema),
+    getUserReposts
+  );
+  
+  server.tool(
+    'user-followers',
+    jsonSchemaToZod(userFollowersSchema),
+    getUserFollowers
+  );
+  
+  server.tool(
+    'user-following',
+    jsonSchemaToZod(userFollowingSchema),
+    getUserFollowing
+  );
+  
+  server.tool(
+    'is-following',
+    jsonSchemaToZod(isFollowingSchema),
+    isFollowing
+  );
+  
+  server.tool(
+    'track-favorites',
+    jsonSchemaToZod(trackFavoritesSchema),
+    getTrackFavorites
+  );
+  
+  server.tool(
+    'track-reposts',
+    jsonSchemaToZod(trackRepostsSchema),
+    getTrackReposts
+  );
+  
+  server.tool(
+    'follow-user',
+    jsonSchemaToZod(followUserSchema),
+    followUser
+  );
+  
+  server.tool(
+    'favorite-track',
+    jsonSchemaToZod(favoriteTrackSchema),
+    favoriteTrack
+  );
+  
+  // Register Comment Tools
+  server.tool(
+    'add-track-comment',
+    jsonSchemaToZod(addTrackCommentSchema),
+    addTrackComment
+  );
+  
+  server.tool(
+    'delete-track-comment',
+    jsonSchemaToZod(deleteTrackCommentSchema),
+    deleteTrackComment
+  );
+  
+  // Register Track Management Tools
+  server.tool(
+    'upload-track',
+    jsonSchemaToZod(uploadTrackSchema),
+    uploadTrack
+  );
+  
+  server.tool(
+    'update-track',
+    jsonSchemaToZod(updateTrackSchema),
+    updateTrack
+  );
+  
+  server.tool(
+    'delete-track',
+    jsonSchemaToZod(deleteTrackSchema),
+    deleteTrack
+  );
+  
+  // Register Playlist Management Tools
+  server.tool(
+    'create-playlist',
+    jsonSchemaToZod(createPlaylistSchema),
+    createPlaylist
+  );
+  
+  server.tool(
+    'update-playlist',
+    jsonSchemaToZod(updatePlaylistSchema),
+    updatePlaylist
+  );
+  
+  server.tool(
+    'delete-playlist',
+    jsonSchemaToZod(deletePlaylistSchema),
+    deletePlaylist
+  );
+  
+  server.tool(
+    'add-tracks-to-playlist',
+    jsonSchemaToZod(addTracksToPlaylistSchema),
+    addTracksToPlaylist
+  );
+  
+  server.tool(
+    'remove-track-from-playlist',
+    jsonSchemaToZod(removeTrackFromPlaylistSchema),
+    removeTrackFromPlaylist
+  );
+  
+  server.tool(
+    'reorder-playlist-tracks',
+    jsonSchemaToZod(reorderPlaylistTracksSchema),
+    reorderPlaylistTracks
+  );
+  
+  // Register Messaging Tools
+  server.tool(
+    'send-message',
+    jsonSchemaToZod(sendMessageSchema),
+    sendMessage
+  );
+  
+  server.tool(
+    'get-messages',
+    jsonSchemaToZod(getMessagesSchema),
+    getMessages
+  );
+  
+  server.tool(
+    'get-message-threads',
+    jsonSchemaToZod(getMessageThreadsSchema),
+    getMessageThreads
+  );
+  
+  server.tool(
+    'mark-message-read',
+    jsonSchemaToZod(markMessageReadSchema),
+    markMessageRead
+  );
+  
+  // Register Analytics Tools
+  server.tool(
+    'get-track-listen-counts',
+    jsonSchemaToZod(trackListenCountsSchema),
+    getTrackListenCounts
+  );
+  
+  server.tool(
+    'get-user-track-listen-counts',
+    jsonSchemaToZod(userTrackListenCountsSchema),
+    getUserTrackListenCounts
+  );
+  
+  server.tool(
+    'get-track-top-listeners',
+    jsonSchemaToZod(trackTopListenersSchema),
+    getTrackTopListeners
+  );
+  
+  server.tool(
+    'get-track-listener-insights',
+    jsonSchemaToZod(trackListenerInsightsSchema),
+    getTrackListenerInsights
+  );
+  
+  server.tool(
+    'get-user-play-metrics',
+    jsonSchemaToZod(userPlayMetricsSchema),
+    getUserPlayMetrics
+  );
+  
+  server.tool(
+    'get-track-monthly-trending',
+    jsonSchemaToZod(trackMonthlyTrendingSchema),
+    getTrackMonthlyTrending
+  );
+  
+  server.tool(
+    'get-user-supporters',
+    jsonSchemaToZod(userSupportersSchema),
+    getUserSupporters
+  );
+  
+  server.tool(
+    'get-user-supporting',
+    jsonSchemaToZod(userSupportingSchema),
+    getUserSupporting
+  );
+  
+  // Register Blockchain Tools
+  server.tool(
+    'get-user-wallets',
+    jsonSchemaToZod(userWalletsSchema),
+    getUserWallets
+  );
+  
+  server.tool(
+    'get-transaction-history',
+    jsonSchemaToZod(transactionHistorySchema),
+    getTransactionHistory
+  );
+  
+  server.tool(
+    'get-available-challenges',
+    jsonSchemaToZod(availableChallengesSchema),
+    getAvailableChallenges
+  );
+  
+  server.tool(
+    'get-user-claimable-tokens',
+    jsonSchemaToZod(userClaimableTokensSchema),
+    getUserClaimableTokens
+  );
+  
+  server.tool(
+    'claim-tokens',
+    jsonSchemaToZod(claimTokensSchema),
+    claimTokens
+  );
+  
+  server.tool(
+    'get-token-balance',
+    jsonSchemaToZod(tokenBalanceSchema),
+    getTokenBalance
+  );
+  
+  server.tool(
+    'send-tokens',
+    jsonSchemaToZod(sendTokensSchema),
+    sendTokens
+  );
+  
+  // Register Monetization Tools
+  server.tool(
+    'get-track-access-gates',
+    jsonSchemaToZod(trackAccessGatesSchema),
+    getTrackAccessGates
+  );
+  
+  server.tool(
+    'check-nft-access',
+    jsonSchemaToZod(checkNftAccessSchema),
+    checkNftAccess
+  );
+  
+  server.tool(
+    'get-nft-gated-signature',
+    jsonSchemaToZod(nftGatedSignatureSchema),
+    getNftGatedSignature
+  );
+  
+  server.tool(
+    'get-purchase-options',
+    jsonSchemaToZod(purchaseOptionsSchema),
+    getPurchaseOptions
+  );
+  
+  server.tool(
+    'check-purchase-access',
+    jsonSchemaToZod(checkPurchaseAccessSchema),
+    checkPurchaseAccess
+  );
+  
+  server.tool(
+    'get-supported-payment-tokens',
+    jsonSchemaToZod(supportedPaymentTokensSchema),
+    getSupportedPaymentTokens
+  );
+  
+  server.tool(
+    'get-usdc-gate-info',
+    jsonSchemaToZod(usdcGateInfoSchema),
+    getUsdcGateInfo
+  );
+  
+  server.tool(
+    'send-tip',
+    jsonSchemaToZod(sendTipSchema),
+    sendTip
+  );
+  
+  server.tool(
+    'get-sent-tips',
+    jsonSchemaToZod(getSentTipsSchema),
+    getSentTips
+  );
+  
+  server.tool(
+    'get-received-tips',
+    jsonSchemaToZod(getReceivedTipsSchema),
+    getReceivedTips
+  );
+  
+  server.tool(
+    'get-user-tip-stats',
+    jsonSchemaToZod(userTipStatsSchema),
+    getUserTipStats
+  );
+  
+  server.tool(
+    'purchase-track',
+    jsonSchemaToZod(purchaseTrackSchema),
+    purchaseTrack
+  );
+  
+  // Register Notification Tools
+  server.tool(
+    'get-notifications',
+    jsonSchemaToZod(getNotificationsSchema),
+    getNotifications
+  );
+  
+  server.tool(
+    'get-notification-settings',
+    jsonSchemaToZod(notificationSettingsSchema),
+    getNotificationSettings
+  );
+  
+  server.tool(
+    'update-notification-settings',
+    jsonSchemaToZod(updateNotificationSettingsSchema),
+    updateNotificationSettings
+  );
+  
+  server.tool(
+    'mark-notifications-read',
+    jsonSchemaToZod(markNotificationsReadSchema),
+    markNotificationsRead
+  );
+  
+  server.tool(
+    'mark-all-notifications-read',
+    jsonSchemaToZod(markAllNotificationsReadSchema),
+    markAllNotificationsRead
+  );
+  
+  server.tool(
+    'get-announcement-notifications',
+    jsonSchemaToZod(announcementNotificationsSchema),
+    getAnnouncementNotifications
+  );
+  
+  server.tool(
+    'get-milestone-notifications',
+    jsonSchemaToZod(milestoneNotificationsSchema),
+    getMilestoneNotifications
+  );
+  
+  server.tool(
+    'get-notification-counts',
+    jsonSchemaToZod(notificationCountsSchema),
+    getNotificationCounts
+  );
+  
+  server.tool(
+    'get-notification-history',
+    jsonSchemaToZod(notificationHistorySchema),
+    getNotificationHistory
+  );
+  
+  server.tool(
+    'send-notification',
+    jsonSchemaToZod(sendNotificationSchema),
+    sendNotification
+  );
+  
+  // Register Prompts
+  server.prompt(
+    'discover-music',
+    { 
+      query: z.string(),
+      artist: z.string().optional(),
+      mood: z.string().optional(),
+      bpmRange: z.string().optional(),
+      underground: z.string().optional(), // Convert boolean to string
+      discoveryMode: z.string().optional() // Convert enum to string
+    },
+    handleDiscoverMusicPrompt
+  );
+  
+  server.prompt(
+    'track-analysis',
+    { trackId: z.string() },
+    handleTrackAnalysisPrompt
+  );
+  
+  server.prompt(
+    'artist-profile',
+    { 
+      userId: z.string(),
+      includeConnections: z.string().optional(), // Convert boolean to string
+      includePopularContent: z.string().optional() // Convert boolean to string
+    },
+    handleArtistProfilePrompt
+  );
+  
+  server.prompt(
+    'music-creation',
+    { 
+      trackTitle: z.string(),
+      userId: z.string(), 
+      genre: z.string().optional(),
+      mood: z.string().optional(),
+      creationGoal: z.string().optional() // Convert enum to string
+    },
+    handleMusicCreationPrompt
+  );
+  
+  server.prompt(
+    'playlist-creation',
+    { 
+      userId: z.string(),
+      playlistName: z.string().optional(),
+      playlistId: z.string().optional(),
+      isAlbum: z.string().optional(), // Convert boolean to string
+      genre: z.string().optional(),
+      action: z.string().optional() // Convert enum to string
+    },
+    handlePlaylistCreationPrompt
+  );
+  
+  server.prompt(
+    'messaging',
+    { 
+      userId: z.string(), 
+      recipientId: z.string().optional(),
+      initialMessage: z.string().optional(),
+      purpose: z.string().optional() // Convert enum to string
+    },
+    handleMessagingPrompt
+  );
+  
+  server.prompt(
+    'analytics',
+    { 
+      userId: z.string().optional(), 
+      trackId: z.string().optional(),
+      insightType: z.string().optional(), // Convert enum to string
+      timePeriod: z.string().optional() // Convert enum to string
+    },
+    handleAnalyticsPrompt
+  );
+  
+  server.prompt(
+    'blockchain',
+    { 
+      userId: z.string().optional(),
+      walletAddress: z.string().optional(),
+      blockchain: z.string().optional(), // Convert enum to string
+      focus: z.string().optional() // Convert enum to string
+    },
+    handleBlockchainPrompt
+  );
+  
+  server.prompt(
+    'monetization',
+    { 
+      userId: z.string().optional(),
+      trackId: z.string().optional(),
+      walletAddress: z.string().optional(),
+      monetizationType: z.string().optional() // Convert enum to string
+    },
+    handleMonetizationPrompt
+  );
+  
+  server.prompt(
+    'notifications',
+    { 
+      userId: z.string(),
+      notificationType: z.string().optional(),
+      limit: z.string().optional(),
+      markAsRead: z.string().optional()
+    },
+    handleNotificationsPrompt
+  );
 
   return server;
 };

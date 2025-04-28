@@ -41,28 +41,31 @@ export const playlistCreationPrompt = {
 
 // Handler for playlist-creation prompt
 export const handlePlaylistCreationPrompt = (args: { 
-  userId: string;
+  userId?: string;
   playlistName?: string;
   playlistId?: string;
-  isAlbum?: boolean;
+  isAlbum?: string; // Changed from boolean to string
   genre?: string;
-  action?: 'create' | 'update' | 'curate' | 'promote';
+  action?: string; // Changed from enum to string
 }) => {
+  // Convert string parameters to appropriate types
+  const userId = args.userId || '';
+  const isAlbum = args.isAlbum === 'true';
   // Build a user query for playlist creation
   let userMessage = '';
   
   if (args.action === 'create' || (!args.action && args.playlistName && !args.playlistId)) {
     // Creation flow
-    userMessage = `I want to create a new ${args.isAlbum ? 'album' : 'playlist'} called "${args.playlistName}" `;
+    userMessage = `I want to create a new ${isAlbum ? 'album' : 'playlist'} called "${args.playlistName}" `;
     
     if (args.genre) {
       userMessage += `in the ${args.genre} genre `;
     }
     
-    userMessage += `on Audius. Can you guide me through the process of creating ${args.isAlbum ? 'an album' : 'a playlist'} and organizing tracks?`;
+    userMessage += `on Audius. Can you guide me through the process of creating ${isAlbum ? 'an album' : 'a playlist'} and organizing tracks?`;
   } else if (args.action === 'update' || (!args.action && args.playlistId)) {
     // Update flow
-    userMessage = `I want to update my ${args.isAlbum ? 'album' : 'playlist'}`;
+    userMessage = `I want to update my ${isAlbum ? 'album' : 'playlist'}`;
     
     if (args.playlistId) {
       userMessage += ` with ID ${args.playlistId}`;
@@ -72,10 +75,10 @@ export const handlePlaylistCreationPrompt = (args: {
       userMessage += ` called "${args.playlistName}"`;
     }
     
-    userMessage += ` on Audius. Can you guide me through the process of updating ${args.isAlbum ? 'an album' : 'a playlist'} and managing its tracks?`;
+    userMessage += ` on Audius. Can you guide me through the process of updating ${isAlbum ? 'an album' : 'a playlist'} and managing its tracks?`;
   } else if (args.action === 'curate') {
     // Curation flow
-    userMessage = `I want to curate a great ${args.isAlbum ? 'album' : 'playlist'}`;
+    userMessage = `I want to curate a great ${isAlbum ? 'album' : 'playlist'}`;
     
     if (args.playlistName) {
       userMessage += ` called "${args.playlistName}"`;
@@ -85,10 +88,10 @@ export const handlePlaylistCreationPrompt = (args: {
       userMessage += ` in the ${args.genre} genre`;
     }
     
-    userMessage += `. Can you give me tips on how to create a well-curated ${args.isAlbum ? 'album' : 'playlist'} that people will enjoy?`;
+    userMessage += `. Can you give me tips on how to create a well-curated ${isAlbum ? 'album' : 'playlist'} that people will enjoy?`;
   } else if (args.action === 'promote') {
     // Promotion flow
-    userMessage = `I want to promote my ${args.isAlbum ? 'album' : 'playlist'}`;
+    userMessage = `I want to promote my ${isAlbum ? 'album' : 'playlist'}`;
     
     if (args.playlistId) {
       userMessage += ` with ID ${args.playlistId}`;
@@ -101,7 +104,7 @@ export const handlePlaylistCreationPrompt = (args: {
     userMessage += ` on Audius. Can you suggest strategies to get more listeners and engagement?`;
   } else {
     // Default flow
-    userMessage = `I'm interested in working with ${args.isAlbum ? 'albums' : 'playlists'} on Audius. Can you guide me through the options for creating, updating, and managing ${args.isAlbum ? 'albums' : 'playlists'}?`;
+    userMessage = `I'm interested in working with ${isAlbum ? 'albums' : 'playlists'} on Audius. Can you guide me through the options for creating, updating, and managing ${isAlbum ? 'albums' : 'playlists'}?`;
   }
   
   // Add instructions on tools to use
@@ -131,19 +134,19 @@ To fulfill this request, help the user with their playlist management:
 Use the appropriate tools based on the user's specified action and provide practical, actionable advice.
   `;
   
-  // Create messages for the prompt
+  // Create messages for the prompt with proper typing, only using allowed roles
   const messages = [
     {
-      role: 'system',
+      role: "assistant" as const,
       content: {
-        type: 'text',
+        type: "text" as const,
         text: systemMessage,
       },
     },
     {
-      role: 'user',
+      role: "user" as const,
       content: {
-        type: 'text',
+        type: "text" as const,
         text: userMessage,
       },
     },

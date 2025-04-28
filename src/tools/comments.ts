@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { AudiusClient } from '../sdk-client.js';
+import { createTextResponse } from '../utils/response.js';
 
 // Schema for add-track-comment tool
 export const addTrackCommentSchema = {
@@ -31,19 +32,27 @@ export const addTrackComment = async (args: {
     const audiusClient = AudiusClient.getInstance();
     
     // First verify the track and user exist
+    let track;
+    let user;
     try {
-      await Promise.all([
+      const [trackResult, userResult] = await Promise.all([
         audiusClient.getTrack(args.trackId),
         audiusClient.getUser(args.userId)
       ]);
+      track = trackResult;
+      user = userResult;
+      
+      if (!track || !user) {
+        return createTextResponse(
+          `Unable to verify track or user. Please check the provided IDs.`,
+          true
+        );
+      }
     } catch (error) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Unable to verify track or user. Please check the provided IDs.`,
-        }],
-        isError: true
-      };
+      return createTextResponse(
+        `Unable to verify track or user. Please check the provided IDs.`,
+        true
+      );
     }
     
     // Add the comment
@@ -54,40 +63,31 @@ export const addTrackComment = async (args: {
     );
     
     if (!result) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Failed to add comment to track ${args.trackId}.`,
-        }],
-        isError: true
-      };
+      return createTextResponse(
+        `Failed to add comment to track ${args.trackId}.`,
+        true
+      );
     }
     
-    // Format results
-    const formattedResults = {
-      trackId: args.trackId,
-      userId: args.userId,
-      comment: args.comment,
-      commentId: result.id || 'unknown',
-      timestamp: new Date().toISOString(),
-      status: 'success'
-    };
+    // Create a more readable response
+    const response = [
+      `✅ Comment added successfully!`,
+      ``,
+      `💬 "${args.comment}"`,
+      ``,
+      `🎵 Track: "${track.title}" by ${track.user.name}`,
+      `👤 Commented as: ${user.name}`,
+      `🕒 Posted: ${new Date().toLocaleString()}`,
+      `🆔 Comment ID: ${result.id || 'unknown'}`
+    ].join('\n');
     
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(formattedResults, null, 2),
-      }],
-    };
+    return createTextResponse(response);
   } catch (error) {
     console.error('Error in add-track-comment tool:', error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error adding comment: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
-      isError: true
-    };
+    return createTextResponse(
+      `Error adding comment: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
   }
 };
 
@@ -116,16 +116,20 @@ export const deleteTrackComment = async (args: {
     const audiusClient = AudiusClient.getInstance();
     
     // Verify user exists
+    let user;
     try {
-      await audiusClient.getUser(args.userId);
+      user = await audiusClient.getUser(args.userId);
+      if (!user) {
+        return createTextResponse(
+          `Unable to verify user. Please check the provided user ID.`,
+          true
+        );
+      }
     } catch (error) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Unable to verify user. Please check the provided user ID.`,
-        }],
-        isError: true
-      };
+      return createTextResponse(
+        `Unable to verify user. Please check the provided user ID.`,
+        true
+      );
     }
     
     // Delete the comment
@@ -135,37 +139,27 @@ export const deleteTrackComment = async (args: {
     );
     
     if (!result) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Failed to delete comment ${args.commentId}.`,
-        }],
-        isError: true
-      };
+      return createTextResponse(
+        `Failed to delete comment ${args.commentId}.`,
+        true
+      );
     }
     
-    // Format results
-    const formattedResults = {
-      commentId: args.commentId,
-      userId: args.userId,
-      timestamp: new Date().toISOString(),
-      status: 'deleted'
-    };
+    // Create a more readable response
+    const response = [
+      `🗑️ Comment deleted successfully`,
+      ``,
+      `👤 Deleted by: ${user.name}`,
+      `🆔 Comment ID: ${args.commentId}`,
+      `🕒 Deleted at: ${new Date().toLocaleString()}`
+    ].join('\n');
     
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(formattedResults, null, 2),
-      }],
-    };
+    return createTextResponse(response);
   } catch (error) {
     console.error('Error in delete-track-comment tool:', error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error deleting comment: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
-      isError: true
-    };
+    return createTextResponse(
+      `Error deleting comment: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
   }
 };

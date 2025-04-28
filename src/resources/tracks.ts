@@ -1,3 +1,4 @@
+import { ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { AudiusClient } from '../sdk-client.js';
 
 // Resource template for track
@@ -9,15 +10,9 @@ export const trackResourceTemplate = {
 };
 
 // Resource handler for track
-export const handleTrackResource = async (uri: string) => {
+export const handleTrackResource = async (uri: URL, params: { id: string }) => {
   try {
-    // Extract the track ID from the URI
-    const match = uri.match(/audius:\/\/track\/(.+)/);
-    if (!match || !match[1]) {
-      throw new Error(`Invalid track URI: ${uri}`);
-    }
-    
-    const trackId = match[1];
+    const trackId = params.id;
     const audiusClient = AudiusClient.getInstance();
     const track = await audiusClient.getTrack(trackId);
     
@@ -26,9 +21,11 @@ export const handleTrackResource = async (uri: string) => {
     }
     
     return {
-      uri,
-      mimeType: 'application/json',
-      text: JSON.stringify(track, null, 2)
+      contents: [{
+        uri: uri.href,
+        mimeType: 'application/json',
+        text: JSON.stringify(track, null, 2)
+      }]
     };
   } catch (error) {
     console.error('Error handling track resource:', error);

@@ -41,13 +41,15 @@ export const discoverMusicPrompt = {
 
 // Handler for discover-music prompt
 export const handleDiscoverMusicPrompt = (args: { 
-  genre: string;
+  query?: string; // Required as per schema
   artist?: string; 
   mood?: string;
   bpmRange?: string;
-  underground?: boolean;
-  discoveryMode?: 'trending' | 'new' | 'similar';
+  underground?: string; // Changed from boolean to string
+  discoveryMode?: string; // Changed from enum to string
 }) => {
+  // Convert string parameters to appropriate types
+  const underground = args.underground === 'true';
   // Parse BPM range if provided
   let bpmMin: number | undefined;
   let bpmMax: number | undefined;
@@ -66,7 +68,7 @@ export const handleDiscoverMusicPrompt = (args: {
   // Build a user query for discovery
   let userMessage = `I'm looking for music recommendations on Audius. `;
   
-  userMessage += `I enjoy ${args.genre} music. `;
+  userMessage += `I enjoy ${args.query || 'music'} music. `;
   
   if (args.artist) {
     userMessage += `Some artists I like are ${args.artist}. `;
@@ -80,7 +82,7 @@ export const handleDiscoverMusicPrompt = (args: {
     userMessage += `I prefer music with a tempo in the ${args.bpmRange} BPM range. `;
   }
   
-  if (args.underground) {
+  if (underground) {
     userMessage += `I'm interested in discovering underground or emerging artists. `;
   }
   
@@ -113,19 +115,19 @@ To fulfill this request, use these tools to provide personalized music recommend
 Make recommendations specific and varied. Include track names, artist names, and brief descriptions of why they match the user's preferences.
   `;
   
-  // Create messages for the prompt
+  // Create messages for the prompt with proper typing, only using allowed roles
   const messages = [
     {
-      role: 'system',
+      role: "assistant" as const,
       content: {
-        type: 'text',
+        type: "text" as const,
         text: systemMessage,
       },
     },
     {
-      role: 'user',
+      role: "user" as const,
       content: {
-        type: 'text',
+        type: "text" as const,
         text: userMessage,
       },
     },

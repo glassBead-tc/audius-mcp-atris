@@ -1,5 +1,7 @@
 import { z } from 'zod';
 import { AudiusClient } from '../sdk-client.js';
+import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
+import { createTextResponse, createMixedResponse } from '../utils/response.js';
 
 // Schema for get-track tool
 export const getTrackSchema = {
@@ -67,135 +69,142 @@ export const getTrack = async (args: { trackId: string }) => {
     const track = await audiusClient.getTrack(args.trackId);
     
     if (!track) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Track with ID ${args.trackId} not found`,
-        }],
-        isError: true
-      };
+      return createTextResponse(`No track found with id ${args.trackId}.`, true);
     }
     
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(track, null, 2),
-      }],
-    };
+    // Create a more readable formatted response for the track
+    const formattedTrack = [
+      `🎵 Track: ${track.title}`,
+      `🧑‍🎤 Artist: ${track.user.name}`,
+      `📝 Description: ${track.description || 'No description provided'}`,
+      `🔗 Permalink: ${track.permalink}`,
+      `🕒 Duration: ${Math.floor(track.duration / 60)}:${String(track.duration % 60).padStart(2, '0')}`,
+      `👍 Likes: ${track.favorite_count}`,
+      `🔁 Reposts: ${track.repost_count}`,
+      `🎧 Plays: ${track.play_count}`,
+      `🏷️ Tags: ${track.tags?.join(', ') || 'No tags'}`
+    ].join('\n');
+    
+    return createTextResponse(formattedTrack);
   } catch (error) {
     console.error('Error in get-track tool:', error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error fetching track: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
-      isError: true
-    };
+    return createTextResponse(
+      `Error retrieving track: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
   }
 };
 
 // Implementation of search-tracks tool
-export const searchTracks = async (args: { query: string, limit?: number }) => {
+export const searchTracks = async (args: { 
+  query: string, 
+  limit?: number 
+}) => {
   try {
     const audiusClient = AudiusClient.getInstance();
-    const limit = args.limit || 10;
-    const results = await audiusClient.searchTracks(args.query, { limit });
+    const searchResults = await audiusClient.searchTracks(args.query, { limit: args.limit || 10 });
     
-    if (!results || results.length === 0) {
-      return {
-        content: [{
-          type: 'text',
-          text: `No tracks found for query: ${args.query}`,
-        }],
-      };
+    if (!searchResults || searchResults.length === 0) {
+      return createTextResponse(`No tracks found matching "${args.query}".`, true);
     }
     
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(results, null, 2),
-      }],
-    };
+    // Format the search results in a more readable way
+    const formattedResults = searchResults.map((track, index) => (
+      `${index + 1}. "${track.title}" by ${track.user.name}\n` +
+      `   ID: ${track.id} | Plays: ${track.play_count} | Duration: ${Math.floor(track.duration / 60)}:${String(track.duration % 60).padStart(2, '0')}`
+    )).join('\n\n');
+    
+    return createTextResponse(
+      `Found ${searchResults.length} tracks matching "${args.query}":\n\n${formattedResults}`
+    );
   } catch (error) {
     console.error('Error in search-tracks tool:', error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error searching tracks: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
-      isError: true
-    };
+    return createTextResponse(
+      `Error searching tracks: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
   }
 };
 
 // Implementation of get-trending-tracks tool
-export const getTrendingTracks = async (args: { genre?: string, limit?: number }) => {
+export const getTrendingTracks = async (args: { 
+  genre?: string, 
+  limit?: number 
+}) => {
   try {
     const audiusClient = AudiusClient.getInstance();
-    const limit = args.limit || 10;
-    console.error('Attempting to get trending tracks...');
+    const genreMessage = args.genre ? ` for genre "${args.genre}"` : '';
     
-    const results = await audiusClient.getTrendingTracks(args.genre, limit);
+    const trendingTracks = await audiusClient.getTrendingTracks(
+      args.genre,
+      args.limit || 10
+    );
     
-    if (!results || results.length === 0) {
-      return {
-        content: [{
-          type: 'text',
-          text: args.genre 
-            ? `No trending tracks found in genre: ${args.genre}`
-            : 'No trending tracks found',
-        }],
-      };
+    if (!trendingTracks || trendingTracks.length === 0) {
+      return createTextResponse(`No trending tracks found${genreMessage}.`, true);
     }
     
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(results, null, 2),
-      }],
-    };
+    // Format the trending tracks in a more readable way
+    const formattedTrending = trendingTracks.map((track, index) => (
+      `${index + 1}. "${track.title}" by ${track.user.name}\n` +
+      `   ID: ${track.id} | Plays: ${track.play_count} | Likes: ${track.favorite_count}`
+    )).join('\n\n');
+    
+    return createTextResponse(
+      `Trending tracks${genreMessage}:\n\n${formattedTrending}`
+    );
   } catch (error) {
     console.error('Error in get-trending-tracks tool:', error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error fetching trending tracks: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
-      isError: true
-    };
+    return createTextResponse(
+      `Error getting trending tracks: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
   }
 };
 
 // Implementation of get-track-comments tool
-export const getTrackComments = async (args: { trackId: string, limit?: number }) => {
+export const getTrackComments = async (args: { 
+  trackId: string, 
+  limit?: number 
+}) => {
   try {
     const audiusClient = AudiusClient.getInstance();
-    const limit = args.limit || 10;
-    const comments = await audiusClient.getTrackComments(args.trackId, limit);
     
-    if (!comments || comments.length === 0) {
-      return {
-        content: [{
-          type: 'text',
-          text: `No comments found for track ID: ${args.trackId}`,
-        }],
-      };
+    // First, verify the track exists
+    let track;
+    try {
+      track = await audiusClient.getTrack(args.trackId);
+      if (!track) {
+        return createTextResponse(`No track found with id ${args.trackId}.`, true);
+      }
+    } catch (error) {
+      return createTextResponse(`Error verifying track: ${error instanceof Error ? error.message : 'Unknown error'}`, true);
     }
     
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(comments, null, 2),
-      }],
-    };
+    const comments = await audiusClient.getTrackComments(
+      args.trackId, 
+      args.limit || 10
+    );
+    
+    if (!comments || comments.length === 0) {
+      return createTextResponse(`No comments found for track "${track.title}" (ID: ${args.trackId}).`, true);
+    }
+    
+    // Format the comments in a more readable way
+    const formattedComments = comments.map((comment, index) => (
+      `${index + 1}. ${comment.user.name} commented:\n` +
+      `   "${comment.comment}"\n` +
+      `   Posted: ${new Date(comment.created_at).toLocaleString()} | Likes: ${comment.favorite_count || 0}`
+    )).join('\n\n');
+    
+    return createTextResponse(
+      `Comments for "${track.title}" by ${track.user.name}:\n\n${formattedComments}`
+    );
   } catch (error) {
     console.error('Error in get-track-comments tool:', error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error fetching track comments: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
-      isError: true
-    };
+    return createTextResponse(
+      `Error retrieving track comments: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
   }
 };

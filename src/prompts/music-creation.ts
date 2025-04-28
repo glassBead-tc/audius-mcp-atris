@@ -35,14 +35,17 @@ export const musicCreationPrompt = {
 
 // Handler for music-creation prompt
 export const handleMusicCreationPrompt = (args: { 
-  trackTitle: string;
-  userId: string;
+  trackTitle?: string;
+  userId?: string;
   genre?: string;
   mood?: string;
-  creationGoal?: 'publish-track' | 'remix-track' | 'collaborate' | 'plan-release';
+  creationGoal?: string; // Changed from enum to string
 }) => {
+  // Use default values in case of missing parameters
+  const trackTitle = args.trackTitle || '';
+  const userId = args.userId || '';
   // Build a user query for music creation
-  let userMessage = `I'm working on a track called "${args.trackTitle}" `;
+  let userMessage = `I'm working on a track called "${trackTitle}" `;
   
   if (args.genre) {
     userMessage += `in the ${args.genre} genre `;
@@ -98,19 +101,19 @@ To fulfill this request, help the user with their music creation and publishing 
 Provide practical, actionable advice tailored to the user's genre and goals.
   `;
   
-  // Create messages for the prompt
+  // Create messages for the prompt with proper typing, only using allowed roles
   const messages = [
     {
-      role: 'system',
+      role: "assistant" as const,
       content: {
-        type: 'text',
+        type: "text" as const,
         text: systemMessage,
       },
     },
     {
-      role: 'user',
+      role: "user" as const,
       content: {
-        type: 'text',
+        type: "text" as const,
         text: userMessage,
       },
     },

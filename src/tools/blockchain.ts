@@ -1,5 +1,7 @@
 import { z } from 'zod';
 import { AudiusClient } from '../sdk-client.js';
+import { createTextResponse } from '../utils/response.js';
+import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
 
 // Schema for user-wallets tool
 export const userWalletsSchema = {
@@ -16,7 +18,7 @@ export const userWalletsSchema = {
 // Implementation of user-wallets tool
 export const getUserWallets = async (args: { 
   userId: string;
-}) => {
+}, extra: RequestHandlerExtra) => {
   try {
     const audiusClient = AudiusClient.getInstance();
     
@@ -24,13 +26,7 @@ export const getUserWallets = async (args: {
     try {
       await audiusClient.getUser(args.userId);
     } catch (error) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Unable to verify user. Please check the provided user ID.`,
-        }],
-        isError: true
-      };
+      return createTextResponse(`Unable to verify user. Please check the provided user ID.`, true);
     }
     
     // Get wallet information from both chains
@@ -40,12 +36,7 @@ export const getUserWallets = async (args: {
     ]);
     
     if ((!solanaWallets || solanaWallets.length === 0) && !ethWallet) {
-      return {
-        content: [{
-          type: 'text',
-          text: `No wallet information found for user ${args.userId}.`,
-        }],
-      };
+      return createTextResponse(`No wallet information found for user ${args.userId}.`);
     }
     
     // Format results
@@ -55,21 +46,13 @@ export const getUserWallets = async (args: {
       ethereumWallet: ethWallet,
     };
     
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(formattedResults, null, 2),
-      }],
-    };
+    return createTextResponse(JSON.stringify(formattedResults, null, 2));
   } catch (error) {
     console.error('Error in user-wallets tool:', error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error getting user wallets: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
-      isError: true
-    };
+    return createTextResponse(
+      `Error getting user wallets: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
   }
 };
 
@@ -93,7 +76,7 @@ export const transactionHistorySchema = {
 export const getTransactionHistory = async (args: { 
   userId: string;
   limit?: number;
-}) => {
+}, extra: RequestHandlerExtra) => {
   try {
     const audiusClient = AudiusClient.getInstance();
     const limit = args.limit || 20;
@@ -102,25 +85,14 @@ export const getTransactionHistory = async (args: {
     try {
       await audiusClient.getUser(args.userId);
     } catch (error) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Unable to verify user. Please check the provided user ID.`,
-        }],
-        isError: true
-      };
+      return createTextResponse(`Unable to verify user. Please check the provided user ID.`, true);
     }
     
     // Get transaction history
     const transactions = await audiusClient.getUserTransactionHistory(args.userId, limit);
     
     if (!transactions || transactions.length === 0) {
-      return {
-        content: [{
-          type: 'text',
-          text: `No transaction history found for user ${args.userId}.`,
-        }],
-      };
+      return createTextResponse(`No transaction history found for user ${args.userId}.`);
     }
     
     // Format results
@@ -131,21 +103,10 @@ export const getTransactionHistory = async (args: {
       transactions: transactions,
     };
     
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(formattedResults, null, 2),
-      }],
-    };
+    return createTextResponse(JSON.stringify(formattedResults, null, 2));
   } catch (error) {
     console.error('Error in transaction-history tool:', error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error getting transaction history: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
-      isError: true
-    };
+    return createTextResponse(`Error getting transaction history: ${error instanceof Error ? error.message : 'Unknown error'}`, true);
   }
 };
 
@@ -156,7 +117,7 @@ export const availableChallengesSchema = {
 };
 
 // Implementation of available-challenges tool
-export const getAvailableChallenges = async () => {
+export const getAvailableChallenges = async (_args: undefined, extra: RequestHandlerExtra) => {
   try {
     const audiusClient = AudiusClient.getInstance();
     
@@ -164,12 +125,7 @@ export const getAvailableChallenges = async () => {
     const challenges = await audiusClient.getAvailableChallenges();
     
     if (!challenges || challenges.length === 0) {
-      return {
-        content: [{
-          type: 'text',
-          text: `No available challenges found.`,
-        }],
-      };
+      return createTextResponse(`No available challenges found.`);
     }
     
     // Format results
@@ -178,21 +134,10 @@ export const getAvailableChallenges = async () => {
       challenges: challenges,
     };
     
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(formattedResults, null, 2),
-      }],
-    };
+    return createTextResponse(JSON.stringify(formattedResults, null, 2));
   } catch (error) {
     console.error('Error in available-challenges tool:', error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error getting available challenges: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
-      isError: true
-    };
+    return createTextResponse(`Error getting available challenges: ${error instanceof Error ? error.message : 'Unknown error'}`, true);
   }
 };
 
@@ -211,7 +156,7 @@ export const userClaimableTokensSchema = {
 // Implementation of user-claimable-tokens tool
 export const getUserClaimableTokens = async (args: { 
   userId: string;
-}) => {
+}, extra: RequestHandlerExtra) => {
   try {
     const audiusClient = AudiusClient.getInstance();
     
@@ -219,13 +164,7 @@ export const getUserClaimableTokens = async (args: {
     try {
       await audiusClient.getUser(args.userId);
     } catch (error) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Unable to verify user. Please check the provided user ID.`,
-        }],
-        isError: true
-      };
+      return createTextResponse(`Unable to verify user. Please check the provided user ID.`, true);
     }
     
     // Get claimable tokens
@@ -236,12 +175,7 @@ export const getUserClaimableTokens = async (args: {
     
     if ((!claimableTokens || claimableTokens.length === 0) && 
         (!undisbursedChallenges || undisbursedChallenges.length === 0)) {
-      return {
-        content: [{
-          type: 'text',
-          text: `No claimable tokens or undisbursed challenges found for user ${args.userId}.`,
-        }],
-      };
+      return createTextResponse(`No claimable tokens or undisbursed challenges found for user ${args.userId}.`);
     }
     
     // Format results
@@ -251,21 +185,10 @@ export const getUserClaimableTokens = async (args: {
       undisbursedChallenges: undisbursedChallenges || [],
     };
     
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(formattedResults, null, 2),
-      }],
-    };
+    return createTextResponse(JSON.stringify(formattedResults, null, 2));
   } catch (error) {
     console.error('Error in user-claimable-tokens tool:', error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error getting user claimable tokens: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
-      isError: true
-    };
+    return createTextResponse(`Error getting user claimable tokens: ${error instanceof Error ? error.message : 'Unknown error'}`, true);
   }
 };
 
@@ -289,7 +212,7 @@ export const claimTokensSchema = {
 export const claimTokens = async (args: { 
   userId: string;
   challengeId: string;
-}) => {
+}, extra: RequestHandlerExtra) => {
   try {
     const audiusClient = AudiusClient.getInstance();
     
@@ -297,26 +220,14 @@ export const claimTokens = async (args: {
     try {
       await audiusClient.getUser(args.userId);
     } catch (error) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Unable to verify user. Please check the provided user ID.`,
-        }],
-        isError: true
-      };
+      return createTextResponse(`Unable to verify user. Please check the provided user ID.`, true);
     }
     
     // Claim tokens
     const result = await audiusClient.claimTokens(args.userId, args.challengeId);
     
     if (!result) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Failed to claim tokens for challenge ${args.challengeId}.`,
-        }],
-        isError: true
-      };
+      return createTextResponse(`Failed to claim tokens for challenge ${args.challengeId}.`, true);
     }
     
     // Format results
@@ -328,21 +239,10 @@ export const claimTokens = async (args: {
       result: result,
     };
     
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(formattedResults, null, 2),
-      }],
-    };
+    return createTextResponse(JSON.stringify(formattedResults, null, 2));
   } catch (error) {
     console.error('Error in claim-tokens tool:', error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error claiming tokens: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
-      isError: true
-    };
+    return createTextResponse(`Error claiming tokens: ${error instanceof Error ? error.message : 'Unknown error'}`, true);
   }
 };
 
@@ -372,43 +272,24 @@ export const getTokenBalance = async (args: {
   walletAddress: string;
   blockchain: 'ethereum' | 'solana';
   tokenMint?: string;
-}) => {
+}, extra: RequestHandlerExtra) => {
   try {
     const audiusClient = AudiusClient.getInstance();
-    
     let balance;
-    // Check token balance based on blockchain
+    
+    // Different API calls based on blockchain
     if (args.blockchain === 'ethereum') {
       balance = await audiusClient.getAudioTokenBalance(args.walletAddress);
     } else if (args.blockchain === 'solana') {
-      if (!args.tokenMint) {
-        return {
-          content: [{
-            type: 'text',
-            text: `Token mint address is required for Solana SPL tokens.`,
-          }],
-          isError: true
-        };
-      }
-      
-      balance = await audiusClient.getSolanaTokenBalance(args.walletAddress, args.tokenMint);
+      // If tokenMint not provided, default to AUDIO token on Solana
+      const tokenMint = args.tokenMint || 'AUDIO_TOKEN_MINT_ADDRESS';
+      balance = await audiusClient.getSolanaTokenBalance(args.walletAddress, tokenMint);
     } else {
-      return {
-        content: [{
-          type: 'text',
-          text: `Invalid blockchain specified. Use 'ethereum' or 'solana'.`,
-        }],
-        isError: true
-      };
+      return createTextResponse(`Invalid blockchain selected. Must be 'ethereum' or 'solana'.`, true);
     }
     
     if (!balance) {
-      return {
-        content: [{
-          type: 'text',
-          text: `No token balance found for wallet ${args.walletAddress} on ${args.blockchain}.`,
-        }],
-      };
+      return createTextResponse(`Unable to retrieve balance for wallet ${args.walletAddress}.`, true);
     }
     
     // Format results
@@ -417,23 +298,13 @@ export const getTokenBalance = async (args: {
       blockchain: args.blockchain,
       tokenMint: args.tokenMint,
       balance: balance,
+      timestamp: new Date().toISOString()
     };
     
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(formattedResults, null, 2),
-      }],
-    };
+    return createTextResponse(JSON.stringify(formattedResults, null, 2));
   } catch (error) {
     console.error('Error in token-balance tool:', error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error getting token balance: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
-      isError: true
-    };
+    return createTextResponse(`Error getting token balance: ${error instanceof Error ? error.message : 'Unknown error'}`, true);
   }
 };
 
@@ -467,7 +338,7 @@ export const sendTokens = async (args: {
   receiverWalletAddress: string;
   amount: string;
   privateKey: string;
-}) => {
+}, extra: RequestHandlerExtra) => {
   try {
     const audiusClient = AudiusClient.getInstance();
     
@@ -483,13 +354,7 @@ export const sendTokens = async (args: {
     });
     
     if (!result) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Failed to send tokens.`,
-        }],
-        isError: true
-      };
+      return createTextResponse(`Failed to send tokens.`, true);
     }
     
     // Format results
@@ -502,20 +367,9 @@ export const sendTokens = async (args: {
       transactionHash: result.transactionHash || 'unknown',
     };
     
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(formattedResults, null, 2),
-      }],
-    };
+    return createTextResponse(JSON.stringify(formattedResults, null, 2));
   } catch (error) {
     console.error('Error in send-tokens tool:', error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error sending tokens: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
-      isError: true
-    };
+    return createTextResponse(`Error sending tokens: ${error instanceof Error ? error.message : 'Unknown error'}`, true);
   }
 };

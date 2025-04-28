@@ -1,3 +1,4 @@
+import { ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { AudiusClient } from '../sdk-client.js';
 
 // Resource template for user
@@ -9,15 +10,9 @@ export const userResourceTemplate = {
 };
 
 // Resource handler for user
-export const handleUserResource = async (uri: string) => {
+export const handleUserResource = async (uri: URL, params: { id: string }) => {
   try {
-    // Extract the user ID from the URI
-    const match = uri.match(/audius:\/\/user\/(.+)/);
-    if (!match || !match[1]) {
-      throw new Error(`Invalid user URI: ${uri}`);
-    }
-    
-    const userId = match[1];
+    const userId = params.id;
     const audiusClient = AudiusClient.getInstance();
     const user = await audiusClient.getUser(userId);
     
@@ -26,9 +21,11 @@ export const handleUserResource = async (uri: string) => {
     }
     
     return {
-      uri,
-      mimeType: 'application/json',
-      text: JSON.stringify(user, null, 2)
+      contents: [{
+        uri: uri.href,
+        mimeType: 'application/json',
+        text: JSON.stringify(user, null, 2)
+      }]
     };
   } catch (error) {
     console.error('Error handling user resource:', error);

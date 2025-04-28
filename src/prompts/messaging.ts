@@ -114,19 +114,19 @@ To fulfill this request, help the user with direct messaging on Audius:
 Use the appropriate tools based on the user's needs and provide practical, actionable advice.
   `;
   
-  // Create messages for the prompt
+  // Create messages for the prompt with proper typing, only using allowed roles
   const messages = [
     {
-      role: 'system',
+      role: "assistant" as const,
       content: {
-        type: 'text',
+        type: "text" as const,
         text: systemMessage,
       },
     },
     {
-      role: 'user',
+      role: "user" as const,
       content: {
-        type: 'text',
+        type: "text" as const,
         text: userMessage,
       },
     },

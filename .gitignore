@@ -20,3 +20,9 @@ yarn-error.log
 
 #SDK Reference
 audius-protocol
+mcp-server-development-guide.md
+mcp-client-development-guide.md
+model-context-protocol-tssdk-readme.md
+github-mcp-reference.md
+building-mcp-with-llms.txt
+audius.txt

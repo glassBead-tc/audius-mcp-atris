@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { AudiusClient } from '../sdk-client.js';
+import { createTextResponse } from '../utils/response.js';
 
 // Schema for search-all tool
 export const searchAllSchema = {
@@ -33,12 +34,7 @@ export const searchAll = async (args: { query: string, limit?: number }) => {
                        (userResults && userResults.length > 0);
     
     if (!hasResults) {
-      return {
-        content: [{
-          type: 'text',
-          text: `No results found for query: ${args.query}`,
-        }],
-      };
+      return createTextResponse(`No results found for query: ${args.query}`);
     }
     
     // Format results
@@ -48,21 +44,13 @@ export const searchAll = async (args: { query: string, limit?: number }) => {
       users: userResults || [],
     };
     
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(formattedResults, null, 2),
-      }],
-    };
+    return createTextResponse(JSON.stringify(formattedResults, null, 2));
   } catch (error) {
     console.error('Error in search-all tool:', error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error performing search: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
-      isError: true
-    };
+    return createTextResponse(
+      `Error performing search: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
   }
 };
 
@@ -144,12 +132,7 @@ export const advancedSearch = async (args: {
     });
     
     if (!tracks || tracks.length === 0) {
-      return {
-        content: [{
-          type: 'text',
-          text: `No tracks found matching the criteria for query: ${args.query}`,
-        }],
-      };
+      return createTextResponse(`No tracks found matching the criteria for query: ${args.query}`);
     }
     
     // Format results
@@ -166,21 +149,13 @@ export const advancedSearch = async (args: {
       tracks: tracks,
     };
     
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(formattedResults, null, 2),
-      }],
-    };
+    return createTextResponse(JSON.stringify(formattedResults, null, 2));
   } catch (error) {
     console.error('Error in advanced-search tool:', error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error performing advanced search: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
-      isError: true
-    };
+    return createTextResponse(
+      `Error performing advanced search: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
   }
 };
 
@@ -232,12 +207,7 @@ export const trendingDiscovery = async (args: {
     }
     
     if (!tracks || tracks.length === 0) {
-      return {
-        content: [{
-          type: 'text',
-          text: `No ${args.underground ? 'underground ' : ''}trending tracks found${args.genre ? ` for genre: ${args.genre}` : ''}`,
-        }],
-      };
+      return createTextResponse(`No ${args.underground ? 'underground ' : ''}trending tracks found${args.genre ? ` for genre: ${args.genre}` : ''}`);
     }
     
     // Format results
@@ -248,21 +218,13 @@ export const trendingDiscovery = async (args: {
       tracks: tracks,
     };
     
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(formattedResults, null, 2),
-      }],
-    };
+    return createTextResponse(JSON.stringify(formattedResults, null, 2));
   } catch (error) {
     console.error('Error in trending-discovery tool:', error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error getting trending tracks: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
-      isError: true
-    };
+    return createTextResponse(
+      `Error getting trending tracks: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
   }
 };
 
@@ -291,12 +253,7 @@ export const similarArtists = async (args: { userId: string, limit?: number }) =
     const artists = await audiusClient.getRelatedArtists(args.userId, limit);
     
     if (!artists || artists.length === 0) {
-      return {
-        content: [{
-          type: 'text',
-          text: `No similar artists found for user ID: ${args.userId}`,
-        }],
-      };
+      return createTextResponse(`No similar artists found for user ID: ${args.userId}`);
     }
     
     // Get the original artist info
@@ -308,20 +265,12 @@ export const similarArtists = async (args: { userId: string, limit?: number }) =
       similarArtists: artists,
     };
     
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(formattedResults, null, 2),
-      }],
-    };
+    return createTextResponse(JSON.stringify(formattedResults, null, 2));
   } catch (error) {
     console.error('Error in similar-artists tool:', error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error finding similar artists: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
-      isError: true
-    };
+    return createTextResponse(
+      `Error finding similar artists: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
   }
 };

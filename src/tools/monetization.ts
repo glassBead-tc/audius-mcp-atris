@@ -1,5 +1,7 @@
 import { z } from 'zod';
 import { AudiusClient } from '../sdk-client.js';
+import { createTextResponse } from '../utils/response.js';
+import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
 
 // Schema for track-access-gates tool
 export const trackAccessGatesSchema = {
@@ -16,7 +18,7 @@ export const trackAccessGatesSchema = {
 // Implementation of track-access-gates tool
 export const getTrackAccessGates = async (args: { 
   trackId: string;
-}) => {
+}, extra: RequestHandlerExtra) => {
   try {
     const audiusClient = AudiusClient.getInstance();
     
@@ -24,25 +26,14 @@ export const getTrackAccessGates = async (args: {
     try {
       await audiusClient.getTrack(args.trackId);
     } catch (error) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Unable to verify track. Please check the provided track ID.`,
-        }],
-        isError: true
-      };
+      return createTextResponse(`Unable to verify track. Please check the provided track ID.`, true);
     }
     
-    // Get track access gates
+    // Get access gates
     const accessGates = await audiusClient.getTrackAccessGates(args.trackId);
     
-    if (!accessGates) {
-      return {
-        content: [{
-          type: 'text',
-          text: `No access gates found for track ${args.trackId}.`,
-        }],
-      };
+    if (!accessGates || accessGates.length === 0) {
+      return createTextResponse(`No access gates found for track ${args.trackId}.`);
     }
     
     // Format results
@@ -51,21 +42,13 @@ export const getTrackAccessGates = async (args: {
       accessGates: accessGates,
     };
     
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(formattedResults, null, 2),
-      }],
-    };
+    return createTextResponse(JSON.stringify(formattedResults, null, 2));
   } catch (error) {
     console.error('Error in track-access-gates tool:', error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error getting track access gates: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
-      isError: true
-    };
+    return createTextResponse(
+      `Error getting track access gates: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
   }
 };
 
@@ -89,7 +72,7 @@ export const checkNftAccessSchema = {
 export const checkNftAccess = async (args: { 
   trackId: string;
   walletAddress: string;
-}) => {
+}, extra: RequestHandlerExtra) => {
   try {
     const audiusClient = AudiusClient.getInstance();
     
@@ -97,25 +80,14 @@ export const checkNftAccess = async (args: {
     try {
       await audiusClient.getTrack(args.trackId);
     } catch (error) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Unable to verify track. Please check the provided track ID.`,
-        }],
-        isError: true
-      };
+      return createTextResponse(`Unable to verify track. Please check the provided track ID.`, true);
     }
     
     // Check NFT access
     const accessResult = await audiusClient.checkNftGatedAccess(args.trackId, args.walletAddress);
     
     if (!accessResult) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Could not determine NFT access for track ${args.trackId} with wallet ${args.walletAddress}.`,
-        }],
-      };
+      return createTextResponse(`Could not determine NFT access for track ${args.trackId} with wallet ${args.walletAddress}.`);
     }
     
     // Format results
@@ -127,21 +99,13 @@ export const checkNftAccess = async (args: {
       accessDetails: accessResult
     };
     
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(formattedResults, null, 2),
-      }],
-    };
+    return createTextResponse(JSON.stringify(formattedResults, null, 2));
   } catch (error) {
     console.error('Error in check-nft-access tool:', error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error checking NFT access: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
-      isError: true
-    };
+    return createTextResponse(
+      `Error checking NFT access: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
   }
 };
 
@@ -165,7 +129,7 @@ export const nftGatedSignatureSchema = {
 export const getNftGatedSignature = async (args: { 
   trackId: string;
   walletAddress: string;
-}) => {
+}, extra: RequestHandlerExtra) => {
   try {
     const audiusClient = AudiusClient.getInstance();
     
@@ -173,25 +137,14 @@ export const getNftGatedSignature = async (args: {
     try {
       await audiusClient.getTrack(args.trackId);
     } catch (error) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Unable to verify track. Please check the provided track ID.`,
-        }],
-        isError: true
-      };
+      return createTextResponse(`Unable to verify track. Please check the provided track ID.`, true);
     }
     
     // Get NFT gated signature
     const signature = await audiusClient.getNftGatedTrackSignature(args.trackId, args.walletAddress);
     
     if (!signature) {
-      return {
-        content: [{
-          type: 'text',
-          text: `No NFT signature available for track ${args.trackId} with wallet ${args.walletAddress}.`,
-        }],
-      };
+      return createTextResponse(`No NFT signature available for track ${args.trackId} with wallet ${args.walletAddress}.`);
     }
     
     // Format results
@@ -201,21 +154,13 @@ export const getNftGatedSignature = async (args: {
       signature: signature,
     };
     
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(formattedResults, null, 2),
-      }],
-    };
+    return createTextResponse(JSON.stringify(formattedResults, null, 2));
   } catch (error) {
     console.error('Error in nft-gated-signature tool:', error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error getting NFT gated signature: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
-      isError: true
-    };
+    return createTextResponse(
+      `Error getting NFT gated signature: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
   }
 };
 
@@ -225,7 +170,7 @@ export const purchaseOptionsSchema = {
   properties: {
     contentId: {
       type: 'string',
-      description: 'ID of the content to check purchase options for',
+      description: 'ID of the content (track or playlist)',
     },
     contentType: {
       type: 'string',
@@ -240,7 +185,7 @@ export const purchaseOptionsSchema = {
 export const getPurchaseOptions = async (args: {
   contentId: string;
   contentType: 'track' | 'playlist';
-}) => {
+}, extra: RequestHandlerExtra) => {
   try {
     const audiusClient = AudiusClient.getInstance();
     
@@ -252,49 +197,30 @@ export const getPurchaseOptions = async (args: {
         await audiusClient.getPlaylist(args.contentId);
       }
     } catch (error) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Unable to verify ${args.contentType}. Please check the provided ID.`,
-        }],
-        isError: true
-      };
+      return createTextResponse(`Unable to verify ${args.contentType}. Please check the provided ID.`, true);
     }
     
     // Get purchase options
-    const options = await audiusClient.getPurchaseOptions(args.contentId, args.contentType);
+    const purchaseOptions = await audiusClient.getPurchaseOptions(args.contentId, args.contentType);
     
-    if (!options || options.length === 0) {
-      return {
-        content: [{
-          type: 'text',
-          text: `No purchase options found for ${args.contentType} ${args.contentId}.`,
-        }],
-      };
+    if (!purchaseOptions || purchaseOptions.length === 0) {
+      return createTextResponse(`No purchase options found for ${args.contentType} ${args.contentId}.`);
     }
     
     // Format results
     const formattedResults = {
       contentId: args.contentId,
       contentType: args.contentType,
-      purchaseOptions: options,
+      purchaseOptions: purchaseOptions,
     };
     
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(formattedResults, null, 2),
-      }],
-    };
+    return createTextResponse(JSON.stringify(formattedResults, null, 2));
   } catch (error) {
     console.error('Error in purchase-options tool:', error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error getting purchase options: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
-      isError: true
-    };
+    return createTextResponse(
+      `Error getting purchase options: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
   }
 };
 
@@ -304,7 +230,7 @@ export const checkPurchaseAccessSchema = {
   properties: {
     contentId: {
       type: 'string',
-      description: 'ID of the purchase-gated content',
+      description: 'ID of the content (track or playlist)',
     },
     contentType: {
       type: 'string',
@@ -324,7 +250,7 @@ export const checkPurchaseAccess = async (args: {
   contentId: string;
   contentType: 'track' | 'playlist';
   walletAddress: string;
-}) => {
+}, extra: RequestHandlerExtra) => {
   try {
     const audiusClient = AudiusClient.getInstance();
     
@@ -336,29 +262,18 @@ export const checkPurchaseAccess = async (args: {
         await audiusClient.getPlaylist(args.contentId);
       }
     } catch (error) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Unable to verify ${args.contentType}. Please check the provided ID.`,
-        }],
-        isError: true
-      };
+      return createTextResponse(`Unable to verify ${args.contentType}. Please check the provided ID.`, true);
     }
     
     // Check purchase access
     const accessResult = await audiusClient.checkPurchaseGatedAccess(
-      args.contentId,
-      args.contentType,
+      args.contentId, 
+      args.contentType, 
       args.walletAddress
     );
     
     if (!accessResult) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Could not determine purchase access for ${args.contentType} ${args.contentId} with wallet ${args.walletAddress}.`,
-        }],
-      };
+      return createTextResponse(`Could not determine purchase access for ${args.contentType} ${args.contentId} with wallet ${args.walletAddress}.`);
     }
     
     // Format results
@@ -367,24 +282,17 @@ export const checkPurchaseAccess = async (args: {
       contentType: args.contentType,
       walletAddress: args.walletAddress,
       hasAccess: accessResult.hasAccess || false,
-      accessDetails: accessResult
+      purchaseTimestamp: accessResult.purchaseTimestamp,
+      purchaseDetails: accessResult
     };
     
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(formattedResults, null, 2),
-      }],
-    };
+    return createTextResponse(JSON.stringify(formattedResults, null, 2));
   } catch (error) {
     console.error('Error in check-purchase-access tool:', error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error checking purchase access: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
-      isError: true
-    };
+    return createTextResponse(
+      `Error checking purchase access: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
   }
 };
 
@@ -392,10 +300,11 @@ export const checkPurchaseAccess = async (args: {
 export const supportedPaymentTokensSchema = {
   type: 'object',
   properties: {},
+  required: [],
 };
 
 // Implementation of supported-payment-tokens tool
-export const getSupportedPaymentTokens = async () => {
+export const getSupportedPaymentTokens = async (args: any, extra: RequestHandlerExtra) => {
   try {
     const audiusClient = AudiusClient.getInstance();
     
@@ -403,34 +312,22 @@ export const getSupportedPaymentTokens = async () => {
     const tokens = await audiusClient.getSupportedPaymentTokens();
     
     if (!tokens || tokens.length === 0) {
-      return {
-        content: [{
-          type: 'text',
-          text: `No supported payment tokens found.`,
-        }],
-      };
+      return createTextResponse(`No supported payment tokens found.`);
     }
     
     // Format results
     const formattedResults = {
       supportedTokens: tokens,
+      count: tokens.length,
     };
     
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(formattedResults, null, 2),
-      }],
-    };
+    return createTextResponse(JSON.stringify(formattedResults, null, 2));
   } catch (error) {
     console.error('Error in supported-payment-tokens tool:', error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error getting supported payment tokens: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
-      isError: true
-    };
+    return createTextResponse(
+      `Error getting supported payment tokens: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
   }
 };
 
@@ -440,7 +337,7 @@ export const usdcGateInfoSchema = {
   properties: {
     trackId: {
       type: 'string',
-      description: 'ID of the USDC-gated track',
+      description: 'ID of the track to get USDC gate info for',
     },
   },
   required: ['trackId'],
@@ -449,7 +346,7 @@ export const usdcGateInfoSchema = {
 // Implementation of usdc-gate-info tool
 export const getUsdcGateInfo = async (args: { 
   trackId: string;
-}) => {
+}, extra: RequestHandlerExtra) => {
   try {
     const audiusClient = AudiusClient.getInstance();
     
@@ -457,48 +354,29 @@ export const getUsdcGateInfo = async (args: {
     try {
       await audiusClient.getTrack(args.trackId);
     } catch (error) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Unable to verify track. Please check the provided track ID.`,
-        }],
-        isError: true
-      };
+      return createTextResponse(`Unable to verify track. Please check the provided track ID.`, true);
     }
     
     // Get USDC gate info
     const gateInfo = await audiusClient.getUsdcGateInfo(args.trackId);
     
     if (!gateInfo) {
-      return {
-        content: [{
-          type: 'text',
-          text: `No USDC gate information found for track ${args.trackId}.`,
-        }],
-      };
+      return createTextResponse(`No USDC gate info found for track ${args.trackId}.`);
     }
     
     // Format results
     const formattedResults = {
       trackId: args.trackId,
-      usdcGateInfo: gateInfo,
+      usdcGate: gateInfo,
     };
     
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(formattedResults, null, 2),
-      }],
-    };
+    return createTextResponse(JSON.stringify(formattedResults, null, 2));
   } catch (error) {
     console.error('Error in usdc-gate-info tool:', error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error getting USDC gate info: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
-      isError: true
-    };
+    return createTextResponse(
+      `Error getting USDC gate info: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
   }
 };
 
@@ -516,12 +394,12 @@ export const sendTipSchema = {
     },
     amount: {
       type: 'string',
-      description: 'Amount to tip',
+      description: 'Amount to tip in the specified token',
     },
     tokenType: {
       type: 'string',
       enum: ['AUDIO', 'USDC', 'SOL'],
-      description: 'Type of token to send',
+      description: 'Type of token for the tip',
     },
     senderWalletAddress: {
       type: 'string',
@@ -529,11 +407,11 @@ export const sendTipSchema = {
     },
     signerPrivateKey: {
       type: 'string',
-      description: 'Private key of the sender wallet (IMPORTANT: only use for testing!)',
+      description: 'Private key of the sender (only for simulation)',
     },
     message: {
       type: 'string',
-      description: 'Optional message to include with the tip',
+      description: 'Optional message with the tip',
     },
   },
   required: ['senderUserId', 'receiverUserId', 'amount', 'tokenType', 'senderWalletAddress', 'signerPrivateKey'],
@@ -548,31 +426,20 @@ export const sendTip = async (args: {
   senderWalletAddress: string;
   signerPrivateKey: string;
   message?: string;
-}) => {
+}, extra: RequestHandlerExtra) => {
   try {
     const audiusClient = AudiusClient.getInstance();
     
-    // Verify users exist
+    // Verify both users exist
     try {
-      await Promise.all([
-        audiusClient.getUser(args.senderUserId),
-        audiusClient.getUser(args.receiverUserId)
-      ]);
+      await audiusClient.getUser(args.senderUserId);
+      await audiusClient.getUser(args.receiverUserId);
     } catch (error) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Unable to verify users. Please check the provided user IDs.`,
-        }],
-        isError: true
-      };
+      return createTextResponse(`Unable to verify users. Please check the provided user IDs.`, true);
     }
     
-    // IMPORTANT NOTE: In a real implementation, you would NEVER handle private keys directly.
-    // This is just for demonstration purposes and should use a secure wallet connection method.
-    
-    // Send tip
-    const result = await audiusClient.sendTip({
+    // Send tip - in a real implementation, this would interact with the blockchain
+    const tipResult = await audiusClient.sendTip({
       senderUserId: args.senderUserId,
       receiverUserId: args.receiverUserId,
       amount: args.amount,
@@ -580,16 +447,11 @@ export const sendTip = async (args: {
       senderWalletAddress: args.senderWalletAddress,
       signerPrivateKey: args.signerPrivateKey,
       message: args.message
+      // Note: signerPrivateKey would be handled securely in a real implementation
     });
     
-    if (!result) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Failed to send tip.`,
-        }],
-        isError: true
-      };
+    if (!tipResult || !tipResult.transactionId) {
+      return createTextResponse(`Failed to send tip. The transaction could not be completed.`, true);
     }
     
     // Format results
@@ -598,27 +460,19 @@ export const sendTip = async (args: {
       receiverUserId: args.receiverUserId,
       amount: args.amount,
       tokenType: args.tokenType,
-      message: args.message,
-      timestamp: new Date().toISOString(),
-      status: 'sent',
-      tipDetails: result
+      transactionId: tipResult.transactionId,
+      timestamp: tipResult.timestamp || new Date().toISOString(),
+      status: tipResult.status || 'completed',
+      message: args.message
     };
     
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(formattedResults, null, 2),
-      }],
-    };
+    return createTextResponse(JSON.stringify(formattedResults, null, 2));
   } catch (error) {
     console.error('Error in send-tip tool:', error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error sending tip: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
-      isError: true
-    };
+    return createTextResponse(
+      `Error sending tip: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
   }
 };
 
@@ -632,7 +486,7 @@ export const getSentTipsSchema = {
     },
     limit: {
       type: 'number',
-      description: 'Maximum number of tips to return (default: 20)',
+      description: 'Maximum number of tips to return',
     },
   },
   required: ['userId'],
@@ -642,59 +496,39 @@ export const getSentTipsSchema = {
 export const getSentTips = async (args: {
   userId: string;
   limit?: number;
-}) => {
+}, extra: RequestHandlerExtra) => {
   try {
     const audiusClient = AudiusClient.getInstance();
-    const limit = args.limit || 20;
     
     // Verify user exists
     try {
       await audiusClient.getUser(args.userId);
     } catch (error) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Unable to verify user. Please check the provided user ID.`,
-        }],
-        isError: true
-      };
+      return createTextResponse(`Unable to verify user. Please check the provided user ID.`, true);
     }
     
     // Get sent tips
-    const tips = await audiusClient.getSentTips(args.userId, limit);
+    const tips = await audiusClient.getSentTips(args.userId, args.limit);
     
     if (!tips || tips.length === 0) {
-      return {
-        content: [{
-          type: 'text',
-          text: `No sent tips found for user ${args.userId}.`,
-        }],
-      };
+      return createTextResponse(`No sent tips found for user ${args.userId}.`);
     }
     
     // Format results
     const formattedResults = {
       userId: args.userId,
-      limit,
-      tipCount: tips.length,
-      sentTips: tips,
+      limit: args.limit,
+      totalTips: tips.length,
+      tips: tips,
     };
     
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(formattedResults, null, 2),
-      }],
-    };
+    return createTextResponse(JSON.stringify(formattedResults, null, 2));
   } catch (error) {
     console.error('Error in get-sent-tips tool:', error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error getting sent tips: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
-      isError: true
-    };
+    return createTextResponse(
+      `Error getting sent tips: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
   }
 };
 
@@ -708,7 +542,7 @@ export const getReceivedTipsSchema = {
     },
     limit: {
       type: 'number',
-      description: 'Maximum number of tips to return (default: 20)',
+      description: 'Maximum number of tips to return',
     },
   },
   required: ['userId'],
@@ -718,59 +552,39 @@ export const getReceivedTipsSchema = {
 export const getReceivedTips = async (args: {
   userId: string;
   limit?: number;
-}) => {
+}, extra: RequestHandlerExtra) => {
   try {
     const audiusClient = AudiusClient.getInstance();
-    const limit = args.limit || 20;
     
     // Verify user exists
     try {
       await audiusClient.getUser(args.userId);
     } catch (error) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Unable to verify user. Please check the provided user ID.`,
-        }],
-        isError: true
-      };
+      return createTextResponse(`Unable to verify user. Please check the provided user ID.`, true);
     }
     
     // Get received tips
-    const tips = await audiusClient.getReceivedTips(args.userId, limit);
+    const tips = await audiusClient.getReceivedTips(args.userId, args.limit);
     
     if (!tips || tips.length === 0) {
-      return {
-        content: [{
-          type: 'text',
-          text: `No received tips found for user ${args.userId}.`,
-        }],
-      };
+      return createTextResponse(`No received tips found for user ${args.userId}.`);
     }
     
     // Format results
     const formattedResults = {
       userId: args.userId,
-      limit,
-      tipCount: tips.length,
-      receivedTips: tips,
+      limit: args.limit,
+      totalTips: tips.length,
+      tips: tips,
     };
     
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(formattedResults, null, 2),
-      }],
-    };
+    return createTextResponse(JSON.stringify(formattedResults, null, 2));
   } catch (error) {
     console.error('Error in get-received-tips tool:', error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error getting received tips: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
-      isError: true
-    };
+    return createTextResponse(
+      `Error getting received tips: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
   }
 };
 
@@ -789,7 +603,7 @@ export const userTipStatsSchema = {
 // Implementation of user-tip-stats tool
 export const getUserTipStats = async (args: {
   userId: string;
-}) => {
+}, extra: RequestHandlerExtra) => {
   try {
     const audiusClient = AudiusClient.getInstance();
     
@@ -797,25 +611,14 @@ export const getUserTipStats = async (args: {
     try {
       await audiusClient.getUser(args.userId);
     } catch (error) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Unable to verify user. Please check the provided user ID.`,
-        }],
-        isError: true
-      };
+      return createTextResponse(`Unable to verify user. Please check the provided user ID.`, true);
     }
     
     // Get tip stats
     const stats = await audiusClient.getUserTipStats(args.userId);
     
     if (!stats) {
-      return {
-        content: [{
-          type: 'text',
-          text: `No tip stats found for user ${args.userId}.`,
-        }],
-      };
+      return createTextResponse(`No tip stats found for user ${args.userId}.`);
     }
     
     // Format results
@@ -824,21 +627,13 @@ export const getUserTipStats = async (args: {
       tipStats: stats,
     };
     
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(formattedResults, null, 2),
-      }],
-    };
+    return createTextResponse(JSON.stringify(formattedResults, null, 2));
   } catch (error) {
     console.error('Error in user-tip-stats tool:', error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error getting user tip stats: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
-      isError: true
-    };
+    return createTextResponse(
+      `Error getting user tip stats: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
   }
 };
 
@@ -882,7 +677,7 @@ export const purchaseTrack = async (args: {
   paymentToken: string;
   amount: string;
   signerPrivateKey: string;
-}) => {
+}, extra: RequestHandlerExtra) => {
   try {
     const audiusClient = AudiusClient.getInstance();
     
@@ -890,50 +685,26 @@ export const purchaseTrack = async (args: {
     try {
       await audiusClient.getTrack(args.contentId);
     } catch (error) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Unable to verify track. Please check the provided track ID.`,
-        }],
-        isError: true
-      };
+      return createTextResponse(`Unable to verify track. Please check the provided track ID.`, true);
     }
     
     // Verify the purchase options exist for this track
     const purchaseOptions = await audiusClient.getPurchaseOptions(args.contentId, 'track');
     if (!purchaseOptions || purchaseOptions.length === 0) {
-      return {
-        content: [{
-          type: 'text',
-          text: `No purchase options found for track ${args.contentId}.`,
-        }],
-        isError: true
-      };
+      return createTextResponse(`No purchase options found for track ${args.contentId}.`, true);
     }
     
     // Verify that the purchase option provided is valid
     const validOption = purchaseOptions.some((option: any) => option.id === args.purchaseOption);
     if (!validOption) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Invalid purchase option. Please check the available options with the purchase-options tool.`,
-        }],
-        isError: true
-      };
+      return createTextResponse(`Invalid purchase option. Please check the available options with the purchase-options tool.`, true);
     }
     
     // Verify the payment token is supported
     const supportedTokens = await audiusClient.getSupportedPaymentTokens();
     const validToken = supportedTokens.some((token: any) => token.symbol === args.paymentToken);
     if (!validToken) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Invalid payment token. Please check the supported tokens with the supported-payment-tokens tool.`,
-        }],
-        isError: true
-      };
+      return createTextResponse(`Invalid payment token. Please check the supported tokens with the supported-payment-tokens tool.`, true);
     }
     
     // IMPORTANT NOTE: In a real implementation, you would NEVER handle private keys directly.
@@ -951,13 +722,7 @@ export const purchaseTrack = async (args: {
     });
     
     if (!result) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Failed to purchase track.`,
-        }],
-        isError: true
-      };
+      return createTextResponse(`Failed to purchase track.`, true);
     }
     
     // Format results
@@ -973,20 +738,12 @@ export const purchaseTrack = async (args: {
       purchaseDetails: result
     };
     
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(formattedResults, null, 2),
-      }],
-    };
+    return createTextResponse(JSON.stringify(formattedResults, null, 2));
   } catch (error) {
     console.error('Error in purchase-track tool:', error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error purchasing track: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
-      isError: true
-    };
+    return createTextResponse(
+      `Error purchasing track: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
   }
 };

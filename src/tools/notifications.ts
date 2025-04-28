@@ -1,5 +1,7 @@
 import { z } from 'zod';
 import { AudiusClient } from '../sdk-client.js';
+import { createTextResponse } from '../utils/response.js';
+import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
 
 // Schema for get-notifications tool
 export const getNotificationsSchema = {
@@ -26,7 +28,7 @@ export const getNotifications = async (args: {
   userId: string;
   limit?: number;
   timestamp?: string;
-}) => {
+}, extra: RequestHandlerExtra) => {
   try {
     const audiusClient = AudiusClient.getInstance();
     const limit = args.limit || 20;
@@ -35,51 +37,32 @@ export const getNotifications = async (args: {
     try {
       await audiusClient.getUser(args.userId);
     } catch (error) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Unable to verify user. Please check the provided user ID.`,
-        }],
-        isError: true
-      };
+      return createTextResponse(`Unable to verify user. Please check the provided user ID.`, true);
     }
     
     // Get notifications
     const notifications = await audiusClient.getUserNotifications(args.userId, limit, args.timestamp);
     
     if (!notifications || notifications.length === 0) {
-      return {
-        content: [{
-          type: 'text',
-          text: `No notifications found for user ${args.userId}.`,
-        }],
-      };
+      return createTextResponse(`No notifications found for user ${args.userId}.`);
     }
     
     // Format results
     const formattedResults = {
       userId: args.userId,
       limit,
+      timestamp: args.timestamp,
       notificationCount: notifications.length,
       notifications: notifications,
-      nextTimestamp: notifications.length > 0 ? notifications[notifications.length - 1].timestamp : null
     };
     
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(formattedResults, null, 2),
-      }],
-    };
+    return createTextResponse(JSON.stringify(formattedResults, null, 2));
   } catch (error) {
     console.error('Error in get-notifications tool:', error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error getting notifications: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
-      isError: true
-    };
+    return createTextResponse(
+      `Error getting notifications: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
   }
 };
 
@@ -98,7 +81,7 @@ export const notificationSettingsSchema = {
 // Implementation of notification-settings tool
 export const getNotificationSettings = async (args: {
   userId: string;
-}) => {
+}, extra: RequestHandlerExtra) => {
   try {
     const audiusClient = AudiusClient.getInstance();
     
@@ -106,25 +89,14 @@ export const getNotificationSettings = async (args: {
     try {
       await audiusClient.getUser(args.userId);
     } catch (error) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Unable to verify user. Please check the provided user ID.`,
-        }],
-        isError: true
-      };
+      return createTextResponse(`Unable to verify user. Please check the provided user ID.`, true);
     }
     
     // Get notification settings
     const settings = await audiusClient.getUserNotificationSettings(args.userId);
     
     if (!settings) {
-      return {
-        content: [{
-          type: 'text',
-          text: `No notification settings found for user ${args.userId}.`,
-        }],
-      };
+      return createTextResponse(`No notification settings found for user ${args.userId}.`);
     }
     
     // Format results
@@ -133,21 +105,13 @@ export const getNotificationSettings = async (args: {
       settings: settings,
     };
     
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(formattedResults, null, 2),
-      }],
-    };
+    return createTextResponse(JSON.stringify(formattedResults, null, 2));
   } catch (error) {
     console.error('Error in notification-settings tool:', error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error getting notification settings: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
-      isError: true
-    };
+    return createTextResponse(
+      `Error getting notification settings: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
   }
 };
 
@@ -226,7 +190,7 @@ export const updateNotificationSettings = async (args: {
   tips?: boolean;
   supporterRank?: boolean;
   supportingRank?: boolean;
-}) => {
+}, extra: RequestHandlerExtra) => {
   try {
     const audiusClient = AudiusClient.getInstance();
     
@@ -234,54 +198,45 @@ export const updateNotificationSettings = async (args: {
     try {
       await audiusClient.getUser(args.userId);
     } catch (error) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Unable to verify user. Please check the provided user ID.`,
-        }],
-        isError: true
-      };
+      return createTextResponse(`Unable to verify user. Please check the provided user ID.`, true);
     }
     
-    // Extract settings from args
-    const { userId, ...settings } = args;
+    // Create settings object from provided args
+    const settings: Record<string, boolean> = {};
+    if (args.milestones !== undefined) settings.milestones = args.milestones;
+    if (args.followers !== undefined) settings.followers = args.followers;
+    if (args.reposts !== undefined) settings.reposts = args.reposts;
+    if (args.favorites !== undefined) settings.favorites = args.favorites;
+    if (args.messages !== undefined) settings.messages = args.messages;
+    if (args.announcements !== undefined) settings.announcements = args.announcements;
+    if (args.comments !== undefined) settings.comments = args.comments;
+    if (args.remixes !== undefined) settings.remixes = args.remixes;
+    if (args.tastemakers !== undefined) settings.tastemakers = args.tastemakers;
+    if (args.tips !== undefined) settings.tips = args.tips;
+    if (args.supporterRank !== undefined) settings.supporterRank = args.supporterRank;
+    if (args.supportingRank !== undefined) settings.supportingRank = args.supportingRank;
     
     // Update notification settings
-    const result = await audiusClient.updateUserNotificationSettings(userId, settings);
+    const updatedSettings = await audiusClient.updateUserNotificationSettings(args.userId, settings);
     
-    if (!result) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Failed to update notification settings for user ${userId}.`,
-        }],
-        isError: true
-      };
+    if (!updatedSettings) {
+      return createTextResponse(`Failed to update notification settings for user ${args.userId}.`, true);
     }
     
     // Format results
     const formattedResults = {
-      userId: userId,
-      settings: settings,
-      timestamp: new Date().toISOString(),
-      status: 'updated'
+      userId: args.userId,
+      settings: updatedSettings,
+      updated: true
     };
     
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(formattedResults, null, 2),
-      }],
-    };
+    return createTextResponse(JSON.stringify(formattedResults, null, 2));
   } catch (error) {
     console.error('Error in update-notification-settings tool:', error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error updating notification settings: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
-      isError: true
-    };
+    return createTextResponse(
+      `Error updating notification settings: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
   }
 };
 
@@ -298,7 +253,7 @@ export const markNotificationsReadSchema = {
       items: {
         type: 'string'
       },
-      description: 'IDs of notifications to mark as read',
+      description: 'Array of notification IDs to mark as read',
     },
   },
   required: ['userId', 'notificationIds'],
@@ -308,7 +263,7 @@ export const markNotificationsReadSchema = {
 export const markNotificationsRead = async (args: {
   userId: string;
   notificationIds: string[];
-}) => {
+}, extra: RequestHandlerExtra) => {
   try {
     const audiusClient = AudiusClient.getInstance();
     
@@ -316,62 +271,30 @@ export const markNotificationsRead = async (args: {
     try {
       await audiusClient.getUser(args.userId);
     } catch (error) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Unable to verify user. Please check the provided user ID.`,
-        }],
-        isError: true
-      };
-    }
-    
-    // Check if notification IDs are provided
-    if (!args.notificationIds || args.notificationIds.length === 0) {
-      return {
-        content: [{
-          type: 'text',
-          text: `No notification IDs provided. Please specify which notifications to mark as read.`,
-        }],
-        isError: true
-      };
+      return createTextResponse(`Unable to verify user. Please check the provided user ID.`, true);
     }
     
     // Mark notifications as read
-    const result = await audiusClient.markNotificationsAsRead(args.userId, args.notificationIds);
+    const success = await audiusClient.markNotificationsAsRead(args.userId, args.notificationIds);
     
-    if (!result) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Failed to mark notifications as read for user ${args.userId}.`,
-        }],
-        isError: true
-      };
+    if (!success) {
+      return createTextResponse(`Failed to mark notifications as read for user ${args.userId}.`, true);
     }
     
     // Format results
     const formattedResults = {
       userId: args.userId,
       notificationIds: args.notificationIds,
-      timestamp: new Date().toISOString(),
-      status: 'marked as read'
+      markedAsRead: true
     };
     
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(formattedResults, null, 2),
-      }],
-    };
+    return createTextResponse(JSON.stringify(formattedResults, null, 2));
   } catch (error) {
     console.error('Error in mark-notifications-read tool:', error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error marking notifications as read: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
-      isError: true
-    };
+    return createTextResponse(
+      `Error marking notifications as read: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
   }
 };
 
@@ -390,7 +313,7 @@ export const markAllNotificationsReadSchema = {
 // Implementation of mark-all-notifications-read tool
 export const markAllNotificationsRead = async (args: {
   userId: string;
-}) => {
+}, extra: RequestHandlerExtra) => {
   try {
     const audiusClient = AudiusClient.getInstance();
     
@@ -398,68 +321,48 @@ export const markAllNotificationsRead = async (args: {
     try {
       await audiusClient.getUser(args.userId);
     } catch (error) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Unable to verify user. Please check the provided user ID.`,
-        }],
-        isError: true
-      };
+      return createTextResponse(`Unable to verify user. Please check the provided user ID.`, true);
     }
     
     // Mark all notifications as read
-    const result = await audiusClient.markAllNotificationsAsRead(args.userId);
+    const success = await audiusClient.markAllNotificationsAsRead(args.userId);
     
-    if (!result) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Failed to mark all notifications as read for user ${args.userId}.`,
-        }],
-        isError: true
-      };
+    if (!success) {
+      return createTextResponse(`Failed to mark all notifications as read for user ${args.userId}.`, true);
     }
     
     // Format results
     const formattedResults = {
       userId: args.userId,
-      timestamp: new Date().toISOString(),
-      status: 'all notifications marked as read'
+      allMarkedAsRead: true
     };
     
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(formattedResults, null, 2),
-      }],
-    };
+    return createTextResponse(JSON.stringify(formattedResults, null, 2));
   } catch (error) {
     console.error('Error in mark-all-notifications-read tool:', error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error marking all notifications as read: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
-      isError: true
-    };
+    return createTextResponse(
+      `Error marking all notifications as read: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
   }
 };
 
-// Schema for announcement-notifications tool
+// Schema for get-announcement-notifications tool
 export const announcementNotificationsSchema = {
   type: 'object',
   properties: {
     limit: {
       type: 'number',
-      description: 'Maximum number of announcements to return (default: 10)',
+      description: 'Maximum number of notifications to return (default: 10)',
     },
   },
+  required: [],
 };
 
-// Implementation of announcement-notifications tool
+// Implementation of get-announcement-notifications tool
 export const getAnnouncementNotifications = async (args: {
   limit?: number;
-}) => {
+}, extra: RequestHandlerExtra) => {
   try {
     const audiusClient = AudiusClient.getInstance();
     const limit = args.limit || 10;
@@ -468,12 +371,7 @@ export const getAnnouncementNotifications = async (args: {
     const announcements = await audiusClient.getAnnouncementNotifications(limit);
     
     if (!announcements || announcements.length === 0) {
-      return {
-        content: [{
-          type: 'text',
-          text: `No announcement notifications found.`,
-        }],
-      };
+      return createTextResponse(`No announcement notifications found.`);
     }
     
     // Format results
@@ -483,25 +381,17 @@ export const getAnnouncementNotifications = async (args: {
       announcements: announcements,
     };
     
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(formattedResults, null, 2),
-      }],
-    };
+    return createTextResponse(JSON.stringify(formattedResults, null, 2));
   } catch (error) {
-    console.error('Error in announcement-notifications tool:', error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error getting announcement notifications: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
-      isError: true
-    };
+    console.error('Error in get-announcement-notifications tool:', error);
+    return createTextResponse(
+      `Error getting announcement notifications: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
   }
 };
 
-// Schema for milestone-notifications tool
+// Schema for get-milestone-notifications tool
 export const milestoneNotificationsSchema = {
   type: 'object',
   properties: {
@@ -511,17 +401,17 @@ export const milestoneNotificationsSchema = {
     },
     limit: {
       type: 'number',
-      description: 'Maximum number of milestone notifications to return (default: 10)',
+      description: 'Maximum number of notifications to return (default: 10)',
     },
   },
   required: ['userId'],
 };
 
-// Implementation of milestone-notifications tool
+// Implementation of get-milestone-notifications tool
 export const getMilestoneNotifications = async (args: {
   userId: string;
   limit?: number;
-}) => {
+}, extra: RequestHandlerExtra) => {
   try {
     const audiusClient = AudiusClient.getInstance();
     const limit = args.limit || 10;
@@ -530,25 +420,14 @@ export const getMilestoneNotifications = async (args: {
     try {
       await audiusClient.getUser(args.userId);
     } catch (error) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Unable to verify user. Please check the provided user ID.`,
-        }],
-        isError: true
-      };
+      return createTextResponse(`Unable to verify user. Please check the provided user ID.`, true);
     }
     
     // Get milestone notifications
     const milestones = await audiusClient.getMilestoneNotifications(args.userId, limit);
     
     if (!milestones || milestones.length === 0) {
-      return {
-        content: [{
-          type: 'text',
-          text: `No milestone notifications found for user ${args.userId}.`,
-        }],
-      };
+      return createTextResponse(`No milestone notifications found for user ${args.userId}.`);
     }
     
     // Format results
@@ -559,25 +438,17 @@ export const getMilestoneNotifications = async (args: {
       milestones: milestones,
     };
     
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(formattedResults, null, 2),
-      }],
-    };
+    return createTextResponse(JSON.stringify(formattedResults, null, 2));
   } catch (error) {
-    console.error('Error in milestone-notifications tool:', error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error getting milestone notifications: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
-      isError: true
-    };
+    console.error('Error in get-milestone-notifications tool:', error);
+    return createTextResponse(
+      `Error getting milestone notifications: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
   }
 };
 
-// Schema for notification-counts tool
+// Schema for get-notification-counts tool
 export const notificationCountsSchema = {
   type: 'object',
   properties: {
@@ -589,10 +460,10 @@ export const notificationCountsSchema = {
   required: ['userId'],
 };
 
-// Implementation of notification-counts tool
+// Implementation of get-notification-counts tool
 export const getNotificationCounts = async (args: {
   userId: string;
-}) => {
+}, extra: RequestHandlerExtra) => {
   try {
     const audiusClient = AudiusClient.getInstance();
     
@@ -600,25 +471,14 @@ export const getNotificationCounts = async (args: {
     try {
       await audiusClient.getUser(args.userId);
     } catch (error) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Unable to verify user. Please check the provided user ID.`,
-        }],
-        isError: true
-      };
+      return createTextResponse(`Unable to verify user. Please check the provided user ID.`, true);
     }
     
     // Get notification counts
     const counts = await audiusClient.getUserNotificationCounts(args.userId);
     
     if (!counts) {
-      return {
-        content: [{
-          type: 'text',
-          text: `No notification counts found for user ${args.userId}.`,
-        }],
-      };
+      return createTextResponse(`Failed to retrieve notification counts for user ${args.userId}.`, true);
     }
     
     // Format results
@@ -627,25 +487,17 @@ export const getNotificationCounts = async (args: {
       counts: counts,
     };
     
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(formattedResults, null, 2),
-      }],
-    };
+    return createTextResponse(JSON.stringify(formattedResults, null, 2));
   } catch (error) {
-    console.error('Error in notification-counts tool:', error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error getting notification counts: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
-      isError: true
-    };
+    console.error('Error in get-notification-counts tool:', error);
+    return createTextResponse(
+      `Error getting notification counts: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
   }
 };
 
-// Schema for notification-history tool
+// Schema for get-notification-history tool
 export const notificationHistorySchema = {
   type: 'object',
   properties: {
@@ -655,44 +507,33 @@ export const notificationHistorySchema = {
     },
     limit: {
       type: 'number',
-      description: 'Maximum number of history items to return (default: 50)',
+      description: 'Maximum number of notifications to return (default: 20)',
     },
   },
   required: ['userId'],
 };
 
-// Implementation of notification-history tool
+// Implementation of get-notification-history tool
 export const getNotificationHistory = async (args: {
   userId: string;
   limit?: number;
-}) => {
+}, extra: RequestHandlerExtra) => {
   try {
     const audiusClient = AudiusClient.getInstance();
-    const limit = args.limit || 50;
+    const limit = args.limit || 20;
     
     // Verify user exists
     try {
       await audiusClient.getUser(args.userId);
     } catch (error) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Unable to verify user. Please check the provided user ID.`,
-        }],
-        isError: true
-      };
+      return createTextResponse(`Unable to verify user. Please check the provided user ID.`, true);
     }
     
     // Get notification history
     const history = await audiusClient.getUserNotificationHistory(args.userId, limit);
     
     if (!history || history.length === 0) {
-      return {
-        content: [{
-          type: 'text',
-          text: `No notification history found for user ${args.userId}.`,
-        }],
-      };
+      return createTextResponse(`No notification history found for user ${args.userId}.`);
     }
     
     // Format results
@@ -703,21 +544,13 @@ export const getNotificationHistory = async (args: {
       history: history,
     };
     
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(formattedResults, null, 2),
-      }],
-    };
+    return createTextResponse(JSON.stringify(formattedResults, null, 2));
   } catch (error) {
-    console.error('Error in notification-history tool:', error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error getting notification history: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
-      isError: true
-    };
+    console.error('Error in get-notification-history tool:', error);
+    return createTextResponse(
+      `Error getting notification history: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
   }
 };
 
@@ -727,11 +560,11 @@ export const sendNotificationSchema = {
   properties: {
     userId: {
       type: 'string',
-      description: 'ID of the user to send the notification to',
+      description: 'ID of the user to send notification to',
     },
     type: {
       type: 'string',
-      description: 'Type of notification',
+      description: 'Type of notification to send (e.g. "message", "comment", "follow")',
     },
     message: {
       type: 'string',
@@ -739,11 +572,11 @@ export const sendNotificationSchema = {
     },
     relatedEntityId: {
       type: 'string',
-      description: 'ID of the related entity (e.g., track, user)',
+      description: 'Optional ID of a related entity (track, playlist, etc.)',
     },
     relatedEntityType: {
       type: 'string',
-      description: 'Type of the related entity (e.g., track, user)',
+      description: 'Optional type of the related entity (track, playlist, etc.)',
     },
   },
   required: ['userId', 'type', 'message'],
@@ -756,7 +589,7 @@ export const sendNotification = async (args: {
   message: string;
   relatedEntityId?: string;
   relatedEntityType?: string;
-}) => {
+}, extra: RequestHandlerExtra) => {
   try {
     const audiusClient = AudiusClient.getInstance();
     
@@ -764,17 +597,11 @@ export const sendNotification = async (args: {
     try {
       await audiusClient.getUser(args.userId);
     } catch (error) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Unable to verify user. Please check the provided user ID.`,
-        }],
-        isError: true
-      };
+      return createTextResponse(`Unable to verify user. Please check the provided user ID.`, true);
     }
     
     // Send notification
-    const result = await audiusClient.sendUserNotification({
+    const success = await audiusClient.sendUserNotification({
       userId: args.userId,
       type: args.type,
       message: args.message,
@@ -782,14 +609,8 @@ export const sendNotification = async (args: {
       relatedEntityType: args.relatedEntityType
     });
     
-    if (!result) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Failed to send notification to user ${args.userId}.`,
-        }],
-        isError: true
-      };
+    if (!success) {
+      return createTextResponse(`Failed to send notification to user ${args.userId}.`, true);
     }
     
     // Format results
@@ -799,25 +620,15 @@ export const sendNotification = async (args: {
       message: args.message,
       relatedEntityId: args.relatedEntityId,
       relatedEntityType: args.relatedEntityType,
-      timestamp: new Date().toISOString(),
-      status: 'sent',
-      notificationId: result.id || 'unknown'
+      sent: true,
     };
     
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(formattedResults, null, 2),
-      }],
-    };
+    return createTextResponse(JSON.stringify(formattedResults, null, 2));
   } catch (error) {
     console.error('Error in send-notification tool:', error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error sending notification: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
-      isError: true
-    };
+    return createTextResponse(
+      `Error sending notification: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
   }
 };

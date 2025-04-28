@@ -26,18 +26,22 @@ export const artistProfilePrompt = {
 
 // Handler for artist-profile prompt
 export const handleArtistProfilePrompt = (args: { 
-  userId: string;
-  includeConnections?: boolean;
-  includePopularContent?: boolean;
+  userId?: string;
+  includeConnections?: string; // Changed from boolean to string
+  includePopularContent?: string; // Changed from boolean to string
 }) => {
+  // Convert string parameters to booleans as needed
+  const includeConnections = args.includeConnections === 'true';
+  const includePopularContent = args.includePopularContent === 'true';
+  const userId = args.userId || '';
   // Build a user query for artist profile
-  let userMessage = `I'd like to learn more about an artist on Audius with ID: ${args.userId}. `;
+  let userMessage = `I'd like to learn more about an artist on Audius with ID: ${userId}. `;
   
-  if (args.includeConnections) {
+  if (includeConnections) {
     userMessage += `Please include information about their social connections, like followers and who they follow. `;
   }
   
-  if (args.includePopularContent) {
+  if (includePopularContent) {
     userMessage += `Please include their most popular tracks and recent reposts. `;
   }
   
@@ -49,13 +53,13 @@ To fulfill this request, use these tools to provide information about the artist
 - Use 'user-favorites' to see tracks the artist has favorited
 - Use 'user-reposts' to see content the artist has reposted
 
-${args.includeConnections ? `
+${includeConnections ? `
 For social connections:
 - Use 'user-followers' to see the artist's followers
 - Use 'user-following' to see who the artist follows
 ` : ''}
 
-${args.includePopularContent ? `
+${includePopularContent ? `
 For popular content:
 - Get tracks by the artist and identify the most popular ones
 - Get recent reposts to understand what content they're sharing
@@ -64,19 +68,19 @@ For popular content:
 Organize the information in a way that gives a comprehensive overview of the artist's profile, musical style, and social presence on Audius.
   `;
   
-  // Create messages for the prompt
+  // Create messages for the prompt with proper typing, only using allowed roles
   const messages = [
     {
-      role: 'system',
+      role: "assistant" as const,
       content: {
-        type: 'text',
+        type: "text" as const,
         text: systemMessage,
       },
     },
     {
-      role: 'user',
+      role: "user" as const,
       content: {
-        type: 'text',
+        type: "text" as const,
         text: userMessage,
       },
     },

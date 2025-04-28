@@ -32,13 +32,17 @@ export const notificationsPrompt = {
 
 // Handler for notifications prompt
 export const handleNotificationsPrompt = (args: {
-  userId: string;
-  notificationType?: 'all' | 'milestones' | 'social' | 'announcements' | 'unread' | 'settings';
-  limit?: number;
-  markAsRead?: boolean;
+  userId?: string;
+  notificationType?: string; // Changed from enum to string
+  limit?: string; // Changed from number to string
+  markAsRead?: string; // Changed from boolean to string
 }) => {
+  // Convert string parameters to appropriate types
+  const userId = args.userId || '';
+  const limit = args.limit ? parseInt(args.limit, 10) : undefined;
+  const markAsRead = args.markAsRead === 'true';
   // Build a user query for notifications
-  let userMessage = `I'd like to see notifications for the user with ID: ${args.userId} on Audius. `;
+  let userMessage = `I'd like to see notifications for the user with ID: ${userId} on Audius. `;
   
   if (args.notificationType) {
     switch (args.notificationType) {
@@ -63,11 +67,11 @@ export const handleNotificationsPrompt = (args: {
     }
   }
   
-  if (args.limit) {
-    userMessage += `Please limit the results to ${args.limit} notifications. `;
+  if (limit) {
+    userMessage += `Please limit the results to ${limit} notifications. `;
   }
   
-  if (args.markAsRead) {
+  if (markAsRead) {
     userMessage += `I'd also like to mark these notifications as read after viewing them. `;
   }
   
@@ -100,19 +104,19 @@ To fulfill this request, help the user manage their Audius notifications:
 Present the information in a clear, organized way and provide actionable suggestions for managing notifications effectively.
   `;
   
-  // Create messages for the prompt
+  // Create messages for the prompt with proper typing, only using allowed roles
   const messages = [
     {
-      role: 'system',
+      role: "assistant" as const,
       content: {
-        type: 'text',
+        type: "text" as const,
         text: systemMessage,
       },
     },
     {
-      role: 'user',
+      role: "user" as const,
       content: {
-        type: 'text',
+        type: "text" as const,
         text: userMessage,
       },
     },

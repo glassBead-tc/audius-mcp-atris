@@ -1,5 +1,7 @@
 import { z } from 'zod';
 import { AudiusClient } from '../sdk-client.js';
+import { createTextResponse } from '../utils/response.js';
+import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
 
 // Schema for user-favorites tool
 export const userFavoritesSchema = {
@@ -18,7 +20,7 @@ export const userFavoritesSchema = {
 };
 
 // Implementation of user-favorites tool
-export const getUserFavorites = async (args: { userId: string, limit?: number }) => {
+export const getUserFavorites = async (args: { userId: string, limit?: number }, extra: RequestHandlerExtra) => {
   try {
     const audiusClient = AudiusClient.getInstance();
     const limit = args.limit || 10;
@@ -26,12 +28,7 @@ export const getUserFavorites = async (args: { userId: string, limit?: number })
     const favorites = await audiusClient.getUserFavorites(args.userId, limit);
     
     if (!favorites || favorites.length === 0) {
-      return {
-        content: [{
-          type: 'text',
-          text: `No favorites found for user ID: ${args.userId}`,
-        }],
-      };
+      return createTextResponse(`No favorites found for user ID: ${args.userId}`);
     }
     
     // Format results
@@ -40,21 +37,13 @@ export const getUserFavorites = async (args: { userId: string, limit?: number })
       favorites: favorites,
     };
     
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(formattedResults, null, 2),
-      }],
-    };
+    return createTextResponse(JSON.stringify(formattedResults, null, 2));
   } catch (error) {
     console.error('Error in user-favorites tool:', error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error retrieving user favorites: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
-      isError: true
-    };
+    return createTextResponse(
+      `Error retrieving user favorites: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
   }
 };
 
@@ -75,7 +64,7 @@ export const userRepostsSchema = {
 };
 
 // Implementation of user-reposts tool
-export const getUserReposts = async (args: { userId: string, limit?: number }) => {
+export const getUserReposts = async (args: { userId: string, limit?: number }, extra: RequestHandlerExtra) => {
   try {
     const audiusClient = AudiusClient.getInstance();
     const limit = args.limit || 10;
@@ -83,12 +72,7 @@ export const getUserReposts = async (args: { userId: string, limit?: number }) =
     const reposts = await audiusClient.getUserReposts(args.userId, limit);
     
     if (!reposts || reposts.length === 0) {
-      return {
-        content: [{
-          type: 'text',
-          text: `No reposts found for user ID: ${args.userId}`,
-        }],
-      };
+      return createTextResponse(`No reposts found for user ID: ${args.userId}`);
     }
     
     // Format results
@@ -97,21 +81,13 @@ export const getUserReposts = async (args: { userId: string, limit?: number }) =
       reposts: reposts,
     };
     
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(formattedResults, null, 2),
-      }],
-    };
+    return createTextResponse(JSON.stringify(formattedResults, null, 2));
   } catch (error) {
     console.error('Error in user-reposts tool:', error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error retrieving user reposts: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
-      isError: true
-    };
+    return createTextResponse(
+      `Error retrieving user reposts: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
   }
 };
 
@@ -132,7 +108,7 @@ export const userFollowersSchema = {
 };
 
 // Implementation of user-followers tool
-export const getUserFollowers = async (args: { userId: string, limit?: number }) => {
+export const getUserFollowers = async (args: { userId: string, limit?: number }, extra: RequestHandlerExtra) => {
   try {
     const audiusClient = AudiusClient.getInstance();
     const limit = args.limit || 10;
@@ -140,12 +116,7 @@ export const getUserFollowers = async (args: { userId: string, limit?: number })
     const followers = await audiusClient.getUserFollowers(args.userId, limit);
     
     if (!followers || followers.length === 0) {
-      return {
-        content: [{
-          type: 'text',
-          text: `No followers found for user ID: ${args.userId}`,
-        }],
-      };
+      return createTextResponse(`No followers found for user ID: ${args.userId}`);
     }
     
     // Format results
@@ -154,21 +125,13 @@ export const getUserFollowers = async (args: { userId: string, limit?: number })
       followers: followers,
     };
     
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(formattedResults, null, 2),
-      }],
-    };
+    return createTextResponse(JSON.stringify(formattedResults, null, 2));
   } catch (error) {
     console.error('Error in user-followers tool:', error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error retrieving user followers: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
-      isError: true
-    };
+    return createTextResponse(
+      `Error retrieving user followers: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
   }
 };
 
@@ -189,7 +152,7 @@ export const userFollowingSchema = {
 };
 
 // Implementation of user-following tool
-export const getUserFollowing = async (args: { userId: string, limit?: number }) => {
+export const getUserFollowing = async (args: { userId: string, limit?: number }, extra: RequestHandlerExtra) => {
   try {
     const audiusClient = AudiusClient.getInstance();
     const limit = args.limit || 10;
@@ -197,12 +160,7 @@ export const getUserFollowing = async (args: { userId: string, limit?: number })
     const following = await audiusClient.getUserFollowing(args.userId, limit);
     
     if (!following || following.length === 0) {
-      return {
-        content: [{
-          type: 'text',
-          text: `No followed users found for user ID: ${args.userId}`,
-        }],
-      };
+      return createTextResponse(`No following found for user ID: ${args.userId}`);
     }
     
     // Format results
@@ -211,21 +169,13 @@ export const getUserFollowing = async (args: { userId: string, limit?: number })
       following: following,
     };
     
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(formattedResults, null, 2),
-      }],
-    };
+    return createTextResponse(JSON.stringify(formattedResults, null, 2));
   } catch (error) {
     console.error('Error in user-following tool:', error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error retrieving user following: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
-      isError: true
-    };
+    return createTextResponse(
+      `Error retrieving user following: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
   }
 };
 
@@ -235,18 +185,18 @@ export const isFollowingSchema = {
   properties: {
     userId: {
       type: 'string',
-      description: 'ID of the user who might be following',
+      description: 'ID of the potential follower',
     },
     followeeId: {
       type: 'string',
-      description: 'ID of the user who might be followed',
+      description: 'ID of the user to check if being followed',
     },
   },
   required: ['userId', 'followeeId'],
 };
 
 // Implementation of is-following tool
-export const isFollowing = async (args: { userId: string, followeeId: string }) => {
+export const isFollowing = async (args: { userId: string, followeeId: string }, extra: RequestHandlerExtra) => {
   try {
     const audiusClient = AudiusClient.getInstance();
     
@@ -271,21 +221,13 @@ export const isFollowing = async (args: { userId: string, followeeId: string }) 
       isFollowing: isFollowingResult,
     };
     
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(formattedResults, null, 2),
-      }],
-    };
+    return createTextResponse(JSON.stringify(formattedResults, null, 2));
   } catch (error) {
     console.error('Error in is-following tool:', error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error checking follow status: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
-      isError: true
-    };
+    return createTextResponse(
+      `Error checking follow status: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
   }
 };
 
@@ -306,7 +248,7 @@ export const trackFavoritesSchema = {
 };
 
 // Implementation of track-favorites tool
-export const getTrackFavorites = async (args: { trackId: string, limit?: number }) => {
+export const getTrackFavorites = async (args: { trackId: string, limit?: number }, extra: RequestHandlerExtra) => {
   try {
     const audiusClient = AudiusClient.getInstance();
     const limit = args.limit || 10;
@@ -314,12 +256,7 @@ export const getTrackFavorites = async (args: { trackId: string, limit?: number 
     const favorites = await audiusClient.getTrackFavorites(args.trackId, limit);
     
     if (!favorites || favorites.length === 0) {
-      return {
-        content: [{
-          type: 'text',
-          text: `No favorites found for track ID: ${args.trackId}`,
-        }],
-      };
+      return createTextResponse(`No favorites found for track ID: ${args.trackId}`);
     }
     
     // Get track info for context
@@ -335,21 +272,13 @@ export const getTrackFavorites = async (args: { trackId: string, limit?: number 
       favorites: favorites,
     };
     
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(formattedResults, null, 2),
-      }],
-    };
+    return createTextResponse(JSON.stringify(formattedResults, null, 2));
   } catch (error) {
     console.error('Error in track-favorites tool:', error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error retrieving track favorites: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
-      isError: true
-    };
+    return createTextResponse(
+      `Error retrieving track favorites: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
   }
 };
 
@@ -370,7 +299,7 @@ export const trackRepostsSchema = {
 };
 
 // Implementation of track-reposts tool
-export const getTrackReposts = async (args: { trackId: string, limit?: number }) => {
+export const getTrackReposts = async (args: { trackId: string, limit?: number }, extra: RequestHandlerExtra) => {
   try {
     const audiusClient = AudiusClient.getInstance();
     const limit = args.limit || 10;
@@ -378,12 +307,7 @@ export const getTrackReposts = async (args: { trackId: string, limit?: number })
     const reposts = await audiusClient.getTrackReposts(args.trackId, limit);
     
     if (!reposts || reposts.length === 0) {
-      return {
-        content: [{
-          type: 'text',
-          text: `No reposts found for track ID: ${args.trackId}`,
-        }],
-      };
+      return createTextResponse(`No reposts found for track ID: ${args.trackId}`);
     }
     
     // Get track info for context
@@ -399,21 +323,13 @@ export const getTrackReposts = async (args: { trackId: string, limit?: number })
       reposts: reposts,
     };
     
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(formattedResults, null, 2),
-      }],
-    };
+    return createTextResponse(JSON.stringify(formattedResults, null, 2));
   } catch (error) {
     console.error('Error in track-reposts tool:', error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error retrieving track reposts: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
-      isError: true
-    };
+    return createTextResponse(
+      `Error retrieving track reposts: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
   }
 };
 
@@ -434,7 +350,7 @@ export const followUserSchema = {
 };
 
 // Implementation of follow-user tool
-export const followUser = async (args: { userId: string, followeeId: string }) => {
+export const followUser = async (args: { userId: string, followeeId: string }, extra: RequestHandlerExtra) => {
   try {
     const audiusClient = AudiusClient.getInstance();
     
@@ -445,76 +361,51 @@ export const followUser = async (args: { userId: string, followeeId: string }) =
     ]);
     
     if (!follower) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Error: Follower user ID ${args.userId} not found`,
-        }],
-        isError: true
-      };
+      return createTextResponse(`Error: Follower user ID ${args.userId} not found`, true);
     }
     
     if (!followee) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Error: Followee user ID ${args.followeeId} not found`,
-        }],
-        isError: true
-      };
+      return createTextResponse(`Error: Followee user ID ${args.followeeId} not found`, true);
     }
     
     // Check if already following
     const isAlreadyFollowing = await audiusClient.isUserFollowing(args.userId, args.followeeId);
     
     if (isAlreadyFollowing) {
-      return {
-        content: [{
-          type: 'text',
-          text: JSON.stringify({
-            status: "already_following",
-            follower: {
-              id: args.userId,
-              name: follower.name
-            },
-            followee: {
-              id: args.followeeId,
-              name: followee.name
-            }
-          }, null, 2),
-        }],
-      };
+      return createTextResponse(JSON.stringify({
+        status: "already_following",
+        follower: {
+          id: args.userId,
+          name: follower.name
+        },
+        followee: {
+          id: args.followeeId,
+          name: followee.name
+        }
+      }, null, 2));
     }
     
     // Follow the user
     const result = await audiusClient.followUser(args.userId, args.followeeId);
     
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify({
-          status: "success",
-          follower: {
-            id: args.userId,
-            name: follower.name
-          },
-          followee: {
-            id: args.followeeId,
-            name: followee.name
-          },
-          timestamp: new Date().toISOString()
-        }, null, 2),
-      }],
-    };
+    return createTextResponse(JSON.stringify({
+      status: "success",
+      follower: {
+        id: args.userId,
+        name: follower.name
+      },
+      followee: {
+        id: args.followeeId,
+        name: followee.name
+      },
+      timestamp: new Date().toISOString()
+    }, null, 2));
   } catch (error) {
     console.error('Error in follow-user tool:', error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error following user: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
-      isError: true
-    };
+    return createTextResponse(
+      `Error following user: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
   }
 };
 
@@ -535,7 +426,7 @@ export const favoriteTrackSchema = {
 };
 
 // Implementation of favorite-track tool
-export const favoriteTrack = async (args: { userId: string, trackId: string }) => {
+export const favoriteTrack = async (args: { userId: string, trackId: string }, extra: RequestHandlerExtra) => {
   try {
     const audiusClient = AudiusClient.getInstance();
     
@@ -546,23 +437,11 @@ export const favoriteTrack = async (args: { userId: string, trackId: string }) =
     ]);
     
     if (!user) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Error: User ID ${args.userId} not found`,
-        }],
-        isError: true
-      };
+      return createTextResponse(`Error: User ID ${args.userId} not found`, true);
     }
     
     if (!track) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Error: Track ID ${args.trackId} not found`,
-        }],
-        isError: true
-      };
+      return createTextResponse(`Error: Track ID ${args.trackId} not found`, true);
     }
     
     // Get user favorites to check if already favorited
@@ -570,54 +449,41 @@ export const favoriteTrack = async (args: { userId: string, trackId: string }) =
     const isAlreadyFavorited = favorites.some((fav: any) => fav.id === args.trackId);
     
     if (isAlreadyFavorited) {
-      return {
-        content: [{
-          type: 'text',
-          text: JSON.stringify({
-            status: "already_favorited",
-            user: {
-              id: args.userId,
-              name: user.name
-            },
-            track: {
-              id: args.trackId,
-              title: track.title,
-              artist: track.user?.name || 'Unknown Artist'
-            }
-          }, null, 2),
-        }],
-      };
+      return createTextResponse(JSON.stringify({
+        status: "already_favorited",
+        user: {
+          id: args.userId,
+          name: user.name
+        },
+        track: {
+          id: args.trackId,
+          title: track.title,
+          artist: track.user?.name || 'Unknown Artist'
+        }
+      }, null, 2));
     }
     
     // Favorite the track
     const result = await audiusClient.favoriteTrack(args.userId, args.trackId);
     
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify({
-          status: "success",
-          user: {
-            id: args.userId,
-            name: user.name
-          },
-          track: {
-            id: args.trackId,
-            title: track.title,
-            artist: track.user?.name || 'Unknown Artist'
-          },
-          timestamp: new Date().toISOString()
-        }, null, 2),
-      }],
-    };
+    return createTextResponse(JSON.stringify({
+      status: "success",
+      user: {
+        id: args.userId,
+        name: user.name
+      },
+      track: {
+        id: args.trackId,
+        title: track.title,
+        artist: track.user?.name || 'Unknown Artist'
+      },
+      timestamp: new Date().toISOString()
+    }, null, 2));
   } catch (error) {
     console.error('Error in favorite-track tool:', error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error favoriting track: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
-      isError: true
-    };
+    return createTextResponse(
+      `Error favoriting track: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
   }
 };

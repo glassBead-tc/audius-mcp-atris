@@ -33,8 +33,8 @@ export const analyticsPrompt = {
 export const handleAnalyticsPrompt = (args: { 
   userId?: string;
   trackId?: string;
-  insightType?: 'listeners' | 'trending' | 'supporters' | 'playMetrics' | 'comprehensive';
-  timePeriod?: 'week' | 'month' | 'year' | 'allTime';
+  insightType?: string; // Changed from enum to string
+  timePeriod?: string; // Changed from enum to string
 }) => {
   // Build a user query for analytics
   let userMessage = '';
@@ -182,19 +182,19 @@ To fulfill this request, help the user understand analytics and insights on Audi
 Organize the information in a clear, insightful way that helps the user understand performance and make data-driven decisions.
   `;
   
-  // Create messages for the prompt
+  // Create messages for the prompt with proper typing, only using allowed roles
   const messages = [
     {
-      role: 'system',
+      role: "assistant" as const,
       content: {
-        type: 'text',
+        type: "text" as const,
         text: systemMessage,
       },
     },
     {
-      role: 'user',
+      role: "user" as const,
       content: {
-        type: 'text',
+        type: "text" as const,
         text: userMessage,
       },
     },

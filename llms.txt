@@ -6567,7 +6567,6 @@ Supported logging levels (in order of increasing severity): DEBUG (0), INFO (1),
     );
     ```
   </Tab>
-
   <Tab title="Async">
     ```java
     // Async prompt registration

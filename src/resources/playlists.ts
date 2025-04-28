@@ -1,3 +1,4 @@
+import { ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { AudiusClient } from '../sdk-client.js';
 
 // Resource template for playlist
@@ -17,15 +18,9 @@ export const albumResourceTemplate = {
 };
 
 // Resource handler for playlist
-export const handlePlaylistResource = async (uri: string) => {
+export const handlePlaylistResource = async (uri: URL, params: { id: string }) => {
   try {
-    // Extract the playlist ID from the URI
-    const match = uri.match(/audius:\/\/playlist\/(.+)/);
-    if (!match || !match[1]) {
-      throw new Error(`Invalid playlist URI: ${uri}`);
-    }
-    
-    const playlistId = match[1];
+    const playlistId = params.id;
     const audiusClient = AudiusClient.getInstance();
     const playlist = await audiusClient.getPlaylist(playlistId);
     
@@ -34,9 +29,11 @@ export const handlePlaylistResource = async (uri: string) => {
     }
     
     return {
-      uri,
-      mimeType: 'application/json',
-      text: JSON.stringify(playlist, null, 2)
+      contents: [{
+        uri: uri.href,
+        mimeType: 'application/json',
+        text: JSON.stringify(playlist, null, 2)
+      }]
     };
   } catch (error) {
     console.error('Error handling playlist resource:', error);
@@ -45,15 +42,9 @@ export const handlePlaylistResource = async (uri: string) => {
 };
 
 // Resource handler for album
-export const handleAlbumResource = async (uri: string) => {
+export const handleAlbumResource = async (uri: URL, params: { id: string }) => {
   try {
-    // Extract the album ID from the URI
-    const match = uri.match(/audius:\/\/album\/(.+)/);
-    if (!match || !match[1]) {
-      throw new Error(`Invalid album URI: ${uri}`);
-    }
-    
-    const albumId = match[1];
+    const albumId = params.id;
     const audiusClient = AudiusClient.getInstance();
     const album = await audiusClient.getAlbum(albumId);
     
@@ -62,9 +53,11 @@ export const handleAlbumResource = async (uri: string) => {
     }
     
     return {
-      uri,
-      mimeType: 'application/json',
-      text: JSON.stringify(album, null, 2)
+      contents: [{
+        uri: uri.href,
+        mimeType: 'application/json',
+        text: JSON.stringify(album, null, 2)
+      }]
     };
   } catch (error) {
     console.error('Error handling album resource:', error);

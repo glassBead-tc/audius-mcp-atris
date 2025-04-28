@@ -33,8 +33,8 @@ export const blockchainPrompt = {
 export const handleBlockchainPrompt = (args: {
   userId?: string;
   walletAddress?: string;
-  blockchain?: 'ethereum' | 'solana' | 'both';
-  focus?: 'wallets' | 'tokens' | 'transactions' | 'rewards' | 'general';
+  blockchain?: string; // Changed from enum to string
+  focus?: string; // Changed from enum to string
 }) => {
   // Build a user query for blockchain
   let userMessage = '';
@@ -186,19 +186,19 @@ To fulfill this request, help the user understand blockchain features on Audius:
 Provide clear, accurate information while emphasizing blockchain security best practices.
   `;
   
-  // Create messages for the prompt
+  // Create messages for the prompt with proper typing, only using allowed roles
   const messages = [
     {
-      role: 'system',
+      role: "assistant" as const,
       content: {
-        type: 'text',
+        type: "text" as const,
         text: systemMessage,
       },
     },
     {
-      role: 'user',
+      role: "user" as const,
       content: {
-        type: 'text',
+        type: "text" as const,
         text: userMessage,
       },
     },

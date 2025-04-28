@@ -1,5 +1,7 @@
 import { z } from 'zod';
 import { AudiusClient } from '../sdk-client.js';
+import { createTextResponse } from '../utils/response.js';
+import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
 
 // Schema for send-message tool
 export const sendMessageSchema = {
@@ -26,68 +28,42 @@ export const sendMessage = async (args: {
   fromUserId: string;
   toUserId: string;
   message: string;
-}) => {
+}, extra: RequestHandlerExtra) => {
   try {
     const audiusClient = AudiusClient.getInstance();
     
-    // Verify both users exist
+    // Verify the sender exists
     try {
-      await Promise.all([
-        audiusClient.getUser(args.fromUserId),
-        audiusClient.getUser(args.toUserId)
-      ]);
+      await audiusClient.getUser(args.fromUserId);
     } catch (error) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Unable to verify users. Please check the provided user IDs.`,
-        }],
-        isError: true
-      };
+      return createTextResponse(`Unable to verify sender. Please check the fromUserId.`, true);
+    }
+    
+    // Verify the recipient exists
+    try {
+      await audiusClient.getUser(args.toUserId);
+    } catch (error) {
+      return createTextResponse(`Unable to verify recipient. Please check the toUserId.`, true);
     }
     
     // Send the message
-    const result = await audiusClient.sendMessage(
+    const messageResult = await audiusClient.sendMessage(
       args.fromUserId,
       args.toUserId,
       args.message
     );
     
-    if (!result) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Failed to send message from user ${args.fromUserId} to user ${args.toUserId}.`,
-        }],
-        isError: true
-      };
+    if (!messageResult || !messageResult.messageId) {
+      return createTextResponse(`Failed to send message. The service may be temporarily unavailable.`, true);
     }
     
-    // Format results
-    const formattedResults = {
-      fromUserId: args.fromUserId,
-      toUserId: args.toUserId,
-      message: args.message,
-      messageId: result.id || `msg-${Date.now()}`,
-      timestamp: new Date().toISOString(),
-      status: 'sent'
-    };
-    
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(formattedResults, null, 2),
-      }],
-    };
+    return createTextResponse(`Message sent successfully. Message ID: ${messageResult.messageId}`);
   } catch (error) {
     console.error('Error in send-message tool:', error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error sending message: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
-      isError: true
-    };
+    return createTextResponse(
+      `Error sending message: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
   }
 };
 
@@ -116,7 +92,7 @@ export const getMessages = async (args: {
   userId: string;
   withUserId: string;
   limit?: number;
-}) => {
+}, extra: RequestHandlerExtra) => {
   try {
     const audiusClient = AudiusClient.getInstance();
     const limit = args.limit || 50;
@@ -128,13 +104,7 @@ export const getMessages = async (args: {
         audiusClient.getUser(args.withUserId)
       ]);
     } catch (error) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Unable to verify users. Please check the provided user IDs.`,
-        }],
-        isError: true
-      };
+      return createTextResponse(`Unable to verify users. Please check the provided user IDs.`, true);
     }
     
     // Get the messages
@@ -145,12 +115,7 @@ export const getMessages = async (args: {
     );
     
     if (!messages || messages.length === 0) {
-      return {
-        content: [{
-          type: 'text',
-          text: `No messages found between user ${args.userId} and user ${args.withUserId}.`,
-        }],
-      };
+      return createTextResponse(`No messages found between user ${args.userId} and user ${args.withUserId}.`);
     }
     
     // Format results
@@ -162,21 +127,10 @@ export const getMessages = async (args: {
       messages: messages,
     };
     
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(formattedResults, null, 2),
-      }],
-    };
+    return createTextResponse(JSON.stringify(formattedResults, null, 2));
   } catch (error) {
     console.error('Error in get-messages tool:', error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error getting messages: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
-      isError: true
-    };
+    return createTextResponse(`Error getting messages: ${error instanceof Error ? error.message : 'Unknown error'}`, true);
   }
 };
 
@@ -200,7 +154,7 @@ export const getMessageThreadsSchema = {
 export const getMessageThreads = async (args: { 
   userId: string;
   limit?: number;
-}) => {
+}, extra: RequestHandlerExtra) => {
   try {
     const audiusClient = AudiusClient.getInstance();
     const limit = args.limit || 20;
@@ -209,13 +163,7 @@ export const getMessageThreads = async (args: {
     try {
       await audiusClient.getUser(args.userId);
     } catch (error) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Unable to verify user. Please check the provided user ID.`,
-        }],
-        isError: true
-      };
+      return createTextResponse(`Unable to verify user. Please check the provided user ID.`, true);
     }
     
     // Get the message threads
@@ -225,12 +173,7 @@ export const getMessageThreads = async (args: {
     );
     
     if (!threads || threads.length === 0) {
-      return {
-        content: [{
-          type: 'text',
-          text: `No message threads found for user ${args.userId}.`,
-        }],
-      };
+      return createTextResponse(`No message threads found for user ${args.userId}.`);
     }
     
     // Format results
@@ -241,21 +184,10 @@ export const getMessageThreads = async (args: {
       threads: threads,
     };
     
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(formattedResults, null, 2),
-      }],
-    };
+    return createTextResponse(JSON.stringify(formattedResults, null, 2));
   } catch (error) {
     console.error('Error in get-message-threads tool:', error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error getting message threads: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
-      isError: true
-    };
+    return createTextResponse(`Error getting message threads: ${error instanceof Error ? error.message : 'Unknown error'}`, true);
   }
 };
 
@@ -279,7 +211,7 @@ export const markMessageReadSchema = {
 export const markMessageRead = async (args: { 
   userId: string;
   messageId: string;
-}) => {
+}, extra: RequestHandlerExtra) => {
   try {
     const audiusClient = AudiusClient.getInstance();
     
@@ -287,13 +219,7 @@ export const markMessageRead = async (args: {
     try {
       await audiusClient.getUser(args.userId);
     } catch (error) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Unable to verify user. Please check the provided user ID.`,
-        }],
-        isError: true
-      };
+      return createTextResponse(`Unable to verify user. Please check the provided user ID.`, true);
     }
     
     // Mark the message as read
@@ -303,13 +229,7 @@ export const markMessageRead = async (args: {
     );
     
     if (!result) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Failed to mark message ${args.messageId} as read for user ${args.userId}.`,
-        }],
-        isError: true
-      };
+      return createTextResponse(`Failed to mark message ${args.messageId} as read for user ${args.userId}.`, true);
     }
     
     // Format results
@@ -317,23 +237,12 @@ export const markMessageRead = async (args: {
       userId: args.userId,
       messageId: args.messageId,
       timestamp: new Date().toISOString(),
-      status: 'marked as read'
+      status: 'read'
     };
     
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(formattedResults, null, 2),
-      }],
-    };
+    return createTextResponse(JSON.stringify(formattedResults, null, 2));
   } catch (error) {
     console.error('Error in mark-message-read tool:', error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error marking message as read: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
-      isError: true
-    };
+    return createTextResponse(`Error marking message as read: ${error instanceof Error ? error.message : 'Unknown error'}`, true);
   }
 };

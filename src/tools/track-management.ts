@@ -1,5 +1,7 @@
 import { z } from 'zod';
 import { AudiusClient } from '../sdk-client.js';
+import { createTextResponse } from '../utils/response.js';
+import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
 
 // Schema for upload-track tool
 export const uploadTrackSchema = {
@@ -64,7 +66,7 @@ export const uploadTrack = async (args: {
   artworkUrl?: string;
   isDownloadable?: boolean;
   isPrivate?: boolean;
-}) => {
+}, extra: RequestHandlerExtra) => {
   try {
     const audiusClient = AudiusClient.getInstance();
     
@@ -72,26 +74,18 @@ export const uploadTrack = async (args: {
     try {
       await audiusClient.getUser(args.userId);
     } catch (error) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Unable to verify user. Please check the provided user ID.`,
-        }],
-        isError: true
-      };
+      return createTextResponse(`Unable to verify user. Please check the provided user ID.`, true);
     }
     
-    // In a real implementation, we would:
-    // 1. Download the audio file from the URL
-    // 2. Download the artwork from the URL if provided
-    // 3. Upload both to Audius using the SDK
+    // In a real implementation, we would download the audio file from the URL
+    // Since we can't directly convert a URL to a File object here,
+    // we'll simulate a successful response
     
-    // Since file handling would require additional infrastructure, 
-    // we'll simulate a successful upload with a message
-    
-    // Format a simulated result
+    // Format simulated results
+    const simulatedTrackId = `track-${Date.now()}`;
     const formattedResults = {
       userId: args.userId,
+      trackId: simulatedTrackId,
       title: args.title,
       description: args.description,
       genre: args.genre,
@@ -101,27 +95,16 @@ export const uploadTrack = async (args: {
       artworkUrl: args.artworkUrl,
       isDownloadable: args.isDownloadable,
       isPrivate: args.isPrivate,
-      simulatedTrackId: `simulated-${Date.now()}`,
-      timestamp: new Date().toISOString(),
-      status: 'Upload simulation - File handling would be required for actual upload',
-      note: 'In a production implementation, the server would need to handle file downloads from URLs and uploads to Audius'
+      status: 'Track upload simulated'
     };
     
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(formattedResults, null, 2),
-      }],
-    };
+    return createTextResponse(JSON.stringify(formattedResults, null, 2));
   } catch (error) {
     console.error('Error in upload-track tool:', error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error uploading track: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
-      isError: true
-    };
+    return createTextResponse(
+      `Error uploading track: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
   }
 };
 
@@ -201,22 +184,16 @@ export const updateTrack = async (args: {
       
       // Check if user is the track owner
       if (!track || !track.user || track.user.id !== args.userId) {
-        return {
-          content: [{
-            type: 'text',
-            text: `User ${args.userId} is not the owner of track ${args.trackId}.`,
-          }],
-          isError: true
-        };
+        return createTextResponse(
+          `User ${args.userId} is not the owner of track ${args.trackId}.`,
+          true
+        );
       }
     } catch (error) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Unable to verify track or user. Please check the provided IDs.`,
-        }],
-        isError: true
-      };
+      return createTextResponse(
+        `Unable to verify track or user. Please check the provided IDs.`,
+        true
+      );
     }
     
     // Similar to upload, artwork handling would require downloading the file
@@ -241,21 +218,13 @@ export const updateTrack = async (args: {
       note: 'In a production implementation, the server would need to handle file downloads for artwork updates'
     };
     
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(formattedResults, null, 2),
-      }],
-    };
+    return createTextResponse(JSON.stringify(formattedResults, null, 2));
   } catch (error) {
     console.error('Error in update-track tool:', error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error updating track: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
-      isError: true
-    };
+    return createTextResponse(
+      `Error updating track: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
   }
 };
 
@@ -292,22 +261,16 @@ export const deleteTrack = async (args: {
       
       // Check if user is the track owner
       if (!track || !track.user || track.user.id !== args.userId) {
-        return {
-          content: [{
-            type: 'text',
-            text: `User ${args.userId} is not the owner of track ${args.trackId}.`,
-          }],
-          isError: true
-        };
+        return createTextResponse(
+          `User ${args.userId} is not the owner of track ${args.trackId}.`,
+          true
+        );
       }
     } catch (error) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Unable to verify track or user. Please check the provided IDs.`,
-        }],
-        isError: true
-      };
+      return createTextResponse(
+        `Unable to verify track or user. Please check the provided IDs.`,
+        true
+      );
     }
     
     // Delete the track
@@ -317,13 +280,10 @@ export const deleteTrack = async (args: {
     );
     
     if (!result) {
-      return {
-        content: [{
-          type: 'text',
-          text: `Failed to delete track ${args.trackId}.`,
-        }],
-        isError: true
-      };
+      return createTextResponse(
+        `Failed to delete track ${args.trackId}.`,
+        true
+      );
     }
     
     // Format results
@@ -334,20 +294,12 @@ export const deleteTrack = async (args: {
       status: 'deleted'
     };
     
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(formattedResults, null, 2),
-      }],
-    };
+    return createTextResponse(JSON.stringify(formattedResults, null, 2));
   } catch (error) {
     console.error('Error in delete-track tool:', error);
-    return {
-      content: [{
-        type: 'text',
-        text: `Error deleting track: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      }],
-      isError: true
-    };
+    return createTextResponse(
+      `Error deleting track: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
   }
 };

@@ -33,7 +33,7 @@ export const handleMonetizationPrompt = (args: {
   userId?: string;
   trackId?: string;
   walletAddress?: string;
-  monetizationType?: 'nft-gates' | 'purchase-gates' | 'tipping' | 'usdc-payments' | 'all';
+  monetizationType?: string; // Changed from enum to string
 }) => {
   // Build a user query for monetization
   let userMessage = '';
@@ -152,19 +152,19 @@ To fulfill this request, help the user understand monetization on Audius:
 Provide clear, practical explanations tailored to the user's specific interests about monetization.
   `;
   
-  // Create messages for the prompt
+  // Create messages for the prompt with proper typing, only using allowed roles
   const messages = [
     {
-      role: 'system',
+      role: "assistant" as const,
       content: {
-        type: 'text',
+        type: "text" as const,
         text: systemMessage,
       },
     },
     {
-      role: 'user',
+      role: "user" as const,
       content: {
-        type: 'text',
+        type: "text" as const,
         text: userMessage,
       },
     },
