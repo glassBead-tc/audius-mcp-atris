@@ -20,15 +20,22 @@ const configSchema = z.object({
 // Create configuration object
 const createConfig = () => {
   try {
+    // Use fixed values for server name and version (matching package.json)
+    const SERVER_NAME = 'audius-mcp';
+    const SERVER_VERSION = '2.0.1';
+    
     const config = configSchema.parse({
       audius: {
         apiKey: process.env.AUDIUS_API_KEY,
         apiSecret: process.env.AUDIUS_API_SECRET,
-        environment: process.env.AUDIUS_ENVIRONMENT || 'production',
+        // Default to development if environment var is not provided or is invalid
+        environment: (process.env.AUDIUS_ENVIRONMENT && 
+                     ['production', 'staging', 'development'].includes(process.env.AUDIUS_ENVIRONMENT)) 
+                     ? process.env.AUDIUS_ENVIRONMENT : 'development',
       },
       server: {
-        name: process.env.SERVER_NAME || 'audius-mcp',
-        version: process.env.SERVER_VERSION || '2.0.1',
+        name: SERVER_NAME,
+        version: SERVER_VERSION,
       },
     });
     
