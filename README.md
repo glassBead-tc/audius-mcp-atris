@@ -1,4 +1,6 @@
-# Atris MCP for Audius
+# Atris MCP for Audius (v2.0.0)
+
+> **Note:** Version 2.0.0+ exclusively uses STDIO transport for all capabilities.
 
 An MCP (Model Context Protocol) server that provides access to the Audius music platform via LLMs (Large Language Models).
 

@@ -1,16 +1,20 @@
 {
   "name": "audius-mcp-atris",
-  "version": "1.0.0",
-  "description": "Atris MCP - Model Context Protocol integration for Audius music platform",
+  "version": "2.0.0",
+  "description": "Atris MCP - STDIO-based Model Context Protocol integration for Audius music platform",
   "main": "build/index.js",
   "type": "module",
+  "bin": {
+    "audius-mcp-atris": "./build/index.js"
+  },
   "scripts": {
     "build": "tsc",
     "start": "node build/index.js",
     "dev": "tsc && node build/index.js",
     "lint": "eslint . --ext .ts",
     "test-client": "cd test && tsc test-client.ts && node test-client.js",
-    "prepublishOnly": "npm run build"
+    "test": "npm run build",
+    "prepublishOnly": "npm run test"
   },
   "keywords": [
     "mcp",
@@ -33,7 +37,9 @@
   "files": [
     "build/**/*",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "CHANGES.md",
+    "CHANGELOG.md"
   ],
   "dependencies": {
     "@audius/sdk": "^8.0.1",
@@ -42,8 +48,6 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
-    "@types/body-parser": "^1.19.5",
-    "@types/express": "^5.0.1",
     "@types/node": "^20.10.5",
     "typescript": "^5.3.3"
   },

@@ -12,6 +12,7 @@ console.log = function(...args: any[]) {
 // Display basic info
 console.error(`Starting ${config.server.name} v${config.server.version}`);
 console.error(`Environment: ${config.audius.environment}`);
+console.error(`STDIO transport only (v2.0.0+)`);
 
 // Main function
 async function main() {
@@ -19,7 +20,8 @@ async function main() {
     // Create MCP server
     const server = createServer();
     
-    // Create the transport layer
+    // Create the transport layer - exclusively using STDIO for all capabilities
+    // This enables compatibility with services like Smithery that handle HTTP transport
     const transport = new StdioServerTransport();
     
     // Connect the server to the transport
