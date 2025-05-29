@@ -1,12 +1,15 @@
-# Atris MCP for Audius (v2.0.0)
+# Atris MCP for Audius (v2.2.0)
 
 > **Note:** Version 2.0.0+ exclusively uses STDIO transport for all capabilities.
 
-An MCP (Model Context Protocol) server that provides access to the Audius music platform via LLMs (Large Language Models).
+An MCP (Model Context Protocol) server that provides comprehensive access to the Audius music platform via LLMs (Large Language Models), with 105 tools covering ~95% of the Audius Protocol API.
 
 ## Features
 
 - **Tools**: Access tracks, users, playlists, albums, and perform searches on Audius
+- **Track Media Operations**: Download tracks, inspect technical details, access stems
+- **User Relationships**: Discover track purchasers, remixers, and related artists
+- **Enhanced Discovery**: Personalized recommendations, user history, trending by genre
 - **Content Creation**: Upload tracks, create playlists, manage your Audius content
 - **Social Features**: Follow users, favorite tracks, comment on content
 - **Monetization**: Access premium content, purchase tracks, send tips to artists

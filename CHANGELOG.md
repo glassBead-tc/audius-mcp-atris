@@ -1,5 +1,35 @@
 # Changelog
 
+## 2.2.0 (2025-05-29)
+
+### New Features - Medium Priority Missing Endpoints
+- Added track media operations in Tracks toolset
+  - `get-track-download` - Get download information and URLs for tracks
+  - `get-track-inspect` - Get technical inspection details (sample rate, bit rate, file size, etc.)
+  - `get-track-stems` - Get available stems/components for tracks
+- Added user relationship discovery in Users toolset
+  - `get-track-purchasers` - Get users who purchased a specific track
+  - `get-track-remixers` - Get users who remixed a specific track
+  - `get-related-users` - Get users related to a given user based on listening patterns
+  - `get-user-tags` - Get tags associated with a user
+- Added enhanced discovery features in Search toolset
+  - `get-recommendations` - Get personalized recommendations (tracks, users, playlists) for a user
+  - `get-user-history` - Get user activity history (plays, likes, reposts, follows)
+  - `get-trending-by-genre` - Get trending content filtered by genre and time range
+
+### Improvements
+- Enhanced API coverage from ~90% to ~95% of Audius Protocol endpoints
+- Better formatted responses with emojis and structured information
+- Comprehensive error handling for missing tracks, users, and data
+- Direct API calls for endpoints not available in the official SDK
+- Parallel processing for bulk operations with individual error tracking
+
+### Technical
+- Created new discovery.ts tool file for recommendation and history features
+- All new endpoints use proper TypeScript typing and error handling
+- Maintained consistent response formatting across all new tools
+- Updated toolset registrations for all new functionality
+
 ## 2.1.0 (2025-05-29)
 
 ### New Features

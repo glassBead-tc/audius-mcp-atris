@@ -91,6 +91,42 @@ export const getBulkTracksSchema = {
   required: ['trackIds'],
 };
 
+// Schema for get-track-download tool
+export const getTrackDownloadSchema = {
+  type: 'object',
+  properties: {
+    trackId: {
+      type: 'string',
+      description: 'The ID of the track to download',
+    },
+  },
+  required: ['trackId'],
+};
+
+// Schema for get-track-inspect tool
+export const getTrackInspectSchema = {
+  type: 'object',
+  properties: {
+    trackId: {
+      type: 'string',
+      description: 'The ID of the track to inspect for technical details',
+    },
+  },
+  required: ['trackId'],
+};
+
+// Schema for get-track-stems tool
+export const getTrackStemsSchema = {
+  type: 'object',
+  properties: {
+    trackId: {
+      type: 'string',
+      description: 'The ID of the track to get stems for',
+    },
+  },
+  required: ['trackId'],
+};
+
 // Implementation of get-track tool
 export const getTrack = async (args: { trackId: string }, extra: RequestHandlerExtra) => {
   try {
@@ -335,5 +371,196 @@ export const getBulkTracks = async (
     return createTextResponse(response);
   } catch (error: any) {
     return createTextResponse(`Error retrieving bulk tracks: ${error.message}`, true);
+  }
+};
+
+// Implementation of get-track-download tool
+export const getTrackDownload = async (
+  args: { trackId: string },
+  extra?: RequestHandlerExtra
+) => {
+  try {
+    const audiusClient = AudiusClient.getInstance();
+    const sdk = audiusClient.getSDK();
+    
+    // Get track details first to verify it exists
+    const trackResponse = await sdk.tracks.getTrack({ trackId: args.trackId });
+    
+    if (!trackResponse.data) {
+      return createTextResponse('Track not found', true);
+    }
+    
+    const track = trackResponse.data;
+    
+    // Check if track is downloadable
+    if (!track.downloadable) {
+      return createTextResponse(
+        `Track "${track.title}" by ${track.user.name} is not available for download.`,
+        true
+      );
+    }
+    
+    // Check if track requires premium access or conditions
+    if (track.isPremium || track.streamConditions) {
+      return createTextResponse(
+        `Track "${track.title}" requires special access conditions for download. Stream conditions: ${JSON.stringify(track.streamConditions)}`,
+        true
+      );
+    }
+    
+    // Construct download URL
+    const baseUrl = 'https://discoveryprovider.audius.co/v1';
+    const downloadUrl = `${baseUrl}/tracks/${args.trackId}/download`;
+    
+    const response = `📥 Download Information for "${track.title}" by ${track.user.name}
+
+🔗 Download URL: ${downloadUrl}
+📁 File Format: ${track.downloadable?.format || 'MP3'}
+💾 File Size: ${track.downloadable?.size ? `${(track.downloadable.size / 1024 / 1024).toFixed(2)} MB` : 'Unknown'}
+⏱️ Duration: ${Math.floor(track.duration / 60)}:${String(track.duration % 60).padStart(2, '0')}
+
+📋 Download Instructions:
+1. Make a GET request to the download URL
+2. Include proper authentication headers if required
+3. Save the response as an audio file
+4. Respect the artist's copyright and usage terms
+
+⚠️ Note: Always respect copyright and the artist's terms of use when downloading tracks.`;
+    
+    return createTextResponse(response);
+  } catch (error: any) {
+    return createTextResponse(`Error getting download info: ${error.message}`, true);
+  }
+};
+
+// Implementation of get-track-inspect tool
+export const getTrackInspect = async (
+  args: { trackId: string },
+  extra?: RequestHandlerExtra
+) => {
+  try {
+    const baseUrl = 'https://discoveryprovider.audius.co/v1';
+    const apiUrl = `${baseUrl}/tracks/${encodeURIComponent(args.trackId)}/inspect`;
+    
+    const response = await fetch(apiUrl, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json'
+      }
+    });
+    
+    if (!response.ok) {
+      if (response.status === 404) {
+        return createTextResponse(`Track with ID '${args.trackId}' not found`, true);
+      }
+      return createTextResponse(`Error inspecting track: HTTP ${response.status}`, true);
+    }
+    
+    const data = await response.json();
+    
+    if (!data.data) {
+      return createTextResponse(`No inspection data available for track ID ${args.trackId}`, true);
+    }
+    
+    const inspection = data.data;
+    
+    const inspectionReport = `🔍 Technical Inspection for Track ID: ${args.trackId}
+
+📊 Audio Properties:
+   • Sample Rate: ${inspection.sampleRate || 'Unknown'} Hz
+   • Bit Rate: ${inspection.bitRate || 'Unknown'} kbps
+   • Channels: ${inspection.channels || 'Unknown'}
+   • Audio Format: ${inspection.format || 'Unknown'}
+   • Duration: ${inspection.duration ? `${Math.floor(inspection.duration / 60)}:${String(inspection.duration % 60).padStart(2, '0')}` : 'Unknown'}
+
+📁 File Information:
+   • File Size: ${inspection.fileSize ? `${(inspection.fileSize / 1024 / 1024).toFixed(2)} MB` : 'Unknown'}
+   • MIME Type: ${inspection.mimeType || 'Unknown'}
+   • Encoding: ${inspection.encoding || 'Unknown'}
+
+🎵 Audio Analysis:
+   • Peak Amplitude: ${inspection.peakAmplitude || 'Unknown'}
+   • RMS Level: ${inspection.rmsLevel || 'Unknown'}
+   • Dynamic Range: ${inspection.dynamicRange || 'Unknown'}
+   • Loudness: ${inspection.loudness || 'Unknown'} LUFS
+
+🏷️ Metadata:
+   • ID3 Tags: ${inspection.id3Tags ? 'Present' : 'None'}
+   • Album Art: ${inspection.hasAlbumArt ? 'Present' : 'None'}
+   • Copyright Info: ${inspection.copyright || 'None'}
+
+⚠️ Quality Assessment:
+   • Audio Quality Score: ${inspection.qualityScore || 'Not assessed'}
+   • Clipping Detected: ${inspection.hasClipping ? 'Yes ⚠️' : 'No ✓'}
+   • Silence Detection: ${inspection.silenceDetected ? 'Yes' : 'No'}`;
+    
+    return createTextResponse(inspectionReport);
+  } catch (error: any) {
+    return createTextResponse(`Error inspecting track: ${error.message}`, true);
+  }
+};
+
+// Implementation of get-track-stems tool
+export const getTrackStems = async (
+  args: { trackId: string },
+  extra?: RequestHandlerExtra
+) => {
+  try {
+    const baseUrl = 'https://discoveryprovider.audius.co/v1';
+    const apiUrl = `${baseUrl}/tracks/${encodeURIComponent(args.trackId)}/stems`;
+    
+    const response = await fetch(apiUrl, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json'
+      }
+    });
+    
+    if (!response.ok) {
+      if (response.status === 404) {
+        return createTextResponse(`Track with ID '${args.trackId}' not found or has no stems`, true);
+      }
+      return createTextResponse(`Error fetching track stems: HTTP ${response.status}`, true);
+    }
+    
+    const data = await response.json();
+    
+    if (!data.data || data.data.length === 0) {
+      return createTextResponse(`No stems available for track ID ${args.trackId}`, true);
+    }
+    
+    const stems = data.data;
+    
+    // Format stems information
+    const formattedStems = stems.map((stem: any, index: number) => (
+      `${index + 1}. ${stem.name || `Stem ${index + 1}`}\n` +
+      `   • Type: ${stem.type || 'Unknown'}\n` +
+      `   • Duration: ${stem.duration ? `${Math.floor(stem.duration / 60)}:${String(stem.duration % 60).padStart(2, '0')}` : 'Unknown'}\n` +
+      `   • File Size: ${stem.fileSize ? `${(stem.fileSize / 1024 / 1024).toFixed(2)} MB` : 'Unknown'}\n` +
+      `   • Download URL: ${stem.downloadUrl || 'Not available'}\n` +
+      `   • Format: ${stem.format || 'Unknown'}`
+    )).join('\n\n');
+    
+    const stemsReport = `🎛️ Track Stems for Track ID: ${args.trackId}
+
+📊 Overview:
+   • Total Stems: ${stems.length}
+   • Stem Types Available: ${[...new Set(stems.map((s: any) => s.type).filter(Boolean))].join(', ') || 'Various'}
+
+🎵 Individual Stems:
+
+${formattedStems}
+
+📋 Usage Instructions:
+1. Each stem is a separate audio track component
+2. Download individual stems using their respective URLs
+3. Stems can be mixed and matched for remixing
+4. Respect copyright and licensing terms
+
+⚠️ Note: Stem availability depends on the artist's choice to share them.`;
+    
+    return createTextResponse(stemsReport);
+  } catch (error: any) {
+    return createTextResponse(`Error fetching track stems: ${error.message}`, true);
   }
 };

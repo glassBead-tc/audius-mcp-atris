@@ -163,6 +163,66 @@ export const getDeveloperAppsSchema = {
   required: ['userId'],
 };
 
+// Schema for get-track-purchasers tool
+export const getTrackPurchasersSchema = {
+  type: 'object',
+  properties: {
+    trackId: {
+      type: 'string',
+      description: 'The ID of the track to get purchasers for',
+    },
+    limit: {
+      type: 'number',
+      description: 'Maximum number of purchasers to return (default: 10)',
+    },
+  },
+  required: ['trackId'],
+};
+
+// Schema for get-track-remixers tool
+export const getTrackRemixersSchema = {
+  type: 'object',
+  properties: {
+    trackId: {
+      type: 'string',
+      description: 'The ID of the track to get remixers for',
+    },
+    limit: {
+      type: 'number',
+      description: 'Maximum number of remixers to return (default: 10)',
+    },
+  },
+  required: ['trackId'],
+};
+
+// Schema for get-related-users tool
+export const getRelatedUsersSchema = {
+  type: 'object',
+  properties: {
+    userId: {
+      type: 'string',
+      description: 'The ID of the user to find related users for',
+    },
+    limit: {
+      type: 'number',
+      description: 'Maximum number of related users to return (default: 10)',
+    },
+  },
+  required: ['userId'],
+};
+
+// Schema for get-user-tags tool
+export const getUserTagsSchema = {
+  type: 'object',
+  properties: {
+    userId: {
+      type: 'string',
+      description: 'The ID of the user to get tags for',
+    },
+  },
+  required: ['userId'],
+};
+
 // Implementation of get-user tool
 export const getUser = async (args: { userId: string }) => {
   try {
@@ -670,6 +730,221 @@ export const getDeveloperApps = async (args: { userId: string }) => {
     console.error('Error in get-developer-apps tool:', error);
     return createTextResponse(
       `Error fetching developer apps: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
+  }
+};
+
+// Implementation of get-track-purchasers tool
+export const getTrackPurchasers = async (args: { trackId: string, limit?: number }) => {
+  try {
+    const limit = args.limit || 10;
+    
+    // Construct the API URL for track purchasers
+    const baseUrl = 'https://discoveryprovider.audius.co/v1';
+    const apiUrl = `${baseUrl}/tracks/${encodeURIComponent(args.trackId)}/purchasers?limit=${limit}`;
+    
+    const response = await fetch(apiUrl, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json'
+      }
+    });
+    
+    if (!response.ok) {
+      if (response.status === 404) {
+        return createTextResponse(`Track with ID '${args.trackId}' not found or has no purchasers`, true);
+      }
+      return createTextResponse(`Error fetching track purchasers: HTTP ${response.status}`, true);
+    }
+    
+    const data = await response.json();
+    
+    if (!data.data || data.data.length === 0) {
+      return createTextResponse(`No purchasers found for track ID ${args.trackId}`, true);
+    }
+    
+    const purchasers = data.data;
+    
+    // Format the purchasers in a more readable way
+    const formattedPurchasers = purchasers.map((purchaser: any, index: number) => (
+      `${index + 1}. ${purchaser.name} (@${purchaser.handle})\n` +
+      `   ID: ${purchaser.id} | Followers: ${purchaser.followerCount || 0}\n` +
+      `   Purchase Date: ${purchaser.purchaseDate ? new Date(purchaser.purchaseDate).toLocaleDateString() : 'Unknown'}\n` +
+      `   Purchase Type: ${purchaser.purchaseType || 'Standard'}`
+    )).join('\n\n');
+    
+    return createTextResponse(
+      `💰 Track Purchasers for Track ID ${args.trackId}:\n\n${formattedPurchasers}`
+    );
+  } catch (error) {
+    console.error('Error in get-track-purchasers tool:', error);
+    return createTextResponse(
+      `Error fetching track purchasers: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
+  }
+};
+
+// Implementation of get-track-remixers tool
+export const getTrackRemixers = async (args: { trackId: string, limit?: number }) => {
+  try {
+    const limit = args.limit || 10;
+    
+    // Construct the API URL for track remixers
+    const baseUrl = 'https://discoveryprovider.audius.co/v1';
+    const apiUrl = `${baseUrl}/tracks/${encodeURIComponent(args.trackId)}/remixers?limit=${limit}`;
+    
+    const response = await fetch(apiUrl, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json'
+      }
+    });
+    
+    if (!response.ok) {
+      if (response.status === 404) {
+        return createTextResponse(`Track with ID '${args.trackId}' not found or has no remixers`, true);
+      }
+      return createTextResponse(`Error fetching track remixers: HTTP ${response.status}`, true);
+    }
+    
+    const data = await response.json();
+    
+    if (!data.data || data.data.length === 0) {
+      return createTextResponse(`No remixers found for track ID ${args.trackId}`, true);
+    }
+    
+    const remixers = data.data;
+    
+    // Format the remixers in a more readable way
+    const formattedRemixers = remixers.map((remixer: any, index: number) => (
+      `${index + 1}. ${remixer.name} (@${remixer.handle})\n` +
+      `   ID: ${remixer.id} | Followers: ${remixer.followerCount || 0}\n` +
+      `   Remix Title: "${remixer.remixTitle || 'Untitled Remix'}"\n` +
+      `   Remix Track ID: ${remixer.remixTrackId || 'N/A'}\n` +
+      `   Created: ${remixer.remixCreatedAt ? new Date(remixer.remixCreatedAt).toLocaleDateString() : 'Unknown'}`
+    )).join('\n\n');
+    
+    return createTextResponse(
+      `🎛️ Track Remixers for Track ID ${args.trackId}:\n\n${formattedRemixers}`
+    );
+  } catch (error) {
+    console.error('Error in get-track-remixers tool:', error);
+    return createTextResponse(
+      `Error fetching track remixers: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
+  }
+};
+
+// Implementation of get-related-users tool
+export const getRelatedUsers = async (args: { userId: string, limit?: number }) => {
+  try {
+    const limit = args.limit || 10;
+    
+    // Construct the API URL for related users
+    const baseUrl = 'https://discoveryprovider.audius.co/v1';
+    const apiUrl = `${baseUrl}/users/${encodeURIComponent(args.userId)}/related?limit=${limit}`;
+    
+    const response = await fetch(apiUrl, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json'
+      }
+    });
+    
+    if (!response.ok) {
+      if (response.status === 404) {
+        return createTextResponse(`User with ID '${args.userId}' not found`, true);
+      }
+      return createTextResponse(`Error fetching related users: HTTP ${response.status}`, true);
+    }
+    
+    const data = await response.json();
+    
+    if (!data.data || data.data.length === 0) {
+      return createTextResponse(`No related users found for user ID ${args.userId}`, true);
+    }
+    
+    const relatedUsers = data.data;
+    
+    // Format the related users in a more readable way
+    const formattedUsers = relatedUsers.map((user: any, index: number) => (
+      `${index + 1}. ${user.name} (@${user.handle})\n` +
+      `   ID: ${user.id} | Followers: ${user.followerCount || 0}\n` +
+      `   Tracks: ${user.trackCount || 0} | Playlists: ${user.playlistCount || 0}\n` +
+      `   Relation Score: ${user.relationScore || 'N/A'}\n` +
+      `   Common Genres: ${user.commonGenres ? user.commonGenres.join(', ') : 'None'}\n` +
+      `   Mutual Follows: ${user.mutualFollows || 0}`
+    )).join('\n\n');
+    
+    return createTextResponse(
+      `🤝 Related Users for User ID ${args.userId}:\n\n${formattedUsers}`
+    );
+  } catch (error) {
+    console.error('Error in get-related-users tool:', error);
+    return createTextResponse(
+      `Error fetching related users: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
+  }
+};
+
+// Implementation of get-user-tags tool
+export const getUserTags = async (args: { userId: string }) => {
+  try {
+    // Construct the API URL for user tags
+    const baseUrl = 'https://discoveryprovider.audius.co/v1';
+    const apiUrl = `${baseUrl}/users/${encodeURIComponent(args.userId)}/tags`;
+    
+    const response = await fetch(apiUrl, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json'
+      }
+    });
+    
+    if (!response.ok) {
+      if (response.status === 404) {
+        return createTextResponse(`User with ID '${args.userId}' not found`, true);
+      }
+      return createTextResponse(`Error fetching user tags: HTTP ${response.status}`, true);
+    }
+    
+    const data = await response.json();
+    
+    if (!data.data || data.data.length === 0) {
+      return createTextResponse(`No tags found for user ID ${args.userId}`, true);
+    }
+    
+    const tags = data.data;
+    
+    // Group tags by category
+    const tagsByCategory: Record<string, any[]> = {};
+    tags.forEach((tag: any) => {
+      const category = tag.category || 'Other';
+      if (!tagsByCategory[category]) {
+        tagsByCategory[category] = [];
+      }
+      tagsByCategory[category].push(tag);
+    });
+    
+    // Format tags by category
+    const formattedTags = Object.entries(tagsByCategory).map(([category, categoryTags]) => {
+      const tagList = categoryTags.map((tag: any) => 
+        `   • ${tag.name} ${tag.count ? `(${tag.count})` : ''}`
+      ).join('\n');
+      return `📂 ${category}:\n${tagList}`;
+    }).join('\n\n');
+    
+    return createTextResponse(
+      `🏷️ User Tags for User ID ${args.userId}:\n\n${formattedTags}\n\n📊 Total Tags: ${tags.length}`
+    );
+  } catch (error) {
+    console.error('Error in get-user-tags tool:', error);
+    return createTextResponse(
+      `Error fetching user tags: ${error instanceof Error ? error.message : 'Unknown error'}`,
       true
     );
   }

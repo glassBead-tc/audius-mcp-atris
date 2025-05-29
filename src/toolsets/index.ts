@@ -8,7 +8,10 @@ import {
   getTrendingTracks, getTrendingTracksSchema,
   getTrackComments, getTrackCommentsSchema,
   getTrackStreamUrl, getTrackStreamUrlSchema,
-  getBulkTracks, getBulkTracksSchema
+  getBulkTracks, getBulkTracksSchema,
+  getTrackDownload, getTrackDownloadSchema,
+  getTrackInspect, getTrackInspectSchema,
+  getTrackStems, getTrackStemsSchema
 } from '../tools/tracks.js';
 
 import {
@@ -22,7 +25,11 @@ import {
   getLibraryPlaylists, getLibraryPlaylistsSchema,
   getAuthorizedApps, getAuthorizedAppsSchema,
   getConnectedWallets, getConnectedWalletsSchema,
-  getDeveloperApps, getDeveloperAppsSchema
+  getDeveloperApps, getDeveloperAppsSchema,
+  getTrackPurchasers, getTrackPurchasersSchema,
+  getTrackRemixers, getTrackRemixersSchema,
+  getRelatedUsers, getRelatedUsersSchema,
+  getUserTags, getUserTagsSchema
 } from '../tools/users.js';
 
 import {
@@ -55,6 +62,12 @@ import {
   trendingDiscovery, trendingDiscoverySchema,
   similarArtists, similarArtistsSchema
 } from '../tools/search.js';
+
+import {
+  getRecommendations, getRecommendationsSchema,
+  getUserHistory, getUserHistorySchema,
+  getTrendingByGenre, getTrendingByGenreSchema
+} from '../tools/discovery.js';
 
 import {
   getUserFavorites, userFavoritesSchema,
@@ -166,7 +179,10 @@ export function initToolsets(enabledToolsets: string[] = DefaultToolsets, readOn
     createServerTool('get-trending-tracks', getTrendingTracksSchema, getTrendingTracks, true, 'Get trending tracks'),
     createServerTool('get-track-comments', getTrackCommentsSchema, getTrackComments, true, 'Get comments for a track'),
     createServerTool('get-track-stream-url', getTrackStreamUrlSchema, getTrackStreamUrl, true, 'Get stream URL for a track'),
-    createServerTool('get-bulk-tracks', getBulkTracksSchema, getBulkTracks, true, 'Get multiple tracks by IDs')
+    createServerTool('get-bulk-tracks', getBulkTracksSchema, getBulkTracks, true, 'Get multiple tracks by IDs'),
+    createServerTool('get-track-download', getTrackDownloadSchema, getTrackDownload, true, 'Get download information for a track'),
+    createServerTool('get-track-inspect', getTrackInspectSchema, getTrackInspect, true, 'Get technical inspection details for a track'),
+    createServerTool('get-track-stems', getTrackStemsSchema, getTrackStems, true, 'Get stems/components for a track')
   );
   
   // 2. Track Management Toolset (write operations)
@@ -192,7 +208,11 @@ export function initToolsets(enabledToolsets: string[] = DefaultToolsets, readOn
     createServerTool('get-library-playlists', getLibraryPlaylistsSchema, getLibraryPlaylists, true, 'Get library playlists for a user'),
     createServerTool('get-authorized-apps', getAuthorizedAppsSchema, getAuthorizedApps, true, 'Get authorized apps for a user'),
     createServerTool('get-connected-wallets', getConnectedWalletsSchema, getConnectedWallets, true, 'Get connected wallets for a user'),
-    createServerTool('get-developer-apps', getDeveloperAppsSchema, getDeveloperApps, true, 'Get developer apps for a user')
+    createServerTool('get-developer-apps', getDeveloperAppsSchema, getDeveloperApps, true, 'Get developer apps for a user'),
+    createServerTool('get-track-purchasers', getTrackPurchasersSchema, getTrackPurchasers, true, 'Get users who purchased a track'),
+    createServerTool('get-track-remixers', getTrackRemixersSchema, getTrackRemixers, true, 'Get users who remixed a track'),
+    createServerTool('get-related-users', getRelatedUsersSchema, getRelatedUsers, true, 'Get users related to a given user'),
+    createServerTool('get-user-tags', getUserTagsSchema, getUserTags, true, 'Get tags associated with a user')
   );
 
   // 4. Playlists Toolset
@@ -233,7 +253,10 @@ export function initToolsets(enabledToolsets: string[] = DefaultToolsets, readOn
     createServerTool('search-all', searchAllSchema, searchAll, true, 'Search across all Audius content'),
     createServerTool('advanced-search', advancedSearchSchema, advancedSearch, true, 'Advanced search with filters'),
     createServerTool('trending-discovery', trendingDiscoverySchema, trendingDiscovery, true, 'Discover trending content'),
-    createServerTool('similar-artists', similarArtistsSchema, similarArtists, true, 'Find artists similar to a given artist')
+    createServerTool('similar-artists', similarArtistsSchema, similarArtists, true, 'Find artists similar to a given artist'),
+    createServerTool('get-recommendations', getRecommendationsSchema, getRecommendations, true, 'Get personalized recommendations for a user'),
+    createServerTool('get-user-history', getUserHistorySchema, getUserHistory, true, 'Get user activity history'),
+    createServerTool('get-trending-by-genre', getTrendingByGenreSchema, getTrendingByGenre, true, 'Get trending content filtered by genre')
   );
 
   // 7. Social Toolset
