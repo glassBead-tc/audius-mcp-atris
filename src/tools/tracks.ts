@@ -74,6 +74,23 @@ export const getTrackStreamUrlSchema = {
   required: ['trackId'],
 };
 
+// Schema for get-bulk-tracks tool
+export const getBulkTracksSchema = {
+  type: 'object',
+  properties: {
+    trackIds: {
+      type: 'array',
+      items: {
+        type: 'string'
+      },
+      description: 'Array of track IDs to retrieve',
+      minItems: 1,
+      maxItems: 50
+    },
+  },
+  required: ['trackIds'],
+};
+
 // Implementation of get-track tool
 export const getTrack = async (args: { trackId: string }, extra: RequestHandlerExtra) => {
   try {
@@ -263,5 +280,60 @@ To stream this track:
     return createTextResponse(response);
   } catch (error: any) {
     return createTextResponse(`Error getting stream URL: ${error.message}`, true);
+  }
+};
+
+// Implementation of get-bulk-tracks tool
+export const getBulkTracks = async (
+  args: { trackIds: string[] },
+  extra?: RequestHandlerExtra
+) => {
+  try {
+    const audiusClient = AudiusClient.getInstance();
+    const sdk = audiusClient.getSDK();
+    
+    // Validate array length
+    if (args.trackIds.length > 50) {
+      return createTextResponse('Maximum 50 track IDs allowed per request', true);
+    }
+    
+    // Fetch tracks in parallel
+    const trackPromises = args.trackIds.map(async (trackId) => {
+      try {
+        const response = await sdk.tracks.getTrack({ trackId });
+        return response.data ? { success: true, track: response.data } : { success: false, trackId, error: 'Track not found' };
+      } catch (error: any) {
+        return { success: false, trackId, error: error.message };
+      }
+    });
+    
+    const results = await Promise.all(trackPromises);
+    
+    // Separate successful and failed results
+    const successfulTracks = results.filter(r => r.success).map(r => (r as any).track);
+    const failedTracks = results.filter(r => !r.success);
+    
+    if (successfulTracks.length === 0) {
+      return createTextResponse('No tracks found for the provided IDs', true);
+    }
+    
+    // Format successful tracks
+    const formattedTracks = successfulTracks.map((track, index) => (
+      `${index + 1}. "${track.title}" by ${track.user.name}\n` +
+      `   ID: ${track.id} | Duration: ${Math.floor(track.duration / 60)}:${String(track.duration % 60).padStart(2, '0')}\n` +
+      `   Plays: ${track.playCount} | Likes: ${track.favoriteCount} | Reposts: ${track.repostCount}`
+    )).join('\n\n');
+    
+    let response = `Retrieved ${successfulTracks.length} tracks:\n\n${formattedTracks}`;
+    
+    // Add failed tracks info if any
+    if (failedTracks.length > 0) {
+      const failedList = failedTracks.map(f => `- ${(f as any).trackId}: ${(f as any).error}`).join('\n');
+      response += `\n\nFailed to retrieve ${failedTracks.length} tracks:\n${failedList}`;
+    }
+    
+    return createTextResponse(response);
+  } catch (error: any) {
+    return createTextResponse(`Error retrieving bulk tracks: ${error.message}`, true);
   }
 };

@@ -26,6 +26,17 @@ export const getAlbumSchema = {
   required: ['albumId'],
 };
 
+// Schema for get-trending-playlists tool
+export const getTrendingPlaylistsSchema = {
+  type: 'object',
+  properties: {
+    limit: {
+      type: 'number',
+      description: 'Maximum number of trending playlists to return (default: 10)',
+    },
+  },
+};
+
 // Implementation of get-playlist tool
 export const getPlaylist = async (args: { playlistId: string }) => {
   try {
@@ -104,6 +115,54 @@ export const getAlbum = async (args: { albumId: string }) => {
     console.error('Error in get-album tool:', error);
     return createTextResponse(
       `Error fetching album: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
+  }
+};
+
+// Implementation of get-trending-playlists tool
+export const getTrendingPlaylists = async (args: { limit?: number }) => {
+  try {
+    const limit = args.limit || 10;
+    
+    // Construct the API URL for trending playlists
+    const baseUrl = 'https://discoveryprovider.audius.co/v1';
+    const apiUrl = `${baseUrl}/playlists/trending?limit=${limit}`;
+    
+    const response = await fetch(apiUrl, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json'
+      }
+    });
+    
+    if (!response.ok) {
+      return createTextResponse(`Error fetching trending playlists: HTTP ${response.status}`, true);
+    }
+    
+    const data = await response.json();
+    
+    if (!data.data || data.data.length === 0) {
+      return createTextResponse('No trending playlists found', true);
+    }
+    
+    const playlists = data.data;
+    
+    // Format the playlists in a more readable way
+    const formattedPlaylists = playlists.map((playlist: any, index: number) => (
+      `${index + 1}. "${playlist.playlistName}" by ${playlist.user.name}\n` +
+      `   ID: ${playlist.id} | Tracks: ${playlist.trackCount || 0}\n` +
+      `   Followers: ${playlist.followerCount || 0} | Favorites: ${playlist.favoriteCount || 0}\n` +
+      `   ${playlist.description ? `Description: ${playlist.description.substring(0, 100)}${playlist.description.length > 100 ? '...' : ''}` : 'No description'}`
+    )).join('\n\n');
+    
+    return createTextResponse(
+      `🔥 Trending Playlists:\n\n${formattedPlaylists}`
+    );
+  } catch (error) {
+    console.error('Error in get-trending-playlists tool:', error);
+    return createTextResponse(
+      `Error fetching trending playlists: ${error instanceof Error ? error.message : 'Unknown error'}`,
       true
     );
   }

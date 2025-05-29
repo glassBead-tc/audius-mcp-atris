@@ -46,6 +46,87 @@ export const getUserTracksSchema = {
   required: ['userId'],
 };
 
+// Schema for get-bulk-users tool
+export const getBulkUsersSchema = {
+  type: 'object',
+  properties: {
+    userIds: {
+      type: 'array',
+      items: {
+        type: 'string'
+      },
+      description: 'Array of user IDs to retrieve',
+      minItems: 1,
+      maxItems: 50
+    },
+  },
+  required: ['userIds'],
+};
+
+// Schema for get-ai-attributed-tracks-by-handle tool
+export const getAIAttributedTracksByUserHandleSchema = {
+  type: 'object',
+  properties: {
+    handle: {
+      type: 'string',
+      description: 'The handle of the user (without @ symbol)',
+    },
+    limit: {
+      type: 'number',
+      description: 'Maximum number of tracks to return (default: 10)',
+    },
+  },
+  required: ['handle'],
+};
+
+// Schema for get-library-tracks tool
+export const getLibraryTracksSchema = {
+  type: 'object',
+  properties: {
+    userId: {
+      type: 'string',
+      description: 'The ID of the user to get library tracks for',
+    },
+    limit: {
+      type: 'number',
+      description: 'Maximum number of tracks to return (default: 10)',
+    },
+  },
+  required: ['userId'],
+};
+
+// Schema for get-library-albums tool
+export const getLibraryAlbumsSchema = {
+  type: 'object',
+  properties: {
+    userId: {
+      type: 'string',
+      description: 'The ID of the user to get library albums for',
+    },
+    limit: {
+      type: 'number',
+      description: 'Maximum number of albums to return (default: 10)',
+    },
+  },
+  required: ['userId'],
+};
+
+// Schema for get-library-playlists tool
+export const getLibraryPlaylistsSchema = {
+  type: 'object',
+  properties: {
+    userId: {
+      type: 'string',
+      description: 'The ID of the user to get library playlists for',
+    },
+    limit: {
+      type: 'number',
+      description: 'Maximum number of playlists to return (default: 10)',
+    },
+  },
+  required: ['userId'],
+};
+
 // Implementation of get-user tool
 export const getUser = async (args: { userId: string }) => {
   try {
@@ -145,6 +226,262 @@ export const getUserTracks = async (args: { userId: string, limit?: number }) =>
     console.error('Error in get-user-tracks tool:', error);
     return createTextResponse(
       `Error fetching user tracks: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
+  }
+};
+
+// Implementation of get-bulk-users tool
+export const getBulkUsers = async (args: { userIds: string[] }) => {
+  try {
+    const audiusClient = AudiusClient.getInstance();
+    
+    // Validate array length
+    if (args.userIds.length > 50) {
+      return createTextResponse('Maximum 50 user IDs allowed per request', true);
+    }
+    
+    // Fetch users in parallel
+    const userPromises = args.userIds.map(async (userId) => {
+      try {
+        const user = await audiusClient.getUser(userId);
+        return user ? { success: true, user } : { success: false, userId, error: 'User not found' };
+      } catch (error: any) {
+        return { success: false, userId, error: error.message };
+      }
+    });
+    
+    const results = await Promise.all(userPromises);
+    
+    // Separate successful and failed results
+    const successfulUsers = results.filter(r => r.success).map(r => (r as any).user);
+    const failedUsers = results.filter(r => !r.success);
+    
+    if (successfulUsers.length === 0) {
+      return createTextResponse('No users found for the provided IDs', true);
+    }
+    
+    // Format successful users
+    const formattedUsers = successfulUsers.map((user, index) => (
+      `${index + 1}. ${user.name} (@${user.handle})\n` +
+      `   ID: ${user.id} | Followers: ${user.followerCount || 0} | Following: ${user.followingCount || 0}\n` +
+      `   Tracks: ${user.trackCount || 0} | Playlists: ${user.playlistCount || 0}`
+    )).join('\n\n');
+    
+    let response = `Retrieved ${successfulUsers.length} users:\n\n${formattedUsers}`;
+    
+    // Add failed users info if any
+    if (failedUsers.length > 0) {
+      const failedList = failedUsers.map(f => `- ${(f as any).userId}: ${(f as any).error}`).join('\n');
+      response += `\n\nFailed to retrieve ${failedUsers.length} users:\n${failedList}`;
+    }
+    
+    return createTextResponse(response);
+  } catch (error) {
+    console.error('Error in get-bulk-users tool:', error);
+    return createTextResponse(
+      `Error retrieving bulk users: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
+  }
+};
+
+// Implementation of get-ai-attributed-tracks-by-handle tool
+export const getAIAttributedTracksByUserHandle = async (args: { handle: string, limit?: number }) => {
+  try {
+    const limit = args.limit || 10;
+    
+    // Construct the API URL based on the Audius API pattern
+    const baseUrl = 'https://discoveryprovider.audius.co/v1';
+    const apiUrl = `${baseUrl}/users/handle/${encodeURIComponent(args.handle)}/tracks/ai_attributed?limit=${limit}`;
+    
+    const response = await fetch(apiUrl, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json'
+      }
+    });
+    
+    if (!response.ok) {
+      if (response.status === 404) {
+        return createTextResponse(`User with handle '@${args.handle}' not found`, true);
+      }
+      return createTextResponse(`Error fetching AI attributed tracks: HTTP ${response.status}`, true);
+    }
+    
+    const data = await response.json();
+    
+    if (!data.data || data.data.length === 0) {
+      return createTextResponse(`No AI-attributed tracks found for user @${args.handle}`, true);
+    }
+    
+    const tracks = data.data;
+    
+    // Format the tracks in a more readable way
+    const formattedTracks = tracks.map((track: any, index: number) => (
+      `${index + 1}. "${track.title}"\n` +
+      `   ID: ${track.id} | Duration: ${Math.floor(track.duration / 60)}:${String(track.duration % 60).padStart(2, '0')}\n` +
+      `   Plays: ${track.playCount || 0} | Likes: ${track.favoriteCount || 0}\n` +
+      `   AI Attribution: ${track.aiAttributionUserId ? `Attributed to User ID ${track.aiAttributionUserId}` : 'AI attribution data available'}`
+    )).join('\n\n');
+    
+    return createTextResponse(
+      `AI-attributed tracks by @${args.handle}:\n\n${formattedTracks}`
+    );
+  } catch (error) {
+    console.error('Error in get-ai-attributed-tracks-by-handle tool:', error);
+    return createTextResponse(
+      `Error fetching AI attributed tracks: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
+  }
+};
+
+// Implementation of get-library-tracks tool
+export const getLibraryTracks = async (args: { userId: string, limit?: number }) => {
+  try {
+    const limit = args.limit || 10;
+    
+    // Construct the API URL for library tracks
+    const baseUrl = 'https://discoveryprovider.audius.co/v1';
+    const apiUrl = `${baseUrl}/users/${encodeURIComponent(args.userId)}/library/tracks?limit=${limit}`;
+    
+    const response = await fetch(apiUrl, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json'
+      }
+    });
+    
+    if (!response.ok) {
+      if (response.status === 404) {
+        return createTextResponse(`User with ID '${args.userId}' not found`, true);
+      }
+      return createTextResponse(`Error fetching library tracks: HTTP ${response.status}`, true);
+    }
+    
+    const data = await response.json();
+    
+    if (!data.data || data.data.length === 0) {
+      return createTextResponse(`No library tracks found for user ID ${args.userId}`, true);
+    }
+    
+    const tracks = data.data;
+    
+    // Format the tracks in a more readable way
+    const formattedTracks = tracks.map((track: any, index: number) => (
+      `${index + 1}. "${track.title}" by ${track.user.name}\n` +
+      `   ID: ${track.id} | Duration: ${Math.floor(track.duration / 60)}:${String(track.duration % 60).padStart(2, '0')}\n` +
+      `   Plays: ${track.playCount || 0} | Likes: ${track.favoriteCount || 0}`
+    )).join('\n\n');
+    
+    return createTextResponse(
+      `Library tracks for user ID ${args.userId}:\n\n${formattedTracks}`
+    );
+  } catch (error) {
+    console.error('Error in get-library-tracks tool:', error);
+    return createTextResponse(
+      `Error fetching library tracks: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
+  }
+};
+
+// Implementation of get-library-albums tool
+export const getLibraryAlbums = async (args: { userId: string, limit?: number }) => {
+  try {
+    const limit = args.limit || 10;
+    
+    // Construct the API URL for library albums
+    const baseUrl = 'https://discoveryprovider.audius.co/v1';
+    const apiUrl = `${baseUrl}/users/${encodeURIComponent(args.userId)}/library/albums?limit=${limit}`;
+    
+    const response = await fetch(apiUrl, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json'
+      }
+    });
+    
+    if (!response.ok) {
+      if (response.status === 404) {
+        return createTextResponse(`User with ID '${args.userId}' not found`, true);
+      }
+      return createTextResponse(`Error fetching library albums: HTTP ${response.status}`, true);
+    }
+    
+    const data = await response.json();
+    
+    if (!data.data || data.data.length === 0) {
+      return createTextResponse(`No library albums found for user ID ${args.userId}`, true);
+    }
+    
+    const albums = data.data;
+    
+    // Format the albums in a more readable way
+    const formattedAlbums = albums.map((album: any, index: number) => (
+      `${index + 1}. "${album.playlistName}" by ${album.user.name}\n` +
+      `   ID: ${album.id} | Tracks: ${album.trackCount || 0}\n` +
+      `   Description: ${album.description || 'No description'}`
+    )).join('\n\n');
+    
+    return createTextResponse(
+      `Library albums for user ID ${args.userId}:\n\n${formattedAlbums}`
+    );
+  } catch (error) {
+    console.error('Error in get-library-albums tool:', error);
+    return createTextResponse(
+      `Error fetching library albums: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
+  }
+};
+
+// Implementation of get-library-playlists tool
+export const getLibraryPlaylists = async (args: { userId: string, limit?: number }) => {
+  try {
+    const limit = args.limit || 10;
+    
+    // Construct the API URL for library playlists
+    const baseUrl = 'https://discoveryprovider.audius.co/v1';
+    const apiUrl = `${baseUrl}/users/${encodeURIComponent(args.userId)}/library/playlists?limit=${limit}`;
+    
+    const response = await fetch(apiUrl, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json'
+      }
+    });
+    
+    if (!response.ok) {
+      if (response.status === 404) {
+        return createTextResponse(`User with ID '${args.userId}' not found`, true);
+      }
+      return createTextResponse(`Error fetching library playlists: HTTP ${response.status}`, true);
+    }
+    
+    const data = await response.json();
+    
+    if (!data.data || data.data.length === 0) {
+      return createTextResponse(`No library playlists found for user ID ${args.userId}`, true);
+    }
+    
+    const playlists = data.data;
+    
+    // Format the playlists in a more readable way
+    const formattedPlaylists = playlists.map((playlist: any, index: number) => (
+      `${index + 1}. "${playlist.playlistName}" by ${playlist.user.name}\n` +
+      `   ID: ${playlist.id} | Tracks: ${playlist.trackCount || 0}\n` +
+      `   Description: ${playlist.description || 'No description'}`
+    )).join('\n\n');
+    
+    return createTextResponse(
+      `Library playlists for user ID ${args.userId}:\n\n${formattedPlaylists}`
+    );
+  } catch (error) {
+    console.error('Error in get-library-playlists tool:', error);
+    return createTextResponse(
+      `Error fetching library playlists: ${error instanceof Error ? error.message : 'Unknown error'}`,
       true
     );
   }

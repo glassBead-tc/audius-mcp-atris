@@ -7,18 +7,25 @@ import {
   searchTracks, searchTracksSchema,
   getTrendingTracks, getTrendingTracksSchema,
   getTrackComments, getTrackCommentsSchema,
-  getTrackStreamUrl, getTrackStreamUrlSchema
+  getTrackStreamUrl, getTrackStreamUrlSchema,
+  getBulkTracks, getBulkTracksSchema
 } from '../tools/tracks.js';
 
 import {
   getUser, getUserSchema,
   searchUsers, searchUsersSchema,
-  getUserTracks, getUserTracksSchema
+  getUserTracks, getUserTracksSchema,
+  getBulkUsers, getBulkUsersSchema,
+  getAIAttributedTracksByUserHandle, getAIAttributedTracksByUserHandleSchema,
+  getLibraryTracks, getLibraryTracksSchema,
+  getLibraryAlbums, getLibraryAlbumsSchema,
+  getLibraryPlaylists, getLibraryPlaylistsSchema
 } from '../tools/users.js';
 
 import {
   getPlaylist, getPlaylistSchema,
-  getAlbum, getAlbumSchema
+  getAlbum, getAlbumSchema,
+  getTrendingPlaylists, getTrendingPlaylistsSchema
 } from '../tools/playlists.js';
 
 import {
@@ -154,7 +161,8 @@ export function initToolsets(enabledToolsets: string[] = DefaultToolsets, readOn
     createServerTool('search-tracks', searchTracksSchema, searchTracks, true, 'Search for tracks by query'),
     createServerTool('get-trending-tracks', getTrendingTracksSchema, getTrendingTracks, true, 'Get trending tracks'),
     createServerTool('get-track-comments', getTrackCommentsSchema, getTrackComments, true, 'Get comments for a track'),
-    createServerTool('get-track-stream-url', getTrackStreamUrlSchema, getTrackStreamUrl, true, 'Get stream URL for a track')
+    createServerTool('get-track-stream-url', getTrackStreamUrlSchema, getTrackStreamUrl, true, 'Get stream URL for a track'),
+    createServerTool('get-bulk-tracks', getBulkTracksSchema, getBulkTracks, true, 'Get multiple tracks by IDs')
   );
   
   // 2. Track Management Toolset (write operations)
@@ -172,7 +180,12 @@ export function initToolsets(enabledToolsets: string[] = DefaultToolsets, readOn
   userTools.addReadTools(
     createServerTool('get-user', getUserSchema, getUser, true, 'Get user details by ID'),
     createServerTool('search-users', searchUsersSchema, searchUsers, true, 'Search for users'),
-    createServerTool('get-user-tracks', getUserTracksSchema, getUserTracks, true, 'Get tracks for a user')
+    createServerTool('get-user-tracks', getUserTracksSchema, getUserTracks, true, 'Get tracks for a user'),
+    createServerTool('get-bulk-users', getBulkUsersSchema, getBulkUsers, true, 'Get multiple users by IDs'),
+    createServerTool('get-ai-attributed-tracks-by-handle', getAIAttributedTracksByUserHandleSchema, getAIAttributedTracksByUserHandle, true, 'Get AI-attributed tracks by user handle'),
+    createServerTool('get-library-tracks', getLibraryTracksSchema, getLibraryTracks, true, 'Get library tracks for a user'),
+    createServerTool('get-library-albums', getLibraryAlbumsSchema, getLibraryAlbums, true, 'Get library albums for a user'),
+    createServerTool('get-library-playlists', getLibraryPlaylistsSchema, getLibraryPlaylists, true, 'Get library playlists for a user')
   );
 
   // 4. Playlists Toolset
@@ -180,7 +193,8 @@ export function initToolsets(enabledToolsets: string[] = DefaultToolsets, readOn
   
   playlistTools.addReadTools(
     createServerTool('get-playlist', getPlaylistSchema, getPlaylist, true, 'Get playlist details'),
-    createServerTool('get-album', getAlbumSchema, getAlbum, true, 'Get album details')
+    createServerTool('get-album', getAlbumSchema, getAlbum, true, 'Get album details'),
+    createServerTool('get-trending-playlists', getTrendingPlaylistsSchema, getTrendingPlaylists, true, 'Get trending playlists')
   );
 
   // 5. Albums Toolset
