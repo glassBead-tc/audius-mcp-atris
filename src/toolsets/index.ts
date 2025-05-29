@@ -19,13 +19,17 @@ import {
   getAIAttributedTracksByUserHandle, getAIAttributedTracksByUserHandleSchema,
   getLibraryTracks, getLibraryTracksSchema,
   getLibraryAlbums, getLibraryAlbumsSchema,
-  getLibraryPlaylists, getLibraryPlaylistsSchema
+  getLibraryPlaylists, getLibraryPlaylistsSchema,
+  getAuthorizedApps, getAuthorizedAppsSchema,
+  getConnectedWallets, getConnectedWalletsSchema,
+  getDeveloperApps, getDeveloperAppsSchema
 } from '../tools/users.js';
 
 import {
   getPlaylist, getPlaylistSchema,
   getAlbum, getAlbumSchema,
-  getTrendingPlaylists, getTrendingPlaylistsSchema
+  getTrendingPlaylists, getTrendingPlaylistsSchema,
+  getBulkPlaylists, getBulkPlaylistsSchema
 } from '../tools/playlists.js';
 
 import {
@@ -185,7 +189,10 @@ export function initToolsets(enabledToolsets: string[] = DefaultToolsets, readOn
     createServerTool('get-ai-attributed-tracks-by-handle', getAIAttributedTracksByUserHandleSchema, getAIAttributedTracksByUserHandle, true, 'Get AI-attributed tracks by user handle'),
     createServerTool('get-library-tracks', getLibraryTracksSchema, getLibraryTracks, true, 'Get library tracks for a user'),
     createServerTool('get-library-albums', getLibraryAlbumsSchema, getLibraryAlbums, true, 'Get library albums for a user'),
-    createServerTool('get-library-playlists', getLibraryPlaylistsSchema, getLibraryPlaylists, true, 'Get library playlists for a user')
+    createServerTool('get-library-playlists', getLibraryPlaylistsSchema, getLibraryPlaylists, true, 'Get library playlists for a user'),
+    createServerTool('get-authorized-apps', getAuthorizedAppsSchema, getAuthorizedApps, true, 'Get authorized apps for a user'),
+    createServerTool('get-connected-wallets', getConnectedWalletsSchema, getConnectedWallets, true, 'Get connected wallets for a user'),
+    createServerTool('get-developer-apps', getDeveloperAppsSchema, getDeveloperApps, true, 'Get developer apps for a user')
   );
 
   // 4. Playlists Toolset
@@ -194,7 +201,8 @@ export function initToolsets(enabledToolsets: string[] = DefaultToolsets, readOn
   playlistTools.addReadTools(
     createServerTool('get-playlist', getPlaylistSchema, getPlaylist, true, 'Get playlist details'),
     createServerTool('get-album', getAlbumSchema, getAlbum, true, 'Get album details'),
-    createServerTool('get-trending-playlists', getTrendingPlaylistsSchema, getTrendingPlaylists, true, 'Get trending playlists')
+    createServerTool('get-trending-playlists', getTrendingPlaylistsSchema, getTrendingPlaylists, true, 'Get trending playlists'),
+    createServerTool('get-bulk-playlists', getBulkPlaylistsSchema, getBulkPlaylists, true, 'Get multiple playlists by IDs')
   );
 
   // 5. Albums Toolset

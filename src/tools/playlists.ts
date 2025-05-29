@@ -37,6 +37,23 @@ export const getTrendingPlaylistsSchema = {
   },
 };
 
+// Schema for get-bulk-playlists tool
+export const getBulkPlaylistsSchema = {
+  type: 'object',
+  properties: {
+    playlistIds: {
+      type: 'array',
+      items: {
+        type: 'string'
+      },
+      description: 'Array of playlist IDs to retrieve',
+      minItems: 1,
+      maxItems: 50
+    },
+  },
+  required: ['playlistIds'],
+};
+
 // Implementation of get-playlist tool
 export const getPlaylist = async (args: { playlistId: string }) => {
   try {
@@ -163,6 +180,62 @@ export const getTrendingPlaylists = async (args: { limit?: number }) => {
     console.error('Error in get-trending-playlists tool:', error);
     return createTextResponse(
       `Error fetching trending playlists: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
+  }
+};
+
+// Implementation of get-bulk-playlists tool
+export const getBulkPlaylists = async (args: { playlistIds: string[] }) => {
+  try {
+    const audiusClient = AudiusClient.getInstance();
+    
+    // Validate array length
+    if (args.playlistIds.length > 50) {
+      return createTextResponse('Maximum 50 playlist IDs allowed per request', true);
+    }
+    
+    // Fetch playlists in parallel
+    const playlistPromises = args.playlistIds.map(async (playlistId) => {
+      try {
+        const playlist = await audiusClient.getPlaylist(playlistId);
+        return playlist ? { success: true, playlist } : { success: false, playlistId, error: 'Playlist not found' };
+      } catch (error: any) {
+        return { success: false, playlistId, error: error.message };
+      }
+    });
+    
+    const results = await Promise.all(playlistPromises);
+    
+    // Separate successful and failed results
+    const successfulPlaylists = results.filter(r => r.success).map(r => (r as any).playlist);
+    const failedPlaylists = results.filter(r => !r.success);
+    
+    if (successfulPlaylists.length === 0) {
+      return createTextResponse('No playlists found for the provided IDs', true);
+    }
+    
+    // Format successful playlists
+    const formattedPlaylists = successfulPlaylists.map((playlist, index) => (
+      `${index + 1}. "${playlist.playlist_name}" by ${playlist.user.name}\n` +
+      `   ID: ${playlist.id} | Tracks: ${playlist.track_count || 0}\n` +
+      `   Type: ${playlist.is_album ? 'Album' : 'Playlist'} | Followers: ${playlist.followee_count || 0}\n` +
+      `   Created: ${new Date(playlist.created_at).toLocaleDateString()}`
+    )).join('\n\n');
+    
+    let response = `Retrieved ${successfulPlaylists.length} playlists:\n\n${formattedPlaylists}`;
+    
+    // Add failed playlists info if any
+    if (failedPlaylists.length > 0) {
+      const failedList = failedPlaylists.map(f => `- ${(f as any).playlistId}: ${(f as any).error}`).join('\n');
+      response += `\n\nFailed to retrieve ${failedPlaylists.length} playlists:\n${failedList}`;
+    }
+    
+    return createTextResponse(response);
+  } catch (error) {
+    console.error('Error in get-bulk-playlists tool:', error);
+    return createTextResponse(
+      `Error retrieving bulk playlists: ${error instanceof Error ? error.message : 'Unknown error'}`,
       true
     );
   }

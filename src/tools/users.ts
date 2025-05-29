@@ -127,6 +127,42 @@ export const getLibraryPlaylistsSchema = {
   required: ['userId'],
 };
 
+// Schema for get-authorized-apps tool
+export const getAuthorizedAppsSchema = {
+  type: 'object',
+  properties: {
+    userId: {
+      type: 'string',
+      description: 'The ID of the user to get authorized apps for',
+    },
+  },
+  required: ['userId'],
+};
+
+// Schema for get-connected-wallets tool
+export const getConnectedWalletsSchema = {
+  type: 'object',
+  properties: {
+    userId: {
+      type: 'string',
+      description: 'The ID of the user to get connected wallets for',
+    },
+  },
+  required: ['userId'],
+};
+
+// Schema for get-developer-apps tool
+export const getDeveloperAppsSchema = {
+  type: 'object',
+  properties: {
+    userId: {
+      type: 'string',
+      description: 'The ID of the user to get developer apps for',
+    },
+  },
+  required: ['userId'],
+};
+
 // Implementation of get-user tool
 export const getUser = async (args: { userId: string }) => {
   try {
@@ -482,6 +518,158 @@ export const getLibraryPlaylists = async (args: { userId: string, limit?: number
     console.error('Error in get-library-playlists tool:', error);
     return createTextResponse(
       `Error fetching library playlists: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
+  }
+};
+
+// Implementation of get-authorized-apps tool
+export const getAuthorizedApps = async (args: { userId: string }) => {
+  try {
+    // Construct the API URL for authorized apps
+    const baseUrl = 'https://discoveryprovider.audius.co/v1';
+    const apiUrl = `${baseUrl}/users/${encodeURIComponent(args.userId)}/authorized_apps`;
+    
+    const response = await fetch(apiUrl, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json'
+      }
+    });
+    
+    if (!response.ok) {
+      if (response.status === 404) {
+        return createTextResponse(`User with ID '${args.userId}' not found`, true);
+      }
+      return createTextResponse(`Error fetching authorized apps: HTTP ${response.status}`, true);
+    }
+    
+    const data = await response.json();
+    
+    if (!data.data || data.data.length === 0) {
+      return createTextResponse(`No authorized apps found for user ID ${args.userId}`, true);
+    }
+    
+    const apps = data.data;
+    
+    // Format the apps in a more readable way
+    const formattedApps = apps.map((app: any, index: number) => (
+      `${index + 1}. ${app.name || app.appName}\n` +
+      `   App ID: ${app.id || app.appId}\n` +
+      `   Description: ${app.description || 'No description'}\n` +
+      `   Authorized: ${new Date(app.createdAt || app.authorizedAt).toLocaleDateString()}\n` +
+      `   Permissions: ${app.scopes ? app.scopes.join(', ') : 'Standard permissions'}`
+    )).join('\n\n');
+    
+    return createTextResponse(
+      `Authorized apps for user ID ${args.userId}:\n\n${formattedApps}`
+    );
+  } catch (error) {
+    console.error('Error in get-authorized-apps tool:', error);
+    return createTextResponse(
+      `Error fetching authorized apps: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
+  }
+};
+
+// Implementation of get-connected-wallets tool
+export const getConnectedWallets = async (args: { userId: string }) => {
+  try {
+    // Construct the API URL for connected wallets
+    const baseUrl = 'https://discoveryprovider.audius.co/v1';
+    const apiUrl = `${baseUrl}/users/${encodeURIComponent(args.userId)}/connected_wallets`;
+    
+    const response = await fetch(apiUrl, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json'
+      }
+    });
+    
+    if (!response.ok) {
+      if (response.status === 404) {
+        return createTextResponse(`User with ID '${args.userId}' not found`, true);
+      }
+      return createTextResponse(`Error fetching connected wallets: HTTP ${response.status}`, true);
+    }
+    
+    const data = await response.json();
+    
+    if (!data.data || data.data.length === 0) {
+      return createTextResponse(`No connected wallets found for user ID ${args.userId}`, true);
+    }
+    
+    const wallets = data.data;
+    
+    // Format the wallets in a more readable way
+    const formattedWallets = wallets.map((wallet: any, index: number) => (
+      `${index + 1}. ${wallet.chain || 'Unknown Chain'} Wallet\n` +
+      `   Address: ${wallet.address}\n` +
+      `   Type: ${wallet.type || 'Standard'}\n` +
+      `   Connected: ${wallet.connectedAt ? new Date(wallet.connectedAt).toLocaleDateString() : 'Unknown date'}\n` +
+      `   Verified: ${wallet.isVerified ? 'Yes ✓' : 'No'}`
+    )).join('\n\n');
+    
+    return createTextResponse(
+      `Connected wallets for user ID ${args.userId}:\n\n${formattedWallets}`
+    );
+  } catch (error) {
+    console.error('Error in get-connected-wallets tool:', error);
+    return createTextResponse(
+      `Error fetching connected wallets: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      true
+    );
+  }
+};
+
+// Implementation of get-developer-apps tool
+export const getDeveloperApps = async (args: { userId: string }) => {
+  try {
+    // Construct the API URL for developer apps
+    const baseUrl = 'https://discoveryprovider.audius.co/v1';
+    const apiUrl = `${baseUrl}/users/${encodeURIComponent(args.userId)}/developer_apps`;
+    
+    const response = await fetch(apiUrl, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json'
+      }
+    });
+    
+    if (!response.ok) {
+      if (response.status === 404) {
+        return createTextResponse(`User with ID '${args.userId}' not found`, true);
+      }
+      return createTextResponse(`Error fetching developer apps: HTTP ${response.status}`, true);
+    }
+    
+    const data = await response.json();
+    
+    if (!data.data || data.data.length === 0) {
+      return createTextResponse(`No developer apps found for user ID ${args.userId}`, true);
+    }
+    
+    const apps = data.data;
+    
+    // Format the apps in a more readable way
+    const formattedApps = apps.map((app: any, index: number) => (
+      `${index + 1}. ${app.name || app.appName}\n` +
+      `   App ID: ${app.id || app.appId}\n` +
+      `   Client ID: ${app.clientId || 'N/A'}\n` +
+      `   Description: ${app.description || 'No description'}\n` +
+      `   Created: ${app.createdAt ? new Date(app.createdAt).toLocaleDateString() : 'Unknown date'}\n` +
+      `   Status: ${app.status || 'Active'}\n` +
+      `   Redirect URIs: ${app.redirectUris ? app.redirectUris.join(', ') : 'None configured'}`
+    )).join('\n\n');
+    
+    return createTextResponse(
+      `Developer apps for user ID ${args.userId}:\n\n${formattedApps}`
+    );
+  } catch (error) {
+    console.error('Error in get-developer-apps tool:', error);
+    return createTextResponse(
+      `Error fetching developer apps: ${error instanceof Error ? error.message : 'Unknown error'}`,
       true
     );
   }
