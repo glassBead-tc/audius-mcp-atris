@@ -6,19 +6,55 @@ import {
   getTrack, getTrackSchema,
   searchTracks, searchTracksSchema,
   getTrendingTracks, getTrendingTracksSchema,
-  getTrackComments, getTrackCommentsSchema
+  getTrackComments, getTrackCommentsSchema,
+  getTrackStreamUrl, getTrackStreamUrlSchema,
+  getBulkTracks, getBulkTracksSchema,
+  getTrackDownload, getTrackDownloadSchema,
+  getTrackInspect, getTrackInspectSchema,
+  getTrackStems, getTrackStemsSchema
 } from '../tools/tracks.js';
 
 import {
   getUser, getUserSchema,
   searchUsers, searchUsersSchema,
-  getUserTracks, getUserTracksSchema
+  getUserTracks, getUserTracksSchema,
+  getBulkUsers, getBulkUsersSchema,
+  getAIAttributedTracksByUserHandle, getAIAttributedTracksByUserHandleSchema,
+  getLibraryTracks, getLibraryTracksSchema,
+  getLibraryAlbums, getLibraryAlbumsSchema,
+  getLibraryPlaylists, getLibraryPlaylistsSchema,
+  getAuthorizedApps, getAuthorizedAppsSchema,
+  getConnectedWallets, getConnectedWalletsSchema,
+  getDeveloperApps, getDeveloperAppsSchema,
+  getTrackPurchasers, getTrackPurchasersSchema,
+  getTrackRemixers, getTrackRemixersSchema,
+  getRelatedUsers, getRelatedUsersSchema,
+  getUserTags, getUserTagsSchema
 } from '../tools/users.js';
 
 import {
   getPlaylist, getPlaylistSchema,
-  getAlbum, getAlbumSchema
+  getAlbum, getAlbumSchema,
+  getTrendingPlaylists, getTrendingPlaylistsSchema,
+  getBulkPlaylists, getBulkPlaylistsSchema
 } from '../tools/playlists.js';
+
+import {
+  getAlbum as getAlbumDetails, getAlbumSchema as getAlbumDetailsSchema,
+  getAlbumTracks, getAlbumTracksSchema,
+  getUserAlbums, getUserAlbumsSchema
+} from '../tools/albums.js';
+
+import {
+  resolve, resolveSchema,
+  getSdkVersion, getSdkVersionSchema
+} from '../tools/core.js';
+
+import {
+  initiateOAuth, initiateOAuthSchema,
+  verifyToken, verifyTokenSchema,
+  exchangeCode, exchangeCodeSchema
+} from '../tools/oauth.js';
 
 import {
   searchAll, searchAllSchema,
@@ -26,6 +62,12 @@ import {
   trendingDiscovery, trendingDiscoverySchema,
   similarArtists, similarArtistsSchema
 } from '../tools/search.js';
+
+import {
+  getRecommendations, getRecommendationsSchema,
+  getUserHistory, getUserHistorySchema,
+  getTrendingByGenre, getTrendingByGenreSchema
+} from '../tools/discovery.js';
 
 import {
   getUserFavorites, userFavoritesSchema,
@@ -135,7 +177,12 @@ export function initToolsets(enabledToolsets: string[] = DefaultToolsets, readOn
     createServerTool('get-track', getTrackSchema, getTrack, true, 'Get track details by ID'),
     createServerTool('search-tracks', searchTracksSchema, searchTracks, true, 'Search for tracks by query'),
     createServerTool('get-trending-tracks', getTrendingTracksSchema, getTrendingTracks, true, 'Get trending tracks'),
-    createServerTool('get-track-comments', getTrackCommentsSchema, getTrackComments, true, 'Get comments for a track')
+    createServerTool('get-track-comments', getTrackCommentsSchema, getTrackComments, true, 'Get comments for a track'),
+    createServerTool('get-track-stream-url', getTrackStreamUrlSchema, getTrackStreamUrl, true, 'Get stream URL for a track'),
+    createServerTool('get-bulk-tracks', getBulkTracksSchema, getBulkTracks, true, 'Get multiple tracks by IDs'),
+    createServerTool('get-track-download', getTrackDownloadSchema, getTrackDownload, true, 'Get download information for a track'),
+    createServerTool('get-track-inspect', getTrackInspectSchema, getTrackInspect, true, 'Get technical inspection details for a track'),
+    createServerTool('get-track-stems', getTrackStemsSchema, getTrackStems, true, 'Get stems/components for a track')
   );
   
   // 2. Track Management Toolset (write operations)
@@ -153,7 +200,19 @@ export function initToolsets(enabledToolsets: string[] = DefaultToolsets, readOn
   userTools.addReadTools(
     createServerTool('get-user', getUserSchema, getUser, true, 'Get user details by ID'),
     createServerTool('search-users', searchUsersSchema, searchUsers, true, 'Search for users'),
-    createServerTool('get-user-tracks', getUserTracksSchema, getUserTracks, true, 'Get tracks for a user')
+    createServerTool('get-user-tracks', getUserTracksSchema, getUserTracks, true, 'Get tracks for a user'),
+    createServerTool('get-bulk-users', getBulkUsersSchema, getBulkUsers, true, 'Get multiple users by IDs'),
+    createServerTool('get-ai-attributed-tracks-by-handle', getAIAttributedTracksByUserHandleSchema, getAIAttributedTracksByUserHandle, true, 'Get AI-attributed tracks by user handle'),
+    createServerTool('get-library-tracks', getLibraryTracksSchema, getLibraryTracks, true, 'Get library tracks for a user'),
+    createServerTool('get-library-albums', getLibraryAlbumsSchema, getLibraryAlbums, true, 'Get library albums for a user'),
+    createServerTool('get-library-playlists', getLibraryPlaylistsSchema, getLibraryPlaylists, true, 'Get library playlists for a user'),
+    createServerTool('get-authorized-apps', getAuthorizedAppsSchema, getAuthorizedApps, true, 'Get authorized apps for a user'),
+    createServerTool('get-connected-wallets', getConnectedWalletsSchema, getConnectedWallets, true, 'Get connected wallets for a user'),
+    createServerTool('get-developer-apps', getDeveloperAppsSchema, getDeveloperApps, true, 'Get developer apps for a user'),
+    createServerTool('get-track-purchasers', getTrackPurchasersSchema, getTrackPurchasers, true, 'Get users who purchased a track'),
+    createServerTool('get-track-remixers', getTrackRemixersSchema, getTrackRemixers, true, 'Get users who remixed a track'),
+    createServerTool('get-related-users', getRelatedUsersSchema, getRelatedUsers, true, 'Get users related to a given user'),
+    createServerTool('get-user-tags', getUserTagsSchema, getUserTags, true, 'Get tags associated with a user')
   );
 
   // 4. Playlists Toolset
@@ -161,10 +220,21 @@ export function initToolsets(enabledToolsets: string[] = DefaultToolsets, readOn
   
   playlistTools.addReadTools(
     createServerTool('get-playlist', getPlaylistSchema, getPlaylist, true, 'Get playlist details'),
-    createServerTool('get-album', getAlbumSchema, getAlbum, true, 'Get album details')
+    createServerTool('get-album', getAlbumSchema, getAlbum, true, 'Get album details'),
+    createServerTool('get-trending-playlists', getTrendingPlaylistsSchema, getTrendingPlaylists, true, 'Get trending playlists'),
+    createServerTool('get-bulk-playlists', getBulkPlaylistsSchema, getBulkPlaylists, true, 'Get multiple playlists by IDs')
   );
 
-  // 5. Playlist Management Toolset
+  // 5. Albums Toolset
+  const albumTools = new Toolset('albums', 'Audius Album-specific tools');
+  
+  albumTools.addReadTools(
+    createServerTool('get-album-details', getAlbumDetailsSchema, getAlbumDetails, true, 'Get album details'),
+    createServerTool('get-album-tracks', getAlbumTracksSchema, getAlbumTracks, true, 'Get tracks in an album'),
+    createServerTool('get-user-albums', getUserAlbumsSchema, getUserAlbums, true, 'Get albums for a user')
+  );
+
+  // 6. Playlist Management Toolset
   const playlistManagementTools = new Toolset('playlist-management', 'Audius Playlist management tools');
   
   playlistManagementTools.addWriteTools(
@@ -176,14 +246,17 @@ export function initToolsets(enabledToolsets: string[] = DefaultToolsets, readOn
     createServerTool('reorder-playlist-tracks', reorderPlaylistTracksSchema, reorderPlaylistTracks, false, 'Reorder tracks in a playlist')
   );
 
-  // 6. Search Toolset
+  // 7. Search Toolset
   const searchTools = new Toolset('search', 'Audius Search tools');
   
   searchTools.addReadTools(
     createServerTool('search-all', searchAllSchema, searchAll, true, 'Search across all Audius content'),
     createServerTool('advanced-search', advancedSearchSchema, advancedSearch, true, 'Advanced search with filters'),
     createServerTool('trending-discovery', trendingDiscoverySchema, trendingDiscovery, true, 'Discover trending content'),
-    createServerTool('similar-artists', similarArtistsSchema, similarArtists, true, 'Find artists similar to a given artist')
+    createServerTool('similar-artists', similarArtistsSchema, similarArtists, true, 'Find artists similar to a given artist'),
+    createServerTool('get-recommendations', getRecommendationsSchema, getRecommendations, true, 'Get personalized recommendations for a user'),
+    createServerTool('get-user-history', getUserHistorySchema, getUserHistory, true, 'Get user activity history'),
+    createServerTool('get-trending-by-genre', getTrendingByGenreSchema, getTrendingByGenre, true, 'Get trending content filtered by genre')
   );
 
   // 7. Social Toolset
@@ -295,11 +368,29 @@ export function initToolsets(enabledToolsets: string[] = DefaultToolsets, readOn
     createServerTool('send-notification', sendNotificationSchema, sendNotification, false, 'Send a notification')
   );
 
+  // 14. Core Toolset
+  const coreTools = new Toolset('core', 'Core Audius functionality');
+  
+  coreTools.addReadTools(
+    createServerTool('resolve', resolveSchema, resolve, true, 'Resolve Audius URLs to entities'),
+    createServerTool('get-sdk-version', getSdkVersionSchema, getSdkVersion, true, 'Get SDK and server version info')
+  );
+
+  // 15. OAuth Toolset
+  const oauthTools = new Toolset('oauth', 'OAuth authentication tools');
+  
+  oauthTools.addReadTools(
+    createServerTool('initiate-oauth', initiateOAuthSchema, initiateOAuth, true, 'Start OAuth authorization flow'),
+    createServerTool('verify-token', verifyTokenSchema, verifyToken, true, 'Verify JWT token from OAuth'),
+    createServerTool('exchange-code', exchangeCodeSchema, exchangeCode, true, 'Exchange authorization code for token')
+  );
+
   // Add all toolsets to the group
   toolsetGroup.addToolset(trackTools);
   toolsetGroup.addToolset(trackManagementTools);
   toolsetGroup.addToolset(userTools);
   toolsetGroup.addToolset(playlistTools);
+  toolsetGroup.addToolset(albumTools);
   toolsetGroup.addToolset(playlistManagementTools);
   toolsetGroup.addToolset(searchTools);
   toolsetGroup.addToolset(socialTools);
@@ -309,6 +400,8 @@ export function initToolsets(enabledToolsets: string[] = DefaultToolsets, readOn
   toolsetGroup.addToolset(blockchainTools);
   toolsetGroup.addToolset(monetizationTools);
   toolsetGroup.addToolset(notificationTools);
+  toolsetGroup.addToolset(coreTools);
+  toolsetGroup.addToolset(oauthTools);
 
   // Enable the requested toolsets
   toolsetGroup.enableToolsets(enabledToolsets);
