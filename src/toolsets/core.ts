@@ -1,6 +1,6 @@
 import { McpServer, ToolCallback } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { RequestHandlerExtra, ToolHandler, McpToolDefinition } from '../types/index.js';
+import { RequestHandlerExtra, ToolHandler, ToolDefinition } from '../types/index.js';
 import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 
 /**

@@ -6,7 +6,8 @@ import {
   getTrack, getTrackSchema,
   searchTracks, searchTracksSchema,
   getTrendingTracks, getTrendingTracksSchema,
-  getTrackComments, getTrackCommentsSchema
+  getTrackComments, getTrackCommentsSchema,
+  getTrackStreamUrl, getTrackStreamUrlSchema
 } from '../tools/tracks.js';
 
 import {
@@ -19,6 +20,17 @@ import {
   getPlaylist, getPlaylistSchema,
   getAlbum, getAlbumSchema
 } from '../tools/playlists.js';
+
+import {
+  getAlbum as getAlbumDetails, getAlbumSchema as getAlbumDetailsSchema,
+  getAlbumTracks, getAlbumTracksSchema,
+  getUserAlbums, getUserAlbumsSchema
+} from '../tools/albums.js';
+
+import {
+  resolve, resolveSchema,
+  getSdkVersion, getSdkVersionSchema
+} from '../tools/core.js';
 
 import {
   searchAll, searchAllSchema,
@@ -135,7 +147,8 @@ export function initToolsets(enabledToolsets: string[] = DefaultToolsets, readOn
     createServerTool('get-track', getTrackSchema, getTrack, true, 'Get track details by ID'),
     createServerTool('search-tracks', searchTracksSchema, searchTracks, true, 'Search for tracks by query'),
     createServerTool('get-trending-tracks', getTrendingTracksSchema, getTrendingTracks, true, 'Get trending tracks'),
-    createServerTool('get-track-comments', getTrackCommentsSchema, getTrackComments, true, 'Get comments for a track')
+    createServerTool('get-track-comments', getTrackCommentsSchema, getTrackComments, true, 'Get comments for a track'),
+    createServerTool('get-track-stream-url', getTrackStreamUrlSchema, getTrackStreamUrl, true, 'Get stream URL for a track')
   );
   
   // 2. Track Management Toolset (write operations)
@@ -164,7 +177,16 @@ export function initToolsets(enabledToolsets: string[] = DefaultToolsets, readOn
     createServerTool('get-album', getAlbumSchema, getAlbum, true, 'Get album details')
   );
 
-  // 5. Playlist Management Toolset
+  // 5. Albums Toolset
+  const albumTools = new Toolset('albums', 'Audius Album-specific tools');
+  
+  albumTools.addReadTools(
+    createServerTool('get-album-details', getAlbumDetailsSchema, getAlbumDetails, true, 'Get album details'),
+    createServerTool('get-album-tracks', getAlbumTracksSchema, getAlbumTracks, true, 'Get tracks in an album'),
+    createServerTool('get-user-albums', getUserAlbumsSchema, getUserAlbums, true, 'Get albums for a user')
+  );
+
+  // 6. Playlist Management Toolset
   const playlistManagementTools = new Toolset('playlist-management', 'Audius Playlist management tools');
   
   playlistManagementTools.addWriteTools(
@@ -176,7 +198,7 @@ export function initToolsets(enabledToolsets: string[] = DefaultToolsets, readOn
     createServerTool('reorder-playlist-tracks', reorderPlaylistTracksSchema, reorderPlaylistTracks, false, 'Reorder tracks in a playlist')
   );
 
-  // 6. Search Toolset
+  // 7. Search Toolset
   const searchTools = new Toolset('search', 'Audius Search tools');
   
   searchTools.addReadTools(
@@ -295,11 +317,20 @@ export function initToolsets(enabledToolsets: string[] = DefaultToolsets, readOn
     createServerTool('send-notification', sendNotificationSchema, sendNotification, false, 'Send a notification')
   );
 
+  // 14. Core Toolset
+  const coreTools = new Toolset('core', 'Core Audius functionality');
+  
+  coreTools.addReadTools(
+    createServerTool('resolve', resolveSchema, resolve, true, 'Resolve Audius URLs to entities'),
+    createServerTool('get-sdk-version', getSdkVersionSchema, getSdkVersion, true, 'Get SDK and server version info')
+  );
+
   // Add all toolsets to the group
   toolsetGroup.addToolset(trackTools);
   toolsetGroup.addToolset(trackManagementTools);
   toolsetGroup.addToolset(userTools);
   toolsetGroup.addToolset(playlistTools);
+  toolsetGroup.addToolset(albumTools);
   toolsetGroup.addToolset(playlistManagementTools);
   toolsetGroup.addToolset(searchTools);
   toolsetGroup.addToolset(socialTools);
@@ -309,6 +340,7 @@ export function initToolsets(enabledToolsets: string[] = DefaultToolsets, readOn
   toolsetGroup.addToolset(blockchainTools);
   toolsetGroup.addToolset(monetizationTools);
   toolsetGroup.addToolset(notificationTools);
+  toolsetGroup.addToolset(coreTools);
 
   // Enable the requested toolsets
   toolsetGroup.enableToolsets(enabledToolsets);

@@ -1,5 +1,29 @@
 # Changelog
 
+## 2.1.0 (2025-05-29)
+
+### New Features
+- Added Albums toolset with complete album functionality
+  - `get-album-details` - Get album information
+  - `get-album-tracks` - Get tracks in an album
+  - `get-user-albums` - Get albums for a specific user
+- Added Core toolset with fundamental Audius features
+  - `resolve` - Resolve Audius URLs to entities (tracks, users, playlists, albums)
+  - `get-sdk-version` - Get SDK and server version information
+- Added track streaming support
+  - `get-track-stream-url` - Get streaming URL for tracks
+- Created missing types definition file (`src/types/index.ts`)
+
+### Improvements
+- Albums are properly handled as playlists with `is_album=true`
+- Better resource responses with mixed content types
+- Consistent error handling across new tools
+
+### Technical
+- Fixed TypeScript compilation issues
+- Added proper RequestHandlerExtra type definition
+- Improved SDK client usage pattern
+
 ## 2.0.1 (2025-04-29)
 
 ### New Features

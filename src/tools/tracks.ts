@@ -62,6 +62,18 @@ export const getTrackCommentsSchema = {
   required: ['trackId'],
 };
 
+// Schema for get-track-stream-url tool
+export const getTrackStreamUrlSchema = {
+  type: 'object',
+  properties: {
+    trackId: {
+      type: 'string',
+      description: 'Track ID to get stream URL for',
+    },
+  },
+  required: ['trackId'],
+};
+
 // Implementation of get-track tool
 export const getTrack = async (args: { trackId: string }, extra: RequestHandlerExtra) => {
   try {
@@ -206,5 +218,50 @@ export const getTrackComments = async (args: {
       `Error retrieving track comments: ${error instanceof Error ? error.message : 'Unknown error'}`,
       true
     );
+  }
+};
+
+// Implementation of get-track-stream-url tool
+export const getTrackStreamUrl = async (
+  args: { trackId: string },
+  extra?: RequestHandlerExtra
+) => {
+  try {
+    const audiusClient = AudiusClient.getInstance();
+    const sdk = audiusClient.getSDK();
+    
+    // Get track details first to verify it exists
+    const trackResponse = await sdk.tracks.getTrack({ trackId: args.trackId });
+    
+    if (!trackResponse.data) {
+      return createTextResponse('Track not found', true);
+    }
+    
+    const track = trackResponse.data;
+    
+    // Check if track requires premium access
+    if (track.isPremium || track.streamConditions) {
+      return createTextResponse(
+        `This track requires special access conditions. Stream conditions: ${JSON.stringify(track.streamConditions)}`,
+        true
+      );
+    }
+    
+    // Construct stream URL based on API pattern
+    const baseUrl = 'https://discoveryprovider.audius.co/v1';
+    const streamUrl = `${baseUrl}/tracks/${args.trackId}/stream`;
+    
+    const response = `Track: ${track.title} by ${track.user.name}
+Stream URL: ${streamUrl}
+
+Note: This URL requires proper authentication headers if the track has access restrictions.
+To stream this track:
+1. Make a GET request to the URL
+2. Include any required authentication headers
+3. The response will be an audio stream (typically MP3)`;
+    
+    return createTextResponse(response);
+  } catch (error: any) {
+    return createTextResponse(`Error getting stream URL: ${error.message}`, true);
   }
 };
