@@ -10,6 +10,10 @@
 - Added Core toolset with fundamental Audius features
   - `resolve` - Resolve Audius URLs to entities (tracks, users, playlists, albums)
   - `get-sdk-version` - Get SDK and server version information
+- Added OAuth toolset for authentication flows
+  - `initiate-oauth` - Start OAuth authorization flow with Audius
+  - `verify-token` - Verify JWT tokens from OAuth
+  - `exchange-code` - Exchange authorization codes for tokens (with implementation guidance)
 - Added track streaming support
   - `get-track-stream-url` - Get streaming URL for tracks
 - Created missing types definition file (`src/types/index.ts`)
@@ -18,11 +22,14 @@
 - Albums are properly handled as playlists with `is_album=true`
 - Better resource responses with mixed content types
 - Consistent error handling across new tools
+- OAuth implementation includes CSRF protection with state tokens
+- Multiple API host fallback for token verification
 
 ### Technical
 - Fixed TypeScript compilation issues
 - Added proper RequestHandlerExtra type definition
 - Improved SDK client usage pattern
+- OAuth state management with automatic cleanup
 
 ## 2.0.1 (2025-04-29)
 

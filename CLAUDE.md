@@ -37,9 +37,12 @@ This is an MCP (Model Context Protocol) server that provides LLM access to the A
 
 ### Available Toolsets
 
-tracks, users, playlists, albums, search, social, comments, track-management, playlist-management, messaging, analytics, blockchain, monetization, notifications
+tracks, users, playlists, albums, search, social, comments, track-management, playlist-management, messaging, analytics, blockchain, monetization, notifications, core, oauth
 
-Note: The `albums` toolset provides album-specific functionality (get album details, tracks, and user albums).
+Notes:
+- The `albums` toolset provides album-specific functionality (get album details, tracks, and user albums).
+- The `core` toolset provides URL resolution and SDK version info.
+- The `oauth` toolset provides OAuth authentication flow tools.
 
 ### Important Implementation Notes
 

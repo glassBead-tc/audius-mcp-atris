@@ -33,6 +33,12 @@ import {
 } from '../tools/core.js';
 
 import {
+  initiateOAuth, initiateOAuthSchema,
+  verifyToken, verifyTokenSchema,
+  exchangeCode, exchangeCodeSchema
+} from '../tools/oauth.js';
+
+import {
   searchAll, searchAllSchema,
   advancedSearch, advancedSearchSchema,
   trendingDiscovery, trendingDiscoverySchema,
@@ -325,6 +331,15 @@ export function initToolsets(enabledToolsets: string[] = DefaultToolsets, readOn
     createServerTool('get-sdk-version', getSdkVersionSchema, getSdkVersion, true, 'Get SDK and server version info')
   );
 
+  // 15. OAuth Toolset
+  const oauthTools = new Toolset('oauth', 'OAuth authentication tools');
+  
+  oauthTools.addReadTools(
+    createServerTool('initiate-oauth', initiateOAuthSchema, initiateOAuth, true, 'Start OAuth authorization flow'),
+    createServerTool('verify-token', verifyTokenSchema, verifyToken, true, 'Verify JWT token from OAuth'),
+    createServerTool('exchange-code', exchangeCodeSchema, exchangeCode, true, 'Exchange authorization code for token')
+  );
+
   // Add all toolsets to the group
   toolsetGroup.addToolset(trackTools);
   toolsetGroup.addToolset(trackManagementTools);
@@ -341,6 +356,7 @@ export function initToolsets(enabledToolsets: string[] = DefaultToolsets, readOn
   toolsetGroup.addToolset(monetizationTools);
   toolsetGroup.addToolset(notificationTools);
   toolsetGroup.addToolset(coreTools);
+  toolsetGroup.addToolset(oauthTools);
 
   // Enable the requested toolsets
   toolsetGroup.enableToolsets(enabledToolsets);
