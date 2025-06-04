@@ -1,6 +1,6 @@
-# Atris MCP for Audius (v2.2.0)
+# Atris MCP for Audius (v2.3.0)
 
-> **Note:** Version 2.0.0+ exclusively uses STDIO transport for all capabilities.
+> **Note:** Version 2.3.0+ uses the Smithery SDK for improved HTTP transport support while maintaining full backward compatibility with STDIO transport for local development.
 
 An MCP (Model Context Protocol) server that provides comprehensive access to the Audius music platform via LLMs (Large Language Models), with 105 tools covering ~95% of the Audius Protocol API.
 
@@ -76,8 +76,19 @@ With Atris MCP, you can ask your LLM questions in natural language about Audius 
 
 ## Prerequisites
 
-- Node.js 16 or higher
+- Node.js 18 or higher (required for ES modules support)
 - An Audius API key (optional, but recommended for production use)
+
+## Changelog
+
+### v2.3.0 - Smithery SDK Integration
+- **New**: Integrated Smithery SDK for improved HTTP transport
+- **New**: Stateful and stateless HTTP server modes
+- **New**: Runtime configuration via Zod schema validation
+- **New**: Session management for HTTP connections
+- **Improved**: Type safety and error handling
+- **Fixed**: ES module compatibility issues
+- **Breaking**: Node.js 18+ now required (was 16+)
 
 ## Installation
 
@@ -227,6 +238,82 @@ claude mcp add audius audius-mcp-atris
 }
 ```
 
+### HTTP Transport and Smithery Deployment
+
+Atris MCP v2.3.0+ uses the Smithery SDK for improved HTTP transport capabilities, including:
+- **Session management**: Automatic session handling for stateful connections
+- **Runtime configuration**: Dynamic configuration without environment variables
+- **Enhanced security**: Built-in request validation and type safety
+
+#### Running in HTTP Mode
+
+For local HTTP server development:
+
+```bash
+# Run HTTP server on port 3000 (stateful mode)
+npm run start:http
+
+# Run in stateless mode
+MCP_TRANSPORT=http MCP_MODE=stateless npm start
+
+# Or with a custom port
+PORT=8080 npm run start:http
+```
+
+#### Smithery Deployment
+
+The server includes a `smithery.yaml` configuration for deployment on Smithery. The server now uses a Zod schema for configuration validation:
+
+```yaml
+runtime: "node"
+startCommand:
+  type: "http"
+  cmd: ["npm", "run", "start:http"]
+configSchema:
+  $ref: "./src/schemas/config.schema.ts#AudiusConfigSchema"
+```
+
+Configuration options include:
+- `apiKey` (string): Audius API key for authenticated requests
+- `apiSecret` (string): Audius API secret
+- `apiHost` (string): Custom Audius API host URL
+- `environment` (enum): "production", "staging", or "development"
+- `appName` (string): Custom application name
+- `readOnly` (boolean): Enable read-only mode (disables write operations)
+- `enabledToolsets` (array): Specific toolsets to enable
+
+#### Transport Modes
+
+The server automatically detects which transport to use:
+- **STDIO**: Default for local development and Claude Desktop
+- **HTTP**: Automatically enabled when `MCP_TRANSPORT=http` or running on Smithery
+  - **Stateful mode** (default): Maintains session state across requests
+  - **Stateless mode**: Each request is independent
+
+```bash
+# STDIO mode (default)
+npm start
+
+# HTTP stateful mode
+MCP_TRANSPORT=http npm start
+
+# HTTP stateless mode  
+MCP_TRANSPORT=http MCP_MODE=stateless npm start
+```
+
+#### Advanced Configuration
+
+When using HTTP transport, you can configure the server via:
+
+1. **Environment variables** (for local development)
+2. **Runtime configuration** (via Smithery platform)
+3. **Query parameters** (for dynamic configuration)
+
+Example configuration via query parameters:
+```
+http://localhost:3000/mcp?config.apiKey=your_key&config.readOnly=true&config.enabledToolsets=tracks,users
+```
+
 ### Available Tools
 
 The server provides the following functionality:
@@ -299,6 +386,25 @@ The server offers guided experiences for common music-related tasks:
 - **Blockchain**: Assist with crypto and token operations
 - **Monetization**: Guide premium content setup and purchases
 - **Notifications**: Manage and organize platform notifications
+- **Toolsets Guide**: Get dynamic documentation about available tools
+
+### Important Note: Audio Streaming
+
+This MCP server provides metadata and URLs for music streaming, but does not handle actual audio playback. MCP servers communicate via JSON-RPC and are designed to provide structured data, not binary media streams.
+
+**What this server provides:**
+- Track metadata (title, artist, duration, etc.)
+- Stream URLs via `get-track-stream-url` tool
+- Download URLs and links
+- Track inspection data (bitrate, format, etc.)
+
+**What client applications need to handle:**
+- Actual audio playback using the provided URLs
+- Authentication headers for protected content
+- Audio streaming protocols (HLS, DASH, etc.)
+- Player controls and UI
+
+This follows the MCP design philosophy where servers provide data and clients handle presentation/playback.
 
 ## Development
 
@@ -306,10 +412,23 @@ The server offers guided experiences for common music-related tasks:
 
 ```
 ├── src/
-│   ├── index.ts          # Entry point
-│   ├── server.ts         # MCP server setup
-│   ├── config.ts         # Configuration handling
+│   ├── index.ts          # Entry point with transport detection
+│   ├── server.ts         # Legacy MCP server setup (STDIO)
+│   ├── config.ts         # Configuration handling with Zod validation
 │   ├── sdk-client.ts     # Audius SDK client wrapper
+│   ├── transports/       # Transport implementations
+│   │   ├── http/         # HTTP transport (Smithery SDK)
+│   │   │   ├── index.ts          # HTTP server factory
+│   │   │   └── mcp-factory.ts    # MCP server factory for sessions
+│   │   └── stdio/        # STDIO transport
+│   │       └── index.ts          # STDIO server implementation
+│   ├── registry/         # Component registration
+│   │   ├── index.ts      # Main registry exports
+│   │   ├── tools.ts      # Tool registration logic
+│   │   ├── resources.ts  # Resource registration logic
+│   │   └── prompts.ts    # Prompt registration logic
+│   ├── schemas/          # Configuration schemas
+│   │   └── config.schema.ts      # Zod schema for runtime config
 │   ├── tools/            # MCP tool implementations
 │   │   ├── tracks.ts               # Track-related tools
 │   │   ├── users.ts                # User-related tools

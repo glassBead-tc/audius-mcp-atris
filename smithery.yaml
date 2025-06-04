@@ -1,0 +1,42 @@
+runtime: "node"
+startCommand:
+  type: "http"
+  cmd: ["npm", "run", "start:http"]
+configSchema:
+  $ref: "./src/schemas/config.schema.ts#AudiusConfigSchema"
+exampleConfig:
+  # Basic configuration
+  apiHost: "https://discoveryprovider.audius.co"
+  appName: "Atris MCP"
+  environment: "production"
+  
+  # Access control
+  readOnly: false
+  enabledToolsets: ["all"]
+  
+  # API authentication (optional but recommended)
+  # apiKey: "your-api-key"
+  # apiSecret: "your-api-secret"
+
+# Alternative configurations
+alternativeConfigs:
+  # Read-only mode for public access
+  readonly:
+    readOnly: true
+    enabledToolsets: ["tracks", "users", "playlists", "search", "discovery"]
+    appName: "Atris MCP (Read-Only)"
+    
+  # Limited toolsets for specific use cases
+  musicDiscovery:
+    enabledToolsets: ["search", "discovery", "tracks", "users"]
+    appName: "Atris Music Discovery"
+    
+  # Content creator tools
+  creator:
+    enabledToolsets: ["track-management", "playlist-management", "analytics", "monetization"]
+    appName: "Atris Creator Tools"
+    
+  # Social features
+  social:
+    enabledToolsets: ["social", "messaging", "comments", "notifications"]
+    appName: "Atris Social"

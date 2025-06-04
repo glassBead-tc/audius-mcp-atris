@@ -6,6 +6,7 @@ import { config } from './config.js';
  */
 export class AudiusClient {
   private static instance: AudiusClient;
+  private static runtimeConfig: Record<string, any> = {};
   private audiusSDK: any; // Use any type to bypass TypeScript errors
 
   private constructor() {
@@ -14,15 +15,19 @@ export class AudiusClient {
       
       // Initialize the Audius SDK with minimal configuration
       // Let the SDK initialize its own services with defaults
-      this.audiusSDK = sdk({
-        appName: config.server.name,
-        apiKey: config.audius.apiKey,
-        apiSecret: config.audius.apiSecret,
-        environment: config.audius.environment as any
-        
-        // Important: do NOT provide a services object
-        // The SDK will initialize the necessary services with defaults
-      });
+      const sdkConfig: any = {
+        appName: AudiusClient.runtimeConfig.appName || config.server.name,
+        apiKey: AudiusClient.runtimeConfig.apiKey || config.audius.apiKey,
+        apiSecret: AudiusClient.runtimeConfig.apiSecret || config.audius.apiSecret,
+        environment: (AudiusClient.runtimeConfig.environment || config.audius.environment) as any
+      };
+      
+      // Add apiHost if provided in runtime config
+      if (AudiusClient.runtimeConfig.apiHost) {
+        sdkConfig.apiHost = AudiusClient.runtimeConfig.apiHost;
+      }
+      
+      this.audiusSDK = sdk(sdkConfig);
       
       // Verify that all required APIs are available
       const endpointStatus = {
@@ -66,6 +71,15 @@ export class AudiusClient {
       console.error('Failed to initialize Audius SDK:', error);
       throw error;
     }
+  }
+
+  /**
+   * Set runtime configuration before getting instance
+   */
+  public static setRuntimeConfig(config: Record<string, any>) {
+    AudiusClient.runtimeConfig = config;
+    // Reset instance to force reinitialization with new config
+    AudiusClient.instance = null as any;
   }
 
   /**

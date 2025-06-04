@@ -1,7 +1,7 @@
 {
   "name": "audius-mcp-atris",
-  "version": "2.2.0",
-  "description": "Atris MCP - STDIO-based Model Context Protocol integration for Audius music platform",
+  "version": "2.3.1",
+  "description": "Atris MCP - Model Context Protocol integration for Audius music platform with STDIO and HTTP transport support",
   "main": "build/index.js",
   "type": "module",
   "bin": {
@@ -10,11 +10,20 @@
   "scripts": {
     "build": "tsc",
     "start": "node build/index.js",
+    "start:stdio": "node build/index.js",
+    "start:http": "MCP_TRANSPORT=http node build/index.js",
+    "start:http:stateless": "MCP_TRANSPORT=http MCP_MODE=stateless node build/index.js",
     "dev": "tsc && node build/index.js",
+    "dev:stdio": "tsc && node build/index.js",
+    "dev:http": "tsc && MCP_TRANSPORT=http node build/index.js",
     "lint": "eslint . --ext .ts",
     "test-client": "cd test && tsc test-client.ts && node test-client.js",
     "test": "npm run build",
-    "prepublishOnly": "npm run test"
+    "clean": "rm -rf build",
+    "build:prod": "npm run clean && npm run build",
+    "verify": "npm run build:prod && npm pack --dry-run",
+    "prepublishOnly": "npm run verify",
+    "postinstall": "patch-package"
   },
   "keywords": [
     "mcp",
@@ -39,17 +48,26 @@
     "README.md",
     "LICENSE",
     "CHANGES.md",
-    "CHANGELOG.md"
+    "CHANGELOG.md",
+    "smithery.yaml",
+    "patches/**/*"
   ],
   "dependencies": {
     "@audius/sdk": "^8.0.1",
     "@modelcontextprotocol/sdk": "^1.10.2",
+    "@smithery/sdk": "^1.4.3",
     "dotenv": "^16.3.1",
+    "express": "^4.21.0",
     "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@types/express": "^5.0.2",
     "@types/node": "^20.10.5",
+    "@typescript-eslint/eslint-plugin": "^8.33.1",
+    "@typescript-eslint/parser": "^8.33.1",
+    "esbuild": "^0.25.5",
+    "eslint": "^9.28.0",
+    "patch-package": "^8.0.0",
     "typescript": "^5.3.3"
-  },
-  "packageManager": "yarn@4.6.0+sha512.5383cc12567a95f1d668fbe762dfe0075c595b4bfff433be478dbbe24e05251a8e8c3eb992a986667c1d53b6c3a9c85b8398c35a960587fbd9fa3a0915406728"
+  }
 }

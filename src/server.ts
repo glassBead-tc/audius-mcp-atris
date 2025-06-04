@@ -23,10 +23,20 @@ import { handleNotificationsPrompt } from './prompts/notifications.js';
 /**
  * Create and configure the MCP server
  */
-export const createServer = (options = {
+export const createServer = async (options: {
+  enabledToolsets?: string[];
+  readOnly?: boolean;
+  config?: Record<string, any>;
+} = {
   enabledToolsets: ['all'],
   readOnly: false
 }) => {
+  // Apply runtime configuration to AudiusClient if provided
+  if (options.config) {
+    const { AudiusClient } = await import('./sdk-client.js');
+    AudiusClient.setRuntimeConfig(options.config);
+  }
+
   // Initialize server with McpServer
   const server = new McpServer({
     name: config.server.name,

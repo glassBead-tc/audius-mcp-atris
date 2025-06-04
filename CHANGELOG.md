@@ -1,5 +1,39 @@
 # Changelog
 
+## 2.3.0 (2025-06-04)
+
+### Major Changes
+- **Smithery SDK Integration**: Migrated HTTP transport to use Smithery SDK for improved functionality
+- **Breaking**: Node.js 18+ now required (previously 16+) for ES modules support
+
+### New Features
+- **Stateful Sessions**: HTTP transport now supports session management with configurable limits
+- **Runtime Configuration**: Dynamic configuration via Zod schema validation
+- **Transport Modes**: Support for both stateful (default) and stateless HTTP modes
+- **Enhanced Security**: Built-in request validation and type safety via Smithery SDK
+- **Configuration Validation**: All configuration now validated with descriptive error messages
+
+### Improvements
+- Better error handling with validated configuration schemas
+- Improved TypeScript types with proper exports
+- Modular architecture with separate transport implementations
+- Registry pattern for component registration (tools, resources, prompts)
+- Automatic transport detection based on environment
+
+### Technical Changes
+- Created `src/transports/` directory for transport implementations
+- Created `src/registry/` for component registration logic
+- Created `src/schemas/` for Zod configuration schemas
+- Added `smithery-wrapper.ts` to handle ES module compatibility
+- Fixed ES module/CommonJS interoperability issues with okay-error dependency
+- Added patch-package to handle third-party module issues
+- Updated build process to handle ES modules correctly
+
+### Migration Notes
+- STDIO transport remains unchanged - no action needed for Claude Desktop users
+- HTTP users should set `MCP_TRANSPORT=http` instead of relying on PORT
+- See MIGRATION-GUIDE.md for detailed upgrade instructions
+
 ## 2.2.0 (2025-05-29)
 
 ### New Features - Medium Priority Missing Endpoints
@@ -108,3 +142,21 @@ This major version update focuses on streamlining the MCP implementation by:
 - Analytics and metrics collection
 - Resource templates for structured data access
 - Natural language prompt capabilities
+
+## 2.0.0 (Date Unknown)
+
+### Breaking Changes
+- **Removed HTTP server implementation**: Simplified to STDIO transport only
+- Removed HTTP-related dependencies (@types/body-parser, @types/express)
+
+### Technical Changes
+- Removed http-server.ts to focus exclusively on STDIO transport
+- Updated index.ts with clarifying comments about STDIO transport usage
+- The server now relies solely on STDIO transport for all capabilities
+
+### Rationale
+Using STDIO as the exclusive transport method:
+- Simplifies the codebase and reduces dependencies
+- Improves compatibility with MCP service providers like Smithery
+- Makes maintenance easier by focusing on a single transport method
+- All existing capabilities (tools, resources, prompts) remain fully functional

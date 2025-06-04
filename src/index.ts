@@ -1,15 +1,6 @@
 #!/usr/bin/env node
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { createServer } from './server.js';
-import { config } from './config.js';
-
-// Parse command line arguments
-const argv = process.argv.slice(2);
-const readOnlyArg = argv.includes('--read-only');
-const toolsetsArg = argv.find(arg => arg.startsWith('--toolsets='));
-const enabledToolsets = toolsetsArg 
-  ? toolsetsArg.split('=')[1].split(',') 
-  : ['all'];
+import { createStdioServer } from './transports/stdio/index.js';
+import { getEnvConfig } from './config.js';
 
 // Redirect console.log to console.error to avoid interfering with JSON-RPC
 const originalConsoleLog = console.log;
@@ -17,40 +8,54 @@ console.log = function(...args: any[]) {
   console.error(...args);
 };
 
-// Display basic info
-console.error(`Starting ${config.server.name} v${config.server.version}`);
-console.error(`Environment: ${config.audius.environment}`);
-console.error(`STDIO transport only (v2.0.0+)`);
-console.error(`Read-only mode: ${readOnlyArg ? 'enabled' : 'disabled'}`);
-console.error(`Enabled toolsets: ${enabledToolsets.join(', ')}`);
+// Parse command line arguments
+const argv = process.argv.slice(2);
+const readOnlyArg = argv.includes('--read-only');
+const toolsetsArg = argv.find(arg => arg.startsWith('--toolsets='));
+const enabledToolsets = toolsetsArg 
+  ? toolsetsArg.split('=')[1].split(',') 
+  : undefined; // Let config handle defaults
+
+// Determine transport type
+const isHttpMode = process.env.PORT || process.env.MCP_TRANSPORT === 'http';
+const httpMode = process.env.MCP_MODE as 'stateful' | 'stateless' || 'stateful';
 
 // Main function
 async function main() {
   try {
-    // Create MCP server with toolset options
-    const server = createServer({
-      enabledToolsets,
-      readOnly: readOnlyArg
-    });
-    
-    // Create the transport layer - exclusively using STDIO for all capabilities
-    // This enables compatibility with services like Smithery that handle HTTP transport
-    const transport = new StdioServerTransport();
-    
-    // Connect the server to the transport
-    await server.connect(transport);
-    
-    console.error('MCP Server running with stdio transport...');
+    if (isHttpMode) {
+      // HTTP transport mode (for Smithery deployment)
+      console.error('Starting Atris MCP in HTTP mode...');
+      console.error(`Mode: ${httpMode}`);
+      
+      // Dynamically import HTTP transport to avoid loading Smithery SDK in STDIO mode
+      const { createHttpServer } = await import('./transports/http/index.js');
+      const { app } = await createHttpServer(httpMode);
+      const port = process.env.PORT || 3000;
+      
+      app.listen(port, () => {
+        console.error(`Atris MCP HTTP server running on port ${port}`);
+        console.error(`Endpoint: http://localhost:${port}/mcp`);
+      });
+    } else {
+      // STDIO transport mode (for local development)
+      const config = getEnvConfig();
+      console.error(`Starting ${config.appName} v2.3.0`);
+      console.error(`Environment: ${config.environment}`);
+      console.error(`Transport: STDIO`);
+      console.error(`Read-only mode: ${readOnlyArg ? 'enabled' : 'disabled'}`);
+      
+      // Create config overrides from CLI args
+      const configOverrides: any = {};
+      if (readOnlyArg) configOverrides.readOnly = true;
+      if (enabledToolsets) configOverrides.enabledToolsets = enabledToolsets;
+      
+      await createStdioServer(configOverrides);
+    }
     
     // Handle process termination
     const cleanup = async () => {
       console.error('Shutting down...');
-      try {
-        await server.close();
-        console.error('Server closed successfully');
-      } catch (error) {
-        console.error('Error during shutdown:', error);
-      }
       process.exit(0);
     };
     

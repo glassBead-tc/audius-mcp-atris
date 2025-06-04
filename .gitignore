@@ -18,7 +18,13 @@ yarn-error.log
 *.swo
 .DS_Store
 
-#SDK Reference
+claude_code_mcp_config.json
+
+# Reference and documentation folders
+references/
+specs/
+
+# SDK Reference
 # audius-protocol
 # mcp-server-development-guide.md
 # mcp-client-development-guide.md

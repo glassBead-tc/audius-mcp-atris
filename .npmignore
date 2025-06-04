@@ -20,6 +20,14 @@ CLAUDE.md
 LLM-GUIDE.md
 LLM-QUICKSTART.md
 test-plan.md
+MIGRATION-GUIDE.md
+TODO-IMPLEMENTATION.md
+TOOLSETS.md
+PUBLISH.md
+
+# Reference and internal documentation
+references/
+specs/
 
 # Logs
 logs/
@@ -31,3 +39,14 @@ yarn-error.log*
 # Environment files
 .env
 .env.*
+claude_code_mcp_config.json
+**/claude_code_mcp_config.json
+**/.env
+**/.env.*
+
+# Other sensitive files
+*.key
+*.pem
+*.cert
+config.local.json
+secrets.json

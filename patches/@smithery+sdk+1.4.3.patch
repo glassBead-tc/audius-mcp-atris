@@ -1,0 +1,18 @@
+diff --git a/node_modules/@smithery/sdk/dist/shared/config.js b/node_modules/@smithery/sdk/dist/shared/config.js
+index c785025..581e880 100644
+--- a/node_modules/@smithery/sdk/dist/shared/config.js
++++ b/node_modules/@smithery/sdk/dist/shared/config.js
+@@ -1,5 +1,12 @@
+ import _ from "lodash";
+-import { err, ok } from "okay-error";
++// Work around okay-error's broken module setup by inlining the functions
++const ok = (value) => ({ ok: true, value });
++const err = (typeOrPayload, payload) => {
++    if (payload !== undefined) {
++        return { ok: false, error: { type: typeOrPayload, ...payload } };
++    }
++    return { ok: false, error: typeOrPayload };
++};
+ import { zodToJsonSchema } from "zod-to-json-schema";
+ /**
+  * Creates a URL to connect to the Smithery MCP server.

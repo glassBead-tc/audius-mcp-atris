@@ -18,5 +18,5 @@
     "ignoreDeprecations": "5.0"
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "src/test-client.ts", "src/http-server.ts"]
+  "exclude": ["node_modules", "src/test-client.ts"]
 }
