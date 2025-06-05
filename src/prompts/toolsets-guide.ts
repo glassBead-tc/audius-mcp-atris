@@ -1,10 +1,10 @@
-import { PromptResult } from '@modelcontextprotocol/sdk/types.js';
+import { GetPromptResult } from '@modelcontextprotocol/sdk/types.js';
 import { initToolsets } from '../toolsets/index.js';
 
 /**
  * Handle the toolsets-guide prompt - explains available toolsets and how to use them
  */
-export async function handleToolsetsGuidePrompt(): Promise<PromptResult> {
+export async function handleToolsetsGuidePrompt(): Promise<GetPromptResult> {
   // Get all toolsets for documentation
   const toolsetGroup = initToolsets(['all'], false);
   const toolsets = toolsetGroup.getAllToolsets();

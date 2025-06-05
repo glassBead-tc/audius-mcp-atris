@@ -197,6 +197,28 @@ export class Toolset {
   }
 
   /**
+   * Gets read tools
+   */
+  getReadTools(): Map<string, ServerTool> {
+    const tools = new Map<string, ServerTool>();
+    for (const tool of this.readTools) {
+      tools.set(tool.name, tool);
+    }
+    return tools;
+  }
+
+  /**
+   * Gets write tools
+   */
+  getWriteTools(): Map<string, ServerTool> {
+    const tools = new Map<string, ServerTool>();
+    for (const tool of this.writeTools) {
+      tools.set(tool.name, tool);
+    }
+    return tools;
+  }
+
+  /**
    * Sets the toolset to read-only mode
    */
   setReadOnly(): void {

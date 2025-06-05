@@ -37,12 +37,13 @@ This is an MCP (Model Context Protocol) server that provides LLM access to the A
 
 ### Available Toolsets
 
-tracks, users, playlists, albums, search, social, comments, track-management, playlist-management, messaging, analytics, blockchain, monetization, notifications, core, oauth
+tracks, users, playlists, albums, search, social, comments, track-management, playlist-management, messaging, analytics, blockchain, monetization, notifications, core, oauth, desktop-playback
 
 Notes:
 - The `albums` toolset provides album-specific functionality (get album details, tracks, and user albums).
 - The `core` toolset provides URL resolution and SDK version info.
 - The `oauth` toolset provides OAuth authentication flow tools.
+- The `desktop-playback` toolset provides deep link generation for playing content in Audius Desktop.
 
 ### Important Implementation Notes
 

@@ -157,6 +157,12 @@ import {
   sendNotification, sendNotificationSchema
 } from '../tools/notifications.js';
 
+import {
+  playTrackInDesktop, playTrackInDesktopSchema,
+  openArtistInDesktop, openArtistInDesktopSchema,
+  openPlaylistInDesktop, openPlaylistInDesktopSchema
+} from '../tools/desktop-playback.js';
+
 // Default toolsets to enable
 export const DefaultToolsets = ['all'];
 
@@ -385,6 +391,15 @@ export function initToolsets(enabledToolsets: string[] = DefaultToolsets, readOn
     createServerTool('exchange-code', exchangeCodeSchema, exchangeCode, true, 'Exchange authorization code for token')
   );
 
+  // 16. Desktop Playback Toolset
+  const desktopPlaybackTools = new Toolset('desktop-playback', 'Audius Desktop playback integration');
+  
+  desktopPlaybackTools.addReadTools(
+    createServerTool('play-track-desktop', playTrackInDesktopSchema, playTrackInDesktop, true, 'Generate deep link to play track in Audius Desktop'),
+    createServerTool('open-artist-desktop', openArtistInDesktopSchema, openArtistInDesktop, true, 'Generate deep link to open artist in Audius Desktop'),
+    createServerTool('open-playlist-desktop', openPlaylistInDesktopSchema, openPlaylistInDesktop, true, 'Generate deep link to open playlist/album in Audius Desktop')
+  );
+
   // Add all toolsets to the group
   toolsetGroup.addToolset(trackTools);
   toolsetGroup.addToolset(trackManagementTools);
@@ -402,6 +417,7 @@ export function initToolsets(enabledToolsets: string[] = DefaultToolsets, readOn
   toolsetGroup.addToolset(notificationTools);
   toolsetGroup.addToolset(coreTools);
   toolsetGroup.addToolset(oauthTools);
+  toolsetGroup.addToolset(desktopPlaybackTools);
 
   // Enable the requested toolsets
   toolsetGroup.enableToolsets(enabledToolsets);
