@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.3.0 (2025-06-18)
+
+### Protocol Updates
+- Adopted Model Context Protocol specification version 2025-06-18.
+- Added `LATEST_PROTOCOL_VERSION` constant to `src/config.ts`.
+- Updated documentation to remove JSON-RPC references.
+
 ## 2.2.0 (2025-05-29)
 
 ### New Features - Medium Priority Missing Endpoints
