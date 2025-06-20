@@ -1,6 +1,8 @@
-# Atris MCP for Audius (v2.2.0)
+# Atris MCP for Audius (v2.3.0)
 
 > **Note:** Version 2.0.0+ exclusively uses STDIO transport for all capabilities.
+> The server targets Model Context Protocol version `2025-06-18` and exports this
+> value as `LATEST_PROTOCOL_VERSION` in `src/config.ts`.
 
 An MCP (Model Context Protocol) server that provides comprehensive access to the Audius music platform via LLMs (Large Language Models), with 105 tools covering ~95% of the Audius Protocol API.
 

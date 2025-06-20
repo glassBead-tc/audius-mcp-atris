@@ -559,7 +559,7 @@ The transport layer handles the actual communication between clients and servers
    * Uses Server-Sent Events for server-to-client messages
    * HTTP POST for client-to-server messages
 
-All transports use [JSON-RPC](https://www.jsonrpc.org/) 2.0 to exchange messages. See the [specification](https://spec.modelcontextprotocol.io) for detailed information about the Model Context Protocol message format.
+Prior to the 2025-06-18 specification MCP used [JSON-RPC](https://www.jsonrpc.org/) 2.0 for message exchange. The protocol now uses a native structured message format.
 
 ### Message types
 
@@ -639,7 +639,7 @@ MCP defines these standard error codes:
 
 ```typescript
 enum ErrorCode {
-  // Standard JSON-RPC error codes
+  // Legacy JSON-RPC error codes
   ParseError = -32700,
   InvalidRequest = -32600,
   MethodNotFound = -32601,
@@ -767,7 +767,7 @@ Here's a basic example of implementing an MCP server:
    * Validate all incoming messages
    * Sanitize inputs
    * Check message size limits
-   * Verify JSON-RPC format
+  * Verify MCP message format
 
 3. **Resource protection**
    * Implement access controls
@@ -2145,9 +2145,9 @@ Transports in the Model Context Protocol (MCP) provide the foundation for commun
 
 ## Message Format
 
-MCP uses [JSON-RPC](https://www.jsonrpc.org/) 2.0 as its wire format. The transport layer is responsible for converting MCP protocol messages into JSON-RPC format for transmission and converting received JSON-RPC messages back into MCP protocol messages.
+Older MCP revisions used [JSON-RPC](https://www.jsonrpc.org/) 2.0 for transport. The 2025-06-18 specification replaces this with a native structured format handled directly by the transport layer.
 
-There are three types of JSON-RPC messages used:
+There are three types of protocol messages used:
 
 ### Requests
 
@@ -2368,8 +2368,8 @@ You can implement custom transports for:
       // Start processing messages
       start(): Promise<void>;
 
-      // Send a JSON-RPC message
-      send(message: JSONRPCMessage): Promise<void>;
+      // Send a protocol message
+      send(message: ProtocolMessage): Promise<void>;
 
       // Close the connection
       close(): Promise<void>;
@@ -5714,7 +5714,7 @@ The MCP Client is a key component in the Model Context Protocol (MCP) architectu
 
 * Protocol version negotiation to ensure compatibility with servers
 * Capability negotiation to determine available features
-* Message transport and JSON-RPC communication
+* Message transport
 * Tool discovery and execution
 * Resource access and management
 * Prompt system interactions
@@ -6067,7 +6067,7 @@ The SDK follows a layered architecture with clear separation of concerns:
 * **Client/Server Layer (McpClient/McpServer)**: Both use McpSession for sync/async operations,
   with McpClient handling client-side protocol operations and McpServer managing server-side protocol operations.
 * **Session Layer (McpSession)**: Manages communication patterns and state using DefaultMcpSession implementation.
-* **Transport Layer (McpTransport)**: Handles JSON-RPC message serialization/deserialization via:
+* **Transport Layer (McpTransport)**: Handles protocol message serialization/deserialization via:
   * StdioTransport (stdin/stdout) in the core module
   * HTTP SSE transports in dedicated transport modules (Java HttpClient, Spring WebFlux, Spring WebMVC)
 
@@ -6084,7 +6084,7 @@ It implements the server-side of the protocol.
 Key Interactions:
 
 * **Client/Server Initialization**: Transport setup, protocol compatibility check, capability negotiation, and implementation details exchange.
-* **Message Flow**: JSON-RPC message handling with validation, type-safe response processing, and error handling.
+* **Message Flow**: Protocol message handling with validation, type-safe response processing, and error handling.
 * **Resource Management**: Resource discovery, URI template-based access, subscription system, and content retrieval.
 
 ## Dependencies
@@ -6304,7 +6304,7 @@ The transport layer in the MCP SDK is responsible for handling the communication
       StdioServerTransport transport = new StdioServerTransport(new ObjectMapper());
       ```
 
-      Provides bidirectional JSON-RPC message handling over standard input/output streams with non-blocking message processing, serialization/deserialization, and graceful shutdown support.
+      Provides bidirectional protocol message handling over standard input/output streams with non-blocking message processing, serialization/deserialization, and graceful shutdown support.
 
       Key features:
 
@@ -6585,7 +6585,7 @@ Supported logging levels (in order of increasing severity): DEBUG (0), INFO (1),
 
 ## Error Handling
 
-The SDK provides comprehensive error handling through the McpError class, covering protocol compatibility, transport communication, JSON-RPC messaging, tool execution, resource management, prompt handling, timeouts, and connection issues. This unified error handling approach ensures consistent and reliable error management across both synchronous and asynchronous operations.
+The SDK provides comprehensive error handling through the McpError class, covering protocol compatibility, transport communication, tool execution, resource management, prompt handling, timeouts, and connection issues. This unified error handling approach ensures consistent and reliable error management across both synchronous and asynchronous operations.
 
 
 # Building MCP with LLMs

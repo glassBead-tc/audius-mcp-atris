@@ -13,7 +13,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Architecture Overview
 
-This is an MCP (Model Context Protocol) server that provides LLM access to the Audius music platform via STDIO-based JSON-RPC communication.
+This is an MCP (Model Context Protocol) server that provides LLM access to the Audius music platform via STDIO-based message transport.
 
 ### Key Architectural Patterns
 
@@ -48,7 +48,7 @@ Notes:
 
 1. **Missing Types**: The codebase references `RequestHandlerExtra` and other types from `../types/index.js` which doesn't exist. When implementing new tools, use the pattern from existing tools.
 
-2. **Console Output**: All console.log calls are redirected to console.error to avoid interfering with STDIO JSON-RPC communication.
+2. **Console Output**: All console.log calls are redirected to console.error to avoid interfering with STDIO-based MCP communication.
 
 3. **Response Formatting**: Always use the helpers in `utils/response.ts` for consistent response formatting:
    - `createTextResponse()` for text responses

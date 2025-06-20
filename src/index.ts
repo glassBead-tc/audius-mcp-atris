@@ -11,7 +11,7 @@ const enabledToolsets = toolsetsArg
   ? toolsetsArg.split('=')[1].split(',') 
   : ['all'];
 
-// Redirect console.log to console.error to avoid interfering with JSON-RPC
+// Redirect console.log to console.error to avoid interfering with MCP messages
 const originalConsoleLog = console.log;
 console.log = function(...args: any[]) {
   console.error(...args);
