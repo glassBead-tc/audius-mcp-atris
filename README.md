@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/mseep-audited.png)](https://mseep.ai/app/glassbead-tc-audius-mcp-atris)
+
 # Atris MCP for Audius
 
 [![smithery badge](https://smithery.ai/badge/@glassBead-tc/audius-mcp-atris)](https://smithery.ai/server/@glassBead-tc/audius-mcp-atris)
