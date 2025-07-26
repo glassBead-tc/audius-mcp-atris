@@ -17,6 +17,7 @@ const configSchema = z.object({
   server: z.object({
     name: z.string().default('audius-mcp'),
     version: z.string().default('2.3.0'),
+    streaming: z.boolean().default(false),
   }),
 });
 
@@ -25,7 +26,7 @@ const createConfig = () => {
   try {
     // Use fixed values for server name and version (matching package.json)
     const SERVER_NAME = 'audius-mcp';
-    const SERVER_VERSION = '2.3.0';
+    const SERVER_VERSION = '2.4.0';
     
     const config = configSchema.parse({
       audius: {
@@ -39,6 +40,7 @@ const createConfig = () => {
       server: {
         name: SERVER_NAME,
         version: SERVER_VERSION,
+        streaming: process.env.AUDIO_STREAMING === "true",
       },
     });
     

@@ -8,12 +8,13 @@ import {
   getTrendingTracks, getTrendingTracksSchema,
   getTrackComments, getTrackCommentsSchema,
   getTrackStreamUrl, getTrackStreamUrlSchema,
+  streamTrack, streamTrackSchema,
+  openTrackInDesktop, openTrackInDesktopSchema,
   getBulkTracks, getBulkTracksSchema,
   getTrackDownload, getTrackDownloadSchema,
   getTrackInspect, getTrackInspectSchema,
-  getTrackStems, getTrackStemsSchema
+  getTrackStems, getTrackStemsSchema,
 } from '../tools/tracks.js';
-
 import {
   getUser, getUserSchema,
   searchUsers, searchUsersSchema,
@@ -179,6 +180,8 @@ export function initToolsets(enabledToolsets: string[] = DefaultToolsets, readOn
     createServerTool('get-trending-tracks', getTrendingTracksSchema, getTrendingTracks, true, 'Get trending tracks'),
     createServerTool('get-track-comments', getTrackCommentsSchema, getTrackComments, true, 'Get comments for a track'),
     createServerTool('get-track-stream-url', getTrackStreamUrlSchema, getTrackStreamUrl, true, 'Get stream URL for a track'),
+    createServerTool("stream-track", streamTrackSchema, streamTrack, true, 'Stream audio data for a track'),
+    createServerTool("open-track-in-desktop", openTrackInDesktopSchema, openTrackInDesktop, true, 'Open a track in Audius Desktop'),
     createServerTool('get-bulk-tracks', getBulkTracksSchema, getBulkTracks, true, 'Get multiple tracks by IDs'),
     createServerTool('get-track-download', getTrackDownloadSchema, getTrackDownload, true, 'Get download information for a track'),
     createServerTool('get-track-inspect', getTrackInspectSchema, getTrackInspect, true, 'Get technical inspection details for a track'),

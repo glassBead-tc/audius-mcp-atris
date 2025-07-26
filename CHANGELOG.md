@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.4.0 (2025-07-01)
+- Added stream-track and open-track-in-desktop tools for direct audio streaming.
+- Introduced AUDIO_STREAMING configuration option.
+- Bumped version to 2.4.0.
+
 ## 2.3.0 (2025-06-18)
 
 ### Protocol Updates

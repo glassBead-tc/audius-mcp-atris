@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { spawn } from "child_process";
 import { AudiusClient } from '../sdk-client.js';
 import { RequestHandlerExtra } from '../types/index.js';
 import { createTextResponse, createMixedResponse } from '../utils/response.js';
@@ -73,6 +74,30 @@ export const getTrackStreamUrlSchema = {
   },
   required: ['trackId'],
 };
+// Schema for stream-track tool
+export const streamTrackSchema = {
+  type: "object",
+  properties: {
+    trackId: {
+      type: "string",
+      description: "Track ID to stream",
+    },
+  },
+  required: ["trackId"],
+};
+
+// Schema for open-track-in-desktop tool
+export const openTrackInDesktopSchema = {
+  type: "object",
+  properties: {
+    trackId: {
+      type: "string",
+      description: "Track ID to open in Audius Desktop",
+    },
+  },
+  required: ["trackId"],
+};
+
 
 // Schema for get-bulk-tracks tool
 export const getBulkTracksSchema = {
@@ -563,4 +588,53 @@ ${formattedStems}
   } catch (error: any) {
     return createTextResponse(`Error fetching track stems: ${error.message}`, true);
   }
+};
+// Implementation of stream-track tool
+export const streamTrack = async (
+  args: { trackId: string },
+  extra?: RequestHandlerExtra
+) => {
+  try {
+    const audiusClient = AudiusClient.getInstance();
+    const sdk = audiusClient.getSDK();
+    const trackResponse = await sdk.tracks.getTrack({ trackId: args.trackId });
+    if (!trackResponse.data) {
+      return createTextResponse('Track not found', true);
+    }
+    const track = trackResponse.data;
+    if (track.isPremium || track.streamConditions) {
+      return createTextResponse(
+        `This track requires special access conditions. Stream conditions: ${JSON.stringify(track.streamConditions)}`,
+        true
+      );
+    }
+    const baseUrl = 'https://discoveryprovider.audius.co/v1';
+    const streamUrl = `${baseUrl}/tracks/${args.trackId}/stream`;
+    const res = await fetch(streamUrl);
+    if (!res.ok) {
+      return createTextResponse('Failed to fetch track stream', true);
+    }
+    const buffer = await res.arrayBuffer();
+    const base64 = Buffer.from(buffer).toString('base64');
+    return createMixedResponse([
+      { type: 'resource', resource: { mimeType: 'audio/mpeg', blob: base64 } }
+    ]);
+  } catch (error: any) {
+    return createTextResponse(`Error streaming track: ${error.message}`, true);
+  }
+};
+
+// Implementation of open-track-in-desktop tool
+export const openTrackInDesktop = async (
+  args: { trackId: string },
+  extra?: RequestHandlerExtra
+) => {
+  const uri = `audius://track/${args.trackId}`;
+  const command = process.platform === 'win32'
+    ? 'start'
+    : process.platform === 'darwin'
+    ? 'open'
+    : 'xdg-open';
+  spawn(command, [uri], { detached: true });
+  return createTextResponse(`Opening ${uri} in Audius Desktop`);
 };
