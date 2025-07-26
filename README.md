@@ -1,4 +1,4 @@
-# Atris MCP for Audius (v2.3.0)
+# Atris MCP for Audius (v2.4.0)
 
 > **Note:** Version 2.0.0+ exclusively uses STDIO transport for all capabilities.
 > The server targets Model Context Protocol version `2025-06-18` and exports this
@@ -12,6 +12,7 @@ An MCP (Model Context Protocol) server that provides comprehensive access to the
 - **Track Media Operations**: Download tracks, inspect technical details, access stems
 - **User Relationships**: Discover track purchasers, remixers, and related artists
 - **Enhanced Discovery**: Personalized recommendations, user history, trending by genre
+- **Audio Streaming**: Stream tracks directly to your client or open them in Audius Desktop
 - **Content Creation**: Upload tracks, create playlists, manage your Audius content
 - **Social Features**: Follow users, favorite tracks, comment on content
 - **Monetization**: Access premium content, purchase tracks, send tips to artists
@@ -127,7 +128,8 @@ AUDIUS_ENVIRONMENT=production # or staging, development
 
 # MCP Server Configuration
 SERVER_NAME=audius-mcp
-SERVER_VERSION=1.0.0
+SERVER_VERSION=2.4.0
+AUDIO_STREAMING=false
 ```
 
 ## Usage
