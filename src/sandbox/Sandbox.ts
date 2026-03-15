@@ -114,12 +114,16 @@ export const SandboxLive: Layer.Layer<Sandbox, never, AudiusClient | TypeGenerat
           ctx.setProp(ctx.global, "__userCode__", userCodeHandle)
           userCodeHandle.dispose()
 
+          // Inject type declarations as a global string to avoid backtick injection
+          // from OpenAPI spec summaries (declarations are LLM context, not executable)
+          const declsHandle = ctx.newString(typeGen.declarations)
+          ctx.setProp(ctx.global, "__apiDecls__", declsHandle)
+          declsHandle.dispose()
+
           // Wrap user code in an async IIFE that parses JSON results
           // User code is read from __userCode__ via eval to avoid template literal injection
+          // Type declarations available via __apiDecls__ global (LLM reference only)
           const wrappedCode = `
-            // Type context for LLM reference
-            ${typeGen.declarations}
-
             // Wrap audius.request to auto-parse JSON
             const _origRequest = audius.request;
             audius.request = async function(method, path, options) {
