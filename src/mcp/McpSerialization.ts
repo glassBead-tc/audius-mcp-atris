@@ -95,6 +95,19 @@ function decodeMcpMessage(msg: McpJsonRpcMessage): unknown {
 // Internal → Wire
 // ---------------------------------------------------------------------------
 
+/**
+ * Convert an internal string ID back to its original JSON-RPC type.
+ * MCP allows both numeric and string IDs — we must preserve the original type.
+ */
+function toWireId(id: string): number | string {
+  const num = Number(id)
+  // Only convert to number if it's a valid finite number and round-trips cleanly
+  if (Number.isFinite(num) && String(num) === id) {
+    return num
+  }
+  return id
+}
+
 function encodeMcpMessage(
   msg: Record<string, unknown>
 ): McpJsonRpcMessage | undefined {
@@ -113,7 +126,7 @@ function encodeMcpMessage(
         method
       }
       if (!isNotification) {
-        base["id"] = Number(id)
+        base["id"] = toWireId(id)
       }
       if (payload !== undefined && payload !== null) {
         base["params"] = payload
@@ -130,7 +143,7 @@ function encodeMcpMessage(
       if (exit["_tag"] === "Success") {
         return {
           jsonrpc: "2.0",
-          id: Number(requestId),
+          id: toWireId(requestId),
           result: exit["value"] ?? {}
         }
       }
@@ -141,7 +154,7 @@ function encodeMcpMessage(
         const error = cause["error"] as Record<string, unknown>
         return {
           jsonrpc: "2.0",
-          id: Number(requestId),
+          id: toWireId(requestId),
           error: {
             code: (error["code"] as number) ?? -32603,
             message: (error["message"] as string) ?? "Internal error",
@@ -152,7 +165,7 @@ function encodeMcpMessage(
 
       return {
         jsonrpc: "2.0",
-        id: Number(requestId),
+        id: toWireId(requestId),
         error: {
           code: -32603,
           message: "Internal error",

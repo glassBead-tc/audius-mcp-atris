@@ -85,25 +85,37 @@ export const SandboxLive: Layer.Layer<Sandbox, never, AudiusClient | TypeGenerat
           // Inject audius.request as async host function
           const audiusHandle = ctx.newObject()
           const requestFn = ctx.newAsyncifiedFunction("request", async (...args) => {
-            const method = ctx.dump(args[0]) as string
-            const path = ctx.dump(args[1]) as string
-            const options = args[2] ? ctx.dump(args[2]) as Record<string, unknown> : undefined
+            try {
+              const method = ctx.dump(args[0]) as string
+              const path = ctx.dump(args[1]) as string
+              const options = args[2] ? ctx.dump(args[2]) as Record<string, unknown> : undefined
 
-            // Call the real Audius API
-            const result = await Effect.runPromise(
-              audiusClient.request(method, path, options as any)
-            )
+              // Call the real Audius API
+              const result = await Effect.runPromise(
+                audiusClient.request(method, path, options as any)
+              )
 
-            // Return result as a QuickJS value
-            const jsonStr = JSON.stringify(result)
-            return ctx.newString(jsonStr)
+              // Return result as a QuickJS value
+              const jsonStr = JSON.stringify(result)
+              return ctx.newString(jsonStr)
+            } catch (e) {
+              // Surface errors back to the sandbox as a JSON error object
+              const errorMsg = e instanceof Error ? e.message : String(e)
+              return ctx.newString(JSON.stringify({ error: errorMsg }))
+            }
           })
           ctx.setProp(audiusHandle, "request", requestFn)
           ctx.setProp(ctx.global, "audius", audiusHandle)
           requestFn.dispose()
           audiusHandle.dispose()
 
+          // Inject user code as a global string to avoid template literal injection
+          const userCodeHandle = ctx.newString(code)
+          ctx.setProp(ctx.global, "__userCode__", userCodeHandle)
+          userCodeHandle.dispose()
+
           // Wrap user code in an async IIFE that parses JSON results
+          // User code is read from __userCode__ via eval to avoid template literal injection
           const wrappedCode = `
             // Type context for LLM reference
             ${typeGen.declarations}
@@ -115,9 +127,11 @@ export const SandboxLive: Layer.Layer<Sandbox, never, AudiusClient | TypeGenerat
               return JSON.parse(jsonStr);
             };
 
-            // Execute user code
+            // Execute user code (injected safely via global string)
             (async () => {
-              ${code}
+              const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
+              const fn = new AsyncFunction("audius", "console", __userCode__);
+              return await fn(audius, console);
             })()
           `
 
