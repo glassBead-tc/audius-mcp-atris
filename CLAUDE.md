@@ -5,63 +5,78 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Build & Development Commands
 
 - **Build**: `npm run build` - Compiles TypeScript to JavaScript
-- **Start**: `npm run start` - Runs the compiled server
+- **Start**: `npm run start` - Runs the compiled server (HTTP on PORT, default 3000)
 - **Dev mode**: `npm run dev` - Builds and runs in one command
-- **Lint**: `npm run lint` - Runs ESLint on TypeScript files
 - **Test**: `npm run test` - Currently runs build as test
-- **Test client**: `npm run test-client` - Builds and runs the test client
+
+## Environment Variables
+
+- `AUDIUS_API_KEY` - API key for Audius REST API
+- `PORT` - HTTP server port (default: 3000)
 
 ## Architecture Overview
 
-This is an MCP (Model Context Protocol) server that provides LLM access to the Audius music platform via STDIO-based message transport.
+This is a **Code Mode** MCP server built with **Effect-TS**. It provides LLM access to the Audius music platform via two tools (`search` + `execute`) over Streamable HTTP transport.
+
+### Code Mode Pattern
+
+Instead of exposing 100+ individual tools (which bloats LLM context), this server uses the Cloudflare Code Mode approach:
+
+1. **search** — Discover API endpoints by querying the OpenAPI spec
+2. **execute** — Run JavaScript code in a QuickJS WASM sandbox with an authenticated `audius.request()` client
+
+### File Structure
+
+```
+src/
+├── index.ts                    # Entry point — Effect program, HTTP server
+├── AppConfig.ts                # Effect Config service (env vars)
+├── mcp/
+│   ├── McpSchema.ts            # MCP 2025-11-25 spec (Effect-TS port)
+│   ├── McpSerialization.ts     # JSON-RPC ↔ Effect RPC bridge
+│   ├── McpNotifications.ts     # Notification channels
+│   ├── McpServerTransport.ts   # Server-side Streamable HTTP transport
+│   └── McpServer.ts            # RPC handler wiring
+├── api/
+│   ├── SpecLoader.ts           # Fetch + parse Audius swagger.yaml
+│   ├── SpecIndex.ts            # Searchable index over parsed spec
+│   └── AudiusClient.ts         # HTTP client for Audius REST API
+├── tools/
+│   ├── SearchTool.ts           # search() tool
+│   └── ExecuteTool.ts          # execute() tool
+└── sandbox/
+    ├── Sandbox.ts              # QuickJS WASM sandbox
+    └── TypeGenerator.ts        # TS declarations from swagger spec
+```
 
 ### Key Architectural Patterns
 
-1. **Toolset System**: The codebase uses a modular toolset architecture where related tools are grouped together. Each toolset can be selectively enabled via command-line arguments and supports read/write separation.
+1. **Effect-TS Services**: Every component is an Effect service (`Context.Tag`) composed via `Layer`. The entry point provides all layers and starts the HTTP server.
 
-2. **SDK Client Singleton**: The `AudiusClient` class in `sdk-client.ts` provides a singleton wrapper around the Audius SDK, ensuring consistent API access throughout the application.
+2. **MCP Schema**: Full MCP 2025-11-25 protocol spec ported to Effect-TS using `@effect/rpc` and `effect/Schema`. Located in `src/mcp/McpSchema.ts`.
 
-3. **Tool Registration Pattern**: Each tool follows a consistent structure with:
-   - JSON Schema definition for parameters
-   - Handler function that accepts typed arguments and `RequestHandlerExtra`
-   - Response formatting using `utils/response.ts` helpers
+3. **McpSerialization Bridge**: Translates between Effect RPC's internal message format (`_tag: "Request"/"Exit"`) and MCP's JSON-RPC wire format (`jsonrpc: "2.0"`). Two variants: `mcpJson` (HTTP) and `mcpNdJson` (STDIO).
 
-4. **Resource URI Pattern**: Resources use URIs like `audius://track/{id}` for accessing Audius entities.
+4. **QuickJS Sandbox**: LLM-generated code runs in a WASM-isolated QuickJS context with:
+   - `audius.request(method, path, options?)` host function
+   - `console.log()` capture
+   - Memory and execution time limits
+   - Fresh context per execution (no state leakage)
 
-5. **Error Handling**: Consistent try-catch pattern with formatted error responses using `createTextResponse(error, true)`.
+5. **API Spec Layer**: At startup, fetches the Audius OpenAPI spec, resolves all `$ref` references, and builds a searchable index. The search tool queries this index.
 
-### Command-Line Options
+### Transport
 
-- `--read-only`: Enables read-only mode, disabling write operations
-- `--toolsets`: Comma-separated list of toolsets to enable (e.g., `tracks,users,search`)
-
-### Available Toolsets
-
-tracks, users, playlists, albums, search, social, comments, track-management, playlist-management, messaging, analytics, blockchain, monetization, notifications, core, oauth
-
-Notes:
-- The `albums` toolset provides album-specific functionality (get album details, tracks, and user albums).
-- The `core` toolset provides URL resolution and SDK version info.
-- The `oauth` toolset provides OAuth authentication flow tools.
+Streamable HTTP on a single `/mcp` endpoint:
+- `POST /mcp` — JSON-RPC requests
+- `DELETE /mcp` — terminate session
+- Session ID via `MCP-Session-Id` header
+- Protocol version: `2025-11-25`
 
 ### Important Implementation Notes
 
-1. **Missing Types**: The codebase references `RequestHandlerExtra` and other types from `../types/index.js` which doesn't exist. When implementing new tools, use the pattern from existing tools.
+1. **Effect service pattern**: Access services via `yield* ServiceTag` in `Effect.gen`. All handlers return `Effect.Effect<T, E, R>`.
 
-2. **Console Output**: All console.log calls are redirected to console.error to avoid interfering with STDIO-based MCP communication.
+2. **Tool handlers**: Return `CallToolResult` from `McpSchema.ts`. Errors go in `content` with `isError: true` (tool-level), not protocol-level.
 
-3. **Response Formatting**: Always use the helpers in `utils/response.ts` for consistent response formatting:
-   - `createTextResponse()` for text responses
-   - `createImageResponse()` for images
-   - `createResourceResponse()` for resources
-   - `createMixedResponse()` for combined content
-
-4. **Zod Validation**: The toolset system converts JSON Schemas to Zod schemas for runtime validation. Ensure all tool parameters have proper JSON Schema definitions.
-
-5. **Async/Await**: All tool handlers are async functions. Use try-catch blocks for error handling.
-
-6. **SDK Client Usage**: Access the Audius SDK through the singleton:
-   ```typescript
-   const client = AudiusClient.getInstance();
-   const result = await client.someMethod(params);
-   ```
+3. **No old SDK**: Direct REST API calls via `AudiusClient.request(method, path, options)`. No `@audius/sdk`.

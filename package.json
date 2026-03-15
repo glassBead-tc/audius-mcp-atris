@@ -1,7 +1,7 @@
 {
   "name": "audius-mcp-atris",
   "version": "2.4.0",
-  "description": "Atris MCP - STDIO-based Model Context Protocol integration for Audius music platform",
+  "description": "Audius MCP Server — Code Mode with Effect-TS",
   "main": "build/index.js",
   "type": "module",
   "bin": {
@@ -42,14 +42,16 @@
     "CHANGELOG.md"
   ],
   "dependencies": {
-    "@audius/sdk": "^8.0.1",
-    "@modelcontextprotocol/sdk": "^1.10.2",
-    "dotenv": "^16.3.1",
-    "zod": "^3.22.4"
+    "@effect/platform": "^0.94.5",
+    "@effect/platform-node": "^0.104.1",
+    "@effect/rpc": "^0.73.0",
+    "effect": "^3.19.18",
+    "quickjs-emscripten": "^0.31.0",
+    "yaml": "^2.7.0"
   },
   "devDependencies": {
     "@types/node": "^20.10.5",
-    "typescript": "^5.3.3"
+    "typescript": "^5.7.0"
   },
   "packageManager": "yarn@4.6.0+sha512.5383cc12567a95f1d668fbe762dfe0075c595b4bfff433be478dbbe24e05251a8e8c3eb992a986667c1d53b6c3a9c85b8398c35a960587fbd9fa3a0915406728"
 }

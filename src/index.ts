@@ -1,68 +1,106 @@
 #!/usr/bin/env node
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { createServer } from './server.js';
-import { config } from './config.js';
+/**
+ * Audius MCP Server — Code Mode entry point.
+ *
+ * Composes all Effect layers and starts the Streamable HTTP server.
+ *
+ * Environment variables:
+ * - AUDIUS_API_KEY: API key for Audius REST API
+ * - PORT: HTTP server port (default: 3000)
+ */
+import { Effect, Fiber, Layer, Logger, LogLevel, Runtime } from "effect"
+import { AppConfig, AppConfigLive } from "./AppConfig.js"
+import { SpecLoaderLive } from "./api/SpecLoader.js"
+import { SpecIndex, SpecIndexLive } from "./api/SpecIndex.js"
+import { AudiusClientLive } from "./api/AudiusClient.js"
+import { TypeGeneratorLive } from "./sandbox/TypeGenerator.js"
+import { Sandbox, SandboxLive } from "./sandbox/Sandbox.js"
+import { createHandler } from "./mcp/McpServer.js"
+import { startServer } from "./mcp/McpServerTransport.js"
 
-// Parse command line arguments
-const argv = process.argv.slice(2);
-const readOnlyArg = argv.includes('--read-only');
-const toolsetsArg = argv.find(arg => arg.startsWith('--toolsets='));
-const enabledToolsets = toolsetsArg 
-  ? toolsetsArg.split('=')[1].split(',') 
-  : ['all'];
+// ---------------------------------------------------------------------------
+// Layer composition
+// ---------------------------------------------------------------------------
 
-// Redirect console.log to console.error to avoid interfering with MCP messages
-const originalConsoleLog = console.log;
-console.log = function(...args: any[]) {
-  console.error(...args);
-};
+// SpecLoader is a shared dependency — build it once
+const SpecLoaderLayer = SpecLoaderLive
 
-// Display basic info
-console.error(`Starting ${config.server.name} v${config.server.version}`);
-console.error(`Environment: ${config.audius.environment}`);
-console.error(`STDIO transport only (v2.0.0+)`);
-console.error(`Read-only mode: ${readOnlyArg ? 'enabled' : 'disabled'}`);
-console.error(`Enabled toolsets: ${enabledToolsets.join(', ')}`);
+// SpecIndex depends on SpecLoader
+const SpecIndexLayer = SpecIndexLive.pipe(
+  Layer.provide(SpecLoaderLayer)
+)
 
-// Main function
-async function main() {
-  try {
-    // Create MCP server with toolset options
-    const server = createServer({
-      enabledToolsets,
-      readOnly: readOnlyArg
-    });
-    
-    // Create the transport layer - exclusively using STDIO for all capabilities
-    // This enables compatibility with services like Smithery that handle HTTP transport
-    const transport = new StdioServerTransport();
-    
-    // Connect the server to the transport
-    await server.connect(transport);
-    
-    console.error('MCP Server running with stdio transport...');
-    
-    // Handle process termination
-    const cleanup = async () => {
-      console.error('Shutting down...');
-      try {
-        await server.close();
-        console.error('Server closed successfully');
-      } catch (error) {
-        console.error('Error during shutdown:', error);
-      }
-      process.exit(0);
-    };
-    
-    // Register signal handlers
-    process.on('SIGINT', cleanup);
-    process.on('SIGTERM', cleanup);
-    
-  } catch (error) {
-    console.error('Fatal server error:', error);
-    process.exit(1);
+// TypeGenerator depends on SpecLoader
+const TypeGeneratorLayer = TypeGeneratorLive.pipe(
+  Layer.provide(SpecLoaderLayer)
+)
+
+// AudiusClient depends on AppConfig
+const AudiusClientLayer = AudiusClientLive.pipe(
+  Layer.provide(AppConfigLive)
+)
+
+// Sandbox depends on AudiusClient + TypeGenerator
+const SandboxLayer = SandboxLive.pipe(
+  Layer.provide(Layer.merge(AudiusClientLayer, TypeGeneratorLayer))
+)
+
+// Full application layer — provides AppConfig, SpecIndex, Sandbox
+const AppLayer = Layer.mergeAll(
+  AppConfigLive,
+  SpecIndexLayer,
+  SandboxLayer
+)
+
+// ---------------------------------------------------------------------------
+// Main program
+// ---------------------------------------------------------------------------
+
+const program = Effect.gen(function* () {
+  const config = yield* AppConfig
+
+  // Create the Effect-based handler
+  const effectHandler = createHandler()
+
+  // Build a runtime with all services provided, so we can run Effects
+  // from within the async HTTP handler
+  const runtime = yield* Effect.runtime<SpecIndex | Sandbox>()
+
+  // Bridge Effect handler → async handler for the transport
+  const asyncHandler = async (decoded: unknown): Promise<unknown> => {
+    return Runtime.runPromise(runtime)(effectHandler(decoded))
   }
-}
 
-// Start the server
-main();
+  // Start HTTP server (acquireRelease handles cleanup on interruption)
+  yield* startServer({
+    port: config.port,
+    handler: asyncHandler
+  })
+
+  yield* Effect.logInfo(`Audius MCP Server (Code Mode) listening on port ${config.port}`)
+  yield* Effect.logInfo("Transport: Streamable HTTP at POST /mcp")
+  yield* Effect.logInfo("Tools: search, execute")
+
+  // Keep running until interrupted (SIGINT/SIGTERM trigger Effect interruption)
+  yield* Effect.never
+})
+
+// ---------------------------------------------------------------------------
+// Run
+// ---------------------------------------------------------------------------
+
+const runnable = program.pipe(
+  Effect.scoped,
+  Effect.provide(AppLayer),
+  Logger.withMinimumLogLevel(LogLevel.Info)
+)
+
+const fiber = Effect.runFork(runnable)
+
+// Graceful shutdown: interrupt the fiber on SIGINT/SIGTERM,
+// which triggers acquireRelease to close the HTTP server
+const shutdown = () => {
+  Effect.runFork(Fiber.interrupt(fiber))
+}
+process.on("SIGINT", shutdown)
+process.on("SIGTERM", shutdown)
