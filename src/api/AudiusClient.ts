@@ -40,6 +40,10 @@ export const AudiusClientLive: Layer.Layer<AudiusClient, never, AppConfig> = Lay
       options?: RequestOptions
     ): Effect.Effect<unknown, Error> =>
       Effect.gen(function* () {
+        // Validate path to prevent SSRF via host hijacking
+        if (typeof path !== "string" || !path.startsWith("/") || path.includes("@")) {
+          return yield* Effect.fail(new Error(`Invalid API path: ${path}`))
+        }
         // Build URL with query params
         const url = new URL(`${BASE_URL}${path}`)
         if (options?.query) {

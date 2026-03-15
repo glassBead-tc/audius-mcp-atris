@@ -57,7 +57,7 @@ export const startServer = (
 
       const server = Http.createServer(async (req, res) => {
       // CORS headers
-      res.setHeader("Access-Control-Allow-Origin", "*")
+      res.setHeader("Access-Control-Allow-Origin", process.env["MCP_ALLOW_ORIGIN"] ?? "http://localhost")
       res.setHeader("Access-Control-Allow-Methods", "POST, DELETE, OPTIONS")
       res.setHeader("Access-Control-Allow-Headers", "Content-Type, MCP-Session-Id, MCP-Protocol-Version")
       res.setHeader("Access-Control-Expose-Headers", "MCP-Session-Id, MCP-Protocol-Version")
@@ -102,8 +102,21 @@ export const startServer = (
         }
 
         // Read body
+        const MAX_BODY_BYTES = 1 * 1024 * 1024 // 1MB limit
         const chunks: Buffer[] = []
+        let totalBytes = 0
         for await (const chunk of req) {
+          totalBytes += (chunk as Buffer).length
+          if (totalBytes > MAX_BODY_BYTES) {
+            res.writeHead(413, { "Content-Type": "application/json" })
+            res.end(JSON.stringify({
+              jsonrpc: "2.0",
+              id: null,
+              error: { code: -32700, message: "Request body too large" }
+            }))
+            req.destroy()
+            return
+          }
           chunks.push(chunk as Buffer)
         }
         const body = Buffer.concat(chunks).toString("utf-8")

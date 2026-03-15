@@ -111,7 +111,13 @@ export const SpecLoaderLive: Layer.Layer<SpecLoader, Error> = Layer.effect(
       try: () => fetch(SPEC_URL),
       catch: (e) => new Error(`Failed to fetch spec: ${e}`)
     })
-
+    if (!response.ok) {
+      const errText = yield* Effect.tryPromise({
+        try: () => response.text(),
+        catch: () => new Error("Failed to read error body")
+      })
+      return yield* Effect.fail(new Error(`Failed to fetch spec: HTTP ${response.status} — ${errText.slice(0, 200)}`))
+    }
     const text = yield* Effect.tryPromise({
       try: () => response.text(),
       catch: (e) => new Error(`Failed to read spec body: ${e}`)

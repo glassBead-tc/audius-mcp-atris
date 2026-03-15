@@ -21,7 +21,8 @@ export const AppConfigLive: Layer.Layer<AppConfig> = Layer.effect(
   AppConfig,
   Effect.sync(() => {
     const apiKey = process.env["AUDIUS_API_KEY"] ?? ""
-    const port = parseInt(process.env["PORT"] ?? "3000", 10)
+    const portParsed = parseInt(process.env["PORT"] ?? "3000", 10)
+    const port = Number.isFinite(portParsed) ? portParsed : 3000
     return { apiKey, port }
   })
 )
