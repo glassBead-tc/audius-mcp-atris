@@ -121,13 +121,29 @@ export const startServer = (
           // Decode JSON-RPC → internal format
           const decoded = parser.decode(body)
 
+          // Check if batch contains an initialize request
+          const isInitialize = decoded.some(
+            (m) => (m as Record<string, unknown>)["tag"] === "initialize"
+          )
+
+          // Validate session on non-initialize requests
+          if (!isInitialize) {
+            const sessionId = req.headers["mcp-session-id"] as string | undefined
+            if (!sessionId || !sessions.has(sessionId)) {
+              res.writeHead(404, { "Content-Type": "application/json" })
+              res.end(JSON.stringify({
+                jsonrpc: "2.0",
+                id: null,
+                error: { code: -32600, message: "Session not found. Send initialize first." }
+              }))
+              return
+            }
+          }
+
           // Process each message
           const responses: unknown[] = []
           for (const msg of decoded) {
             const internal = msg as Record<string, unknown>
-
-            // Check if this is the initialize request
-            const isInitialize = internal["tag"] === "initialize"
 
             // Handle the request
             let result: unknown
@@ -159,7 +175,7 @@ export const startServer = (
             }
 
             // Create session on initialize
-            if (isInitialize) {
+            if (internal["tag"] === "initialize") {
               const sessionId = config.onSessionStart?.() ?? generateSessionId()
               sessions.set(sessionId, { createdAt: Date.now() })
               res.setHeader("MCP-Session-Id", sessionId)
@@ -186,6 +202,7 @@ export const startServer = (
           res.writeHead(400, { "Content-Type": "application/json" })
           res.end(JSON.stringify({
             jsonrpc: "2.0",
+            id: null,
             error: { code: -32700, message: `Parse error: ${e}` }
           }))
         }
