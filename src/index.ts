@@ -8,7 +8,7 @@
  * - AUDIUS_API_KEY: API key for Audius REST API
  * - PORT: HTTP server port (default: 3000)
  */
-import { Effect, Layer, Logger, LogLevel, Runtime } from "effect"
+import { Effect, Fiber, Layer, Logger, LogLevel, Runtime } from "effect"
 import { AppConfig, AppConfigLive } from "./AppConfig.js"
 import { SpecLoaderLive } from "./api/SpecLoader.js"
 import { SpecIndex, SpecIndexLive } from "./api/SpecIndex.js"
@@ -71,8 +71,8 @@ const program = Effect.gen(function* () {
     return Runtime.runPromise(runtime)(effectHandler(decoded))
   }
 
-  // Start HTTP server
-  const server = yield* startServer({
+  // Start HTTP server (acquireRelease handles cleanup on interruption)
+  yield* startServer({
     port: config.port,
     handler: asyncHandler
   })
@@ -81,27 +81,26 @@ const program = Effect.gen(function* () {
   yield* Effect.logInfo("Transport: Streamable HTTP at POST /mcp")
   yield* Effect.logInfo("Tools: search, execute")
 
-  // Keep running until interrupted
-  yield* Effect.async<never, never>(() => {
-    const shutdown = () => {
-      server.close()
-      process.exit(0)
-    }
-    process.on("SIGINT", shutdown)
-    process.on("SIGTERM", shutdown)
-  })
+  // Keep running until interrupted (SIGINT/SIGTERM trigger Effect interruption)
+  yield* Effect.never
 })
 
 // ---------------------------------------------------------------------------
 // Run
 // ---------------------------------------------------------------------------
 
-Effect.runPromise(
-  program.pipe(
-    Effect.provide(AppLayer),
-    Logger.withMinimumLogLevel(LogLevel.Info)
-  )
-).catch((error) => {
-  console.error("Fatal error:", error)
-  process.exit(1)
-})
+const runnable = program.pipe(
+  Effect.scoped,
+  Effect.provide(AppLayer),
+  Logger.withMinimumLogLevel(LogLevel.Info)
+)
+
+const fiber = Effect.runFork(runnable)
+
+// Graceful shutdown: interrupt the fiber on SIGINT/SIGTERM,
+// which triggers acquireRelease to close the HTTP server
+const shutdown = () => {
+  Effect.runFork(Fiber.interrupt(fiber))
+}
+process.on("SIGINT", shutdown)
+process.on("SIGTERM", shutdown)

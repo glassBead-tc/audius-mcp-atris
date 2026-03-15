@@ -8,7 +8,7 @@
  * Session management via MCP-Session-Id header.
  * Uses mcpJson serialization bridge for JSON-RPC ↔ Effect RPC translation.
  */
-import { Effect } from "effect"
+import { Effect, Scope } from "effect"
 import * as Http from "node:http"
 import { mcpJson } from "./McpSerialization.js"
 
@@ -50,11 +50,12 @@ const sessions = new Map<string, { createdAt: number }>()
  */
 export const startServer = (
   config: McpTransportConfig
-): Effect.Effect<Http.Server, Error> =>
-  Effect.async<Http.Server, Error>((resume) => {
-    const parser = mcpJson.unsafeMake()
+): Effect.Effect<Http.Server, Error, Scope.Scope> =>
+  Effect.acquireRelease(
+    Effect.async<Http.Server, Error>((resume) => {
+      const parser = mcpJson.unsafeMake()
 
-    const server = Http.createServer(async (req, res) => {
+      const server = Http.createServer(async (req, res) => {
       // CORS headers
       res.setHeader("Access-Control-Allow-Origin", "*")
       res.setHeader("Access-Control-Allow-Methods", "POST, DELETE, OPTIONS")
@@ -214,11 +215,14 @@ export const startServer = (
       res.end(JSON.stringify({ error: "Method not allowed" }))
     })
 
-    server.listen(config.port, () => {
-      resume(Effect.succeed(server))
-    })
+      server.listen(config.port, () => {
+        resume(Effect.succeed(server))
+      })
 
-    server.on("error", (err) => {
-      resume(Effect.fail(new Error(`Server error: ${err.message}`)))
-    })
-  })
+      server.on("error", (err) => {
+        resume(Effect.fail(new Error(`Server error: ${err.message}`)))
+      })
+    }),
+    // Release: close the server on interruption/finalization
+    (server) => Effect.sync(() => { server.close() })
+  )
