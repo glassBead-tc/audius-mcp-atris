@@ -236,8 +236,8 @@ export class Toolset {
           tool.name,  // Name of the tool
           tool.description,  // Description
           zodSchema,  // Schema as a simple object with Zod validators
-          async (args) => {  // Handler function 
-            return await tool.handler(args, {} as any);
+          async (args, extra) => {  // Handler function
+            return await tool.handler(args, extra);
           }
         );
       } catch (error) {
@@ -251,14 +251,14 @@ export class Toolset {
         try {
           // Convert JSON Schema to Zod schema
           const zodSchema = jsonSchemaToZod(tool.schema);
-          
+
           // Register the tool with the MCP server
           server.tool(
             tool.name,  // Name of the tool
             tool.description,  // Description
             zodSchema,  // Schema as a simple object with Zod validators
-            async (args) => {  // Handler function
-              return await tool.handler(args, {} as any);
+            async (args, extra) => {  // Handler function
+              return await tool.handler(args, extra);
             }
           );
         } catch (error) {

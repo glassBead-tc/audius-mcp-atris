@@ -1,27 +1,23 @@
 /**
  * Type definitions for the Audius MCP server
+ *
+ * Re-exports MCP SDK types so tool files have a single import path.
  */
 
+import { RequestHandlerExtra as _SDKRequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
+import { ServerRequest, ServerNotification } from '@modelcontextprotocol/sdk/types.js';
+import { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+
 /**
- * Extra parameters passed to request handlers
+ * Server-scoped RequestHandlerExtra with generics pre-filled.
  */
-export interface RequestHandlerExtra {
-  /**
-   * AbortSignal for cancelling the request
-   */
-  signal?: AbortSignal;
-  
-  /**
-   * Additional context that might be passed
-   */
-  [key: string]: any;
-}
+export type RequestHandlerExtra = _SDKRequestHandlerExtra<ServerRequest, ServerNotification>;
 
 /**
  * Tool handler function type
  */
 export interface ToolHandler<T = any> {
-  (params: T, extra?: RequestHandlerExtra): Promise<any>;
+  (params: T, extra: RequestHandlerExtra): Promise<CallToolResult>;
 }
 
 /**
