@@ -94,6 +94,7 @@ export const startServer = (
           res.writeHead(415, { "Content-Type": "application/json" })
           res.end(JSON.stringify({
             jsonrpc: "2.0",
+            id: null,
             error: { code: -32700, message: "Content-Type must be application/json" }
           }))
           return
@@ -110,6 +111,7 @@ export const startServer = (
           res.writeHead(400, { "Content-Type": "application/json" })
           res.end(JSON.stringify({
             jsonrpc: "2.0",
+            id: null,
             error: { code: -32700, message: "Empty request body" }
           }))
           return
