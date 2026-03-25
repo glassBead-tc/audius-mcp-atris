@@ -27,4 +27,4 @@ pnpm-debug.log
 .mcp.json
 
 # Effect-TS docs search index (generated, 21MB)
-.claude/skills/effect-ts/data/
+.claude/skills/effect-ts/data/cloudflare-serverside-mcp-ref/
