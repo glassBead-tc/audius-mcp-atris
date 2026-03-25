@@ -37,7 +37,26 @@ echo 'AUDIUS_API_KEY=your_key_here' > .env
 pnpm dev
 ```
 
-Get an API key at [audius.co/settings](https://audius.co/settings).
+## Getting API Keys
+
+### Audius API Key (required)
+
+1. Go to [audius.co/settings](https://audius.co/settings) and sign in (or create an account)
+2. Scroll to **Developer Apps** and create a new app
+3. Copy the **API Key** — this goes in your `.env` as `AUDIUS_API_KEY`
+4. Optionally copy the **API Secret** if you plan to do write operations (uploads, favorites)
+
+Alternatively, get credentials at [api.audius.co/plans](https://api.audius.co/plans).
+
+### The Graph API Key (optional, for subgraph tool)
+
+The subgraph tool queries on-chain protocol data (staking, governance, nodes). It requires a Graph API key:
+
+1. Go to [thegraph.com/studio](https://thegraph.com/studio) and sign in
+2. Create an API key ([video tutorial](https://www.youtube.com/watch?v=UrfIpm-Vlgs))
+3. Add it to your `.env` as `GRAPH_API_KEY`
+
+Without this key, the subgraph tool will return an auth error. All other tools work fine without it.
 
 ## Connect to Claude
 
