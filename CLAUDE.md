@@ -4,10 +4,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Build & Development Commands
 
-- **Build**: `npm run build` - Compiles TypeScript to JavaScript
-- **Start**: `npm run start` - Runs the compiled server (HTTP on PORT, default 3000)
-- **Dev mode**: `npm run dev` - Builds and runs in one command
-- **Test**: `npm run test` - Currently runs build as test
+- **Build**: `pnpm build` - Compiles TypeScript to JavaScript
+- **Start**: `pnpm start` - Runs the compiled server (HTTP on PORT, default 3000)
+- **Dev mode**: `pnpm dev` - Builds and runs in one command
+- **Test**: `pnpm test` - Currently runs build as test
 
 ## Environment Variables
 

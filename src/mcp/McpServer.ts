@@ -13,8 +13,12 @@
 import { Effect } from "effect"
 import { SpecIndex } from "../api/SpecIndex.js"
 import { Sandbox } from "../sandbox/Sandbox.js"
+import { AppConfig } from "../AppConfig.js"
+import { AudiusClient } from "../api/AudiusClient.js"
 import { searchToolDefinition, handleSearch } from "../tools/SearchTool.js"
 import { executeToolDefinition, handleExecute } from "../tools/ExecuteTool.js"
+import { playToolDefinition, handlePlay } from "../tools/PlayTool.js"
+import { subgraphToolDefinition, handleSubgraph } from "../tools/SubgraphTool.js"
 
 // ---------------------------------------------------------------------------
 // Server info
@@ -50,6 +54,16 @@ This server provides access to the Audius music platform API through two tools:
 ### Get track details
 1. execute({ code: "return await audius.request('GET', '/tracks/D7KyD')" })
 
+### Play a track
+- play({ query: "Tiny Little Adiantum" }) — searches and opens in desktop app or browser
+- play({ trackId: "D7KyD" }) — opens specific track by ID
+
+## Play music
+The play tool opens tracks in the Audius desktop app (if installed) or browser.
+
+## On-chain data
+The subgraph tool queries protocol data (staking, governance, nodes) via The Graph.
+
 ## Available in the sandbox
 - \`audius.request(method, path, options?)\` — authenticated API calls
 - \`console.log()\` — output captured and returned
@@ -69,10 +83,10 @@ Use search({ tag: "<tag>" }) with: tracks, users, playlists, challenges, tips, a
  * Takes an internal Effect RPC message (decoded by McpSerialization)
  * and returns the response in internal format.
  */
-export type McpEffectHandler = (decoded: unknown) => Effect.Effect<unknown, never, SpecIndex | Sandbox>
+export type McpEffectHandler = (decoded: unknown) => Effect.Effect<unknown, never, AppConfig | SpecIndex | Sandbox | AudiusClient>
 
 export const createHandler = (): McpEffectHandler => {
-  return (decoded: unknown): Effect.Effect<unknown, never, SpecIndex | Sandbox> => {
+  return (decoded: unknown): Effect.Effect<unknown, never, AppConfig | SpecIndex | Sandbox | AudiusClient> => {
     const msg = decoded as Record<string, unknown>
     const tag = msg["tag"] as string
     const id = msg["id"] as string
@@ -101,7 +115,9 @@ export const createHandler = (): McpEffectHandler => {
         return Effect.succeed(makeResponse(id, {
           tools: [
             stripMake(searchToolDefinition),
-            stripMake(executeToolDefinition)
+            stripMake(executeToolDefinition),
+            stripMake(playToolDefinition),
+            stripMake(subgraphToolDefinition)
           ]
         }))
 
@@ -139,7 +155,7 @@ export const createHandler = (): McpEffectHandler => {
 function handleToolCall(
   id: string,
   payload: Record<string, unknown>
-): Effect.Effect<unknown, never, SpecIndex | Sandbox> {
+): Effect.Effect<unknown, never, AppConfig | SpecIndex | Sandbox | AudiusClient> {
   const name = payload["name"] as string
   const args = (payload["arguments"] as Record<string, unknown>) ?? {}
 
@@ -153,6 +169,18 @@ function handleToolCall(
     case "execute":
       return Effect.map(
         handleExecute(args),
+        (result) => makeResponse(id, result)
+      )
+
+    case "play":
+      return Effect.map(
+        handlePlay(args),
+        (result) => makeResponse(id, result)
+      )
+
+    case "subgraph":
+      return Effect.map(
+        handleSubgraph(args),
         (result) => makeResponse(id, result)
       )
 

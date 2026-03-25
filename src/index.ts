@@ -12,7 +12,7 @@ import { Effect, Fiber, Layer, Logger, LogLevel, Runtime } from "effect"
 import { AppConfig, AppConfigLive } from "./AppConfig.js"
 import { SpecLoaderLive } from "./api/SpecLoader.js"
 import { SpecIndex, SpecIndexLive } from "./api/SpecIndex.js"
-import { AudiusClientLive } from "./api/AudiusClient.js"
+import { AudiusClient, AudiusClientLive } from "./api/AudiusClient.js"
 import { TypeGeneratorLive } from "./sandbox/TypeGenerator.js"
 import { Sandbox, SandboxLive } from "./sandbox/Sandbox.js"
 import { createHandler } from "./mcp/McpServer.js"
@@ -45,11 +45,12 @@ const SandboxLayer = SandboxLive.pipe(
   Layer.provide(Layer.merge(AudiusClientLayer, TypeGeneratorLayer))
 )
 
-// Full application layer — provides AppConfig, SpecIndex, Sandbox
+// Full application layer — provides AppConfig, SpecIndex, Sandbox, AudiusClient
 const AppLayer = Layer.mergeAll(
   AppConfigLive,
   SpecIndexLayer,
-  SandboxLayer
+  SandboxLayer,
+  AudiusClientLayer
 )
 
 // ---------------------------------------------------------------------------
@@ -64,7 +65,7 @@ const program = Effect.gen(function* () {
 
   // Build a runtime with all services provided, so we can run Effects
   // from within the async HTTP handler
-  const runtime = yield* Effect.runtime<SpecIndex | Sandbox>()
+  const runtime = yield* Effect.runtime<AppConfig | SpecIndex | Sandbox | AudiusClient>()
 
   // Bridge Effect handler → async handler for the transport
   const asyncHandler = async (decoded: unknown): Promise<unknown> => {
@@ -79,7 +80,7 @@ const program = Effect.gen(function* () {
 
   yield* Effect.logInfo(`Audius MCP Server (Code Mode) listening on port ${config.port}`)
   yield* Effect.logInfo("Transport: Streamable HTTP at POST /mcp")
-  yield* Effect.logInfo("Tools: search, execute")
+  yield* Effect.logInfo("Tools: search, execute, play, subgraph")
 
   // Keep running until interrupted (SIGINT/SIGTERM trigger Effect interruption)
   yield* Effect.never
