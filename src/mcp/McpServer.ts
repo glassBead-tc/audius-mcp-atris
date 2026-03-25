@@ -19,6 +19,7 @@ import { searchToolDefinition, handleSearch } from "../tools/SearchTool.js"
 import { executeToolDefinition, handleExecute } from "../tools/ExecuteTool.js"
 import { playToolDefinition, handlePlay } from "../tools/PlayTool.js"
 import { subgraphToolDefinition, handleSubgraph } from "../tools/SubgraphTool.js"
+import { workflowsResource, WORKFLOWS_URI, WORKFLOWS_CONTENT } from "../resources/Workflows.js"
 
 // ---------------------------------------------------------------------------
 // Server info
@@ -64,6 +65,16 @@ The play tool opens tracks in the Audius desktop app (if installed) or browser.
 ## On-chain data
 The subgraph tool queries protocol data (staking, governance, nodes) via The Graph.
 
+## Advanced workflows
+The sandbox supports multi-step code that chains API calls. Examples:
+- **Genre Popularity Index** — distribute points across trending tracks with Pareto weighting, aggregate by genre
+- **Trending Snapshot** — mood distribution, avg BPM by genre, top artists from current trending
+- **Artist Social Graph** — map who an artist follows, their remix connections
+- **Deep Artist Comparison** — compare two artists across plays, engagement, genres, supporters
+- **Track Genealogy** — trace a track's remix lineage and catalog context
+
+These workflows run in a single execute call — no round trips needed.
+
 ## Available in the sandbox
 - \`audius.request(method, path, options?)\` — authenticated API calls
 - \`console.log()\` — output captured and returned
@@ -102,7 +113,8 @@ export const createHandler = (): McpEffectHandler => {
         return Effect.succeed(makeResponse(id, {
           protocolVersion: PROTOCOL_VERSION,
           capabilities: {
-            tools: {}
+            tools: {},
+            resources: {}
           },
           serverInfo: SERVER_INFO,
           instructions: INSTRUCTIONS
@@ -129,7 +141,23 @@ export const createHandler = (): McpEffectHandler => {
         return Effect.succeed(makeResponse(id, {}))
 
       case "resources/list":
-        return Effect.succeed(makeResponse(id, { resources: [] }))
+        return Effect.succeed(makeResponse(id, {
+          resources: [workflowsResource]
+        }))
+
+      case "resources/read": {
+        const uri = (payload ?? {})["uri"] as string
+        if (uri === WORKFLOWS_URI) {
+          return Effect.succeed(makeResponse(id, {
+            contents: [{
+              uri: WORKFLOWS_URI,
+              mimeType: "text/markdown",
+              text: WORKFLOWS_CONTENT
+            }]
+          }))
+        }
+        return Effect.succeed(makeErrorResponse(id, -32602, `Resource not found: ${uri}`))
+      }
 
       case "resources/templates/list":
         return Effect.succeed(makeResponse(id, { resourceTemplates: [] }))
