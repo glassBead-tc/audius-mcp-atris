@@ -1,5 +1,20 @@
 # Jules / Code Mode Audit for Atris
 
+> **Resolution status (2026-03-25):** This audit was conducted against the pre-rebuild codebase. The Code Mode rebuild (commit `8326a25`) addresses the findings as follows:
+>
+> | Finding | Severity | Status | How |
+> |---------|----------|--------|-----|
+> | Search contract (fixed filter vs code-over-spec) | Critical | **Resolved** | Search tool now provides structured filtering (tag/path/method/query) with full endpoint metadata and parameter schemas. Not code-over-spec (unnecessary at 207 endpoints vs Cloudflare's 2,500), but a proper discovery tool. |
+> | Execute type surface hidden from model | Critical | **Resolved** | TypeGenerator injects TS declarations into sandbox context. Execute tool description includes full `audius.request()` signature and examples. |
+> | Sandbox async semantics (multi-await) | High | **Resolved** | Replaced `newAsyncifiedFunction` (asyncify can only unwind WASM stack once) with `QuickJSDeferredPromise` pattern supporting unlimited chained awaits. |
+> | Transport correctness | High | **Resolved** | Session validation on non-initialize requests, content-type enforcement (415), body size limit (1MB), CORS headers, proper JSON-RPC error codes with `id: null`. |
+> | Token discipline | High | **Resolved** | 4 tool definitions (~1,000 tokens) vs 207 individual tools (~20,000 tokens). |
+> | SSRF / security | High | **Resolved** | Path validation (must start with `/`, no `@`), hardcoded base URL, no `fetch` in sandbox, 64MB memory cap, 30s timeout. |
+> | Agent guidance / instructions | High | **Resolved** | Server sends structured instructions on initialize with workflow examples, tool descriptions include usage patterns. |
+> | Protocol drift (MCP version) | Medium | **Resolved** | Implements MCP 2025-11-25 spec. |
+>
+> Remaining items (not yet addressed): OAuth/auth flow, response truncation, code-over-spec search variant.
+
 ## Executive Summary
 The current `main` branch is not Cloudflare-style server-side Code Mode in the ways that matter most to an agent. It does expose two tools, but `search` is a fixed filter wrapper instead of code over a typed spec, `execute` hides weak types behind an internal global the model never sees, and the transport/security/docs layers add protocol drift and misleading agent guidance on top. QuickJS is not the problem by itself; [Cloudflare's Code Mode docs](https://developers.cloudflare.com/agents/api-reference/codemode/) explicitly allow custom executors. The problem is that Atris does not deliver the same search contract, type surface, sandbox semantics, transport correctness, or token discipline.
 
