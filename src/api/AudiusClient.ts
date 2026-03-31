@@ -17,7 +17,7 @@ import { hexToBytes } from "@noble/hashes/utils.js"
 import { AppConfig } from "../AppConfig.js"
 
 const BASE_URL = "https://api.audius.co/v1"
-const COMMS_BASE_URL = "https://api.audius.co"
+const COMMS_BASE_URL = "https://api.audius.co/comms"
 
 export interface RequestOptions {
   readonly query?: Record<string, string | number | boolean | undefined>
