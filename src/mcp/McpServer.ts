@@ -77,8 +77,18 @@ These workflows run in a single execute call — no round trips needed.
 
 ## Available in the sandbox
 - \`audius.request(method, path, options?)\` — authenticated API calls
+- \`audius.comms(method, path, options?)\` — comms/messaging API calls (auth handled automatically)
 - \`console.log()\` — output captured and returned
 - Return values are automatically captured
+
+## Messaging & Blasts
+The comms system enables direct messaging and broadcast blasts.
+- audius.comms('POST', '/mutate', { body: rpcPayload }) — send messages, blasts, reactions
+- audius.comms('GET', '/chats', { query: { timestamp } }) — list chats
+- audius.comms('GET', '/chats/unread', { query: { timestamp } }) — unread count
+- audius.comms('GET', '/blasts', { query: { timestamp } }) — sent blasts
+
+Blast audiences: follower_audience, tipper_audience, remixer_audience, customer_audience, coin_holder_audience
 
 ## API Categories
 Use search({ tag: "<tag>" }) with: tracks, users, playlists, challenges, tips, and more.
