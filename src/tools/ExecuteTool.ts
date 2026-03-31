@@ -18,9 +18,38 @@ export const executeToolDefinition = Tool.make({
   title: "Execute Audius API Code",
   description:
     "Execute JavaScript code against the Audius API in an isolated sandbox. " +
-    "An authenticated `audius` client is available with `audius.request(method, path, options?)`. " +
+    "An authenticated `audius` client is available with:\n" +
+    "- `audius.request(method, path, options?)` — call Audius REST API endpoints\n" +
+    "- `audius.comms(method, path, options?)` — call Audius comms/messaging endpoints (blast, inbox, chat). Auth is handled automatically.\n\n" +
     "Use `console.log()` to output intermediate results. The return value of the last expression is captured. " +
-    "Use the search tool first to discover available endpoints.",
+    "Use the search tool first to discover available endpoints.\n\n" +
+    "### Send a blast message to all followers\n" +
+    "execute({ code: `\n" +
+    "  const payload = {\n" +
+    "    method: \"chat.blast\",\n" +
+    "    params: {\n" +
+    "      blast_id: Date.now().toString(36) + Math.random().toString(36).slice(2),\n" +
+    "      audience: \"follower_audience\",\n" +
+    "      message: \"Hello from Atris!\"\n" +
+    "    },\n" +
+    "    current_user_id: \"E2AjR\",\n" +
+    "    timestamp: Date.now()\n" +
+    "  };\n" +
+    "  return await audius.comms('POST', '/mutate', { body: payload });\n" +
+    "`})\n\n" +
+    "### Read your inbox\n" +
+    "execute({ code: `\n" +
+    "  return await audius.comms('GET', '/chats', { query: { timestamp: Date.now() } });\n" +
+    "`})\n\n" +
+    "### Get unread message count\n" +
+    "execute({ code: `\n" +
+    "  return await audius.comms('GET', '/chats/unread', { query: { timestamp: Date.now() } });\n" +
+    "`})\n\n" +
+    "### Get blast messages sent\n" +
+    "execute({ code: `\n" +
+    "  return await audius.comms('GET', '/blasts', { query: { timestamp: Date.now() } });\n" +
+    "`})\n\n" +
+    "Blast audience options: follower_audience, tipper_audience, remixer_audience, customer_audience, coin_holder_audience",
   inputSchema: {
     type: "object",
     properties: {
