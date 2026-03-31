@@ -98,48 +98,54 @@ export const SandboxLive: Layer.Layer<Sandbox, Error, AudiusClient | TypeGenerat
             logFn.dispose()
             consoleHandle.dispose()
 
-            // Inject audius.request using deferred promises.
+            // Helper: create a QuickJS host function that bridges to an
+            // Effect-based API client method via deferred promises.
             // Each call creates a QuickJSDeferredPromise, kicks off the
             // host-side API call, and returns the promise handle to the VM.
-            // When the API call resolves, we settle the deferred and pump
-            // executePendingJobs to advance the VM's promise chain.
+            const bridgeHostFn = (
+              name: string,
+              clientMethod: (method: string, path: string, options?: any) => Effect.Effect<unknown, Error>
+            ) => {
+              const fn = ctx.newFunction(name, (...args) => {
+                const method = ctx.dump(args[0]) as string
+                const path = ctx.dump(args[1]) as string
+                const options = args[2] ? ctx.dump(args[2]) as Record<string, unknown> : undefined
+
+                const deferred = ctx.newPromise()
+
+                const hostPromise = Effect.runPromise(
+                  clientMethod(method, path, options as any)
+                ).then(
+                  (result) => {
+                    const jsonStr = JSON.stringify(result)
+                    const strHandle = ctx.newString(jsonStr)
+                    deferred.resolve(strHandle)
+                    strHandle.dispose()
+                    ctx.runtime.executePendingJobs()
+                  },
+                  (e) => {
+                    const errorMsg = e instanceof Error ? e.message : String(e)
+                    const jsonStr = JSON.stringify({ error: errorMsg })
+                    const strHandle = ctx.newString(jsonStr)
+                    deferred.resolve(strHandle)
+                    strHandle.dispose()
+                    ctx.runtime.executePendingJobs()
+                  }
+                )
+
+                pendingPromises.push(hostPromise)
+
+                return deferred.handle
+              })
+              ctx.setProp(audiusHandle, name, fn)
+              fn.dispose()
+            }
+
             const audiusHandle = ctx.newObject()
-            const requestFn = ctx.newFunction("request", (...args) => {
-              const method = ctx.dump(args[0]) as string
-              const path = ctx.dump(args[1]) as string
-              const options = args[2] ? ctx.dump(args[2]) as Record<string, unknown> : undefined
+            bridgeHostFn("request", audiusClient.request)
+            bridgeHostFn("comms", audiusClient.commsRequest)
 
-              const deferred = ctx.newPromise()
-
-              // Kick off the host-side API call asynchronously
-              const hostPromise = Effect.runPromise(
-                audiusClient.request(method, path, options as any)
-              ).then(
-                (result) => {
-                  const jsonStr = JSON.stringify(result)
-                  const strHandle = ctx.newString(jsonStr)
-                  deferred.resolve(strHandle)
-                  strHandle.dispose()
-                  // Pump the VM event loop so the .then() handlers run
-                  ctx.runtime.executePendingJobs()
-                },
-                (e) => {
-                  const errorMsg = e instanceof Error ? e.message : String(e)
-                  const jsonStr = JSON.stringify({ error: errorMsg })
-                  const strHandle = ctx.newString(jsonStr)
-                  deferred.resolve(strHandle)
-                  strHandle.dispose()
-                  ctx.runtime.executePendingJobs()
-                }
-              )
-
-              pendingPromises.push(hostPromise)
-
-              return deferred.handle
-            })
-            ctx.setProp(audiusHandle, "request", requestFn)
             ctx.setProp(ctx.global, "audius", audiusHandle)
-            requestFn.dispose()
             audiusHandle.dispose()
 
             // Inject user code as a global string to avoid template literal injection
@@ -159,6 +165,12 @@ export const SandboxLive: Layer.Layer<Sandbox, Error, AudiusClient | TypeGenerat
               var _origRequest = audius.request;
               audius.request = function(method, path, options) {
                 return _origRequest(method, path, options)
+                  .then(function(jsonStr) { return JSON.parse(jsonStr); });
+              };
+
+              var _origComms = audius.comms;
+              audius.comms = function(method, path, options) {
+                return _origComms(method, path, options)
                   .then(function(jsonStr) { return JSON.parse(jsonStr); });
               };
 
