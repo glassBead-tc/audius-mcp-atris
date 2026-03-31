@@ -26,6 +26,11 @@ export class AudiusClient extends Context.Tag("AudiusClient")<
       path: string,
       options?: RequestOptions
     ) => Effect.Effect<unknown, Error>
+    readonly commsRequest: (
+      method: string,
+      path: string,
+      options?: RequestOptions
+    ) => Effect.Effect<unknown, Error>
   }
 >() {}
 
@@ -94,6 +99,9 @@ export const AudiusClientLive: Layer.Layer<AudiusClient, never, AppConfig> = Lay
         return json
       })
 
-    return { request }
+    const commsRequest = (_method: string, _path: string, _options?: RequestOptions): Effect.Effect<unknown, Error> =>
+      Effect.fail(new Error("Comms not implemented - see Unit 2A"))
+
+    return { request, commsRequest }
   })
 )
