@@ -1,0 +1,9 @@
+{
+  "image": "mcr.microsoft.com/devcontainers/universal:2",
+  "features": {
+    "ghcr.io/bartventer/arch-devcontainer-features/gcloud-cli:1": {},
+    "ghcr.io/siri404/devcontainer-ai-features/gemini-cli:1": {
+      "telemetry": false
+    }
+  }
+}
