@@ -268,6 +268,8 @@ export class SpecIndex extends Context.Tag("SpecIndex")<
     readonly search: (filters: SearchFilters) => SearchResult
     readonly getAllTags: () => string[]
     readonly getEndpointCount: () => number
+    /** Full metadata for one endpoint (AX-06 — backs inspect_endpoint). */
+    readonly getEndpoint: (path: string, method: string) => EndpointMeta | undefined
   }
 >() {}
 
@@ -279,12 +281,24 @@ export const SpecIndexLive: Layer.Layer<SpecIndex, never, SpecLoader> = Layer.ef
 
     const allTags = [...new Set(index.flatMap((e) => e.tags))].sort()
 
+    // Exact-match lookup for inspect_endpoint, keyed "METHOD /path".
+    const byKey = new Map<string, IndexedEndpoint>()
+    for (const e of index) {
+      byKey.set(`${e.method} ${e.path.toLowerCase()}`, e)
+    }
+
     yield* Effect.logInfo(`Built spec index: ${index.length} endpoints across ${allTags.length} tags`)
 
     return {
       search: (filters: SearchFilters) => searchEndpoints(index, filters),
       getAllTags: () => allTags,
-      getEndpointCount: () => index.length
+      getEndpointCount: () => index.length,
+      getEndpoint: (path: string, method: string): EndpointMeta | undefined => {
+        const found = byKey.get(`${method.toUpperCase()} ${path.toLowerCase()}`)
+        if (!found) return undefined
+        const { searchText: _ignored, ...rest } = found
+        return rest
+      }
     }
   })
 )

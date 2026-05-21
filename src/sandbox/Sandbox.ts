@@ -19,6 +19,8 @@ import { Context, Effect, Layer } from "effect"
 import { getQuickJS } from "quickjs-emscripten"
 import { AudiusClient } from "../api/AudiusClient.js"
 import { TypeGenerator } from "./TypeGenerator.js"
+import { project } from "../api/Projection.js"
+import { buildErrorDirective, directiveFromError } from "../api/Errors.js"
 
 // ---------------------------------------------------------------------------
 // Types
@@ -32,6 +34,11 @@ export interface SandboxResult {
 
 const DEFAULT_TIMEOUT_MS = 30_000
 const MEMORY_LIMIT_BYTES = 64 * 1024 * 1024 // 64MB
+
+/** AX-10 — max audius.request calls per single execute. */
+const REQUEST_BUDGET = 64
+/** AX-10 — max wall-clock time for one host-side API call. */
+const PER_REQUEST_TIMEOUT_MS = 10_000
 
 // ---------------------------------------------------------------------------
 // Service
@@ -110,6 +117,11 @@ export const SandboxLive: Layer.Layer<Sandbox, Error, AudiusClient | TypeGenerat
             // host-side API call, and returns the promise handle to the VM.
             // When the API call resolves, we settle the deferred and pump
             // executePendingJobs to advance the VM's promise chain.
+            // AX-02 — successful responses are projected (heavy keys stripped).
+            // AX-09 — failures become typed recovery directives.
+            // AX-10 — each call is time-bounded and counted against a budget.
+            let requestCount = 0
+
             const audiusHandle = ctx.newObject()
             const requestFn = ctx.newFunction("request", (...args) => {
               const method = ctx.dump(args[0]) as string
@@ -118,33 +130,64 @@ export const SandboxLive: Layer.Layer<Sandbox, Error, AudiusClient | TypeGenerat
 
               const deferred = ctx.newPromise()
 
-              // Kick off the host-side API call asynchronously
+              const settle = (payload: unknown) => {
+                const strHandle = ctx.newString(JSON.stringify(payload))
+                deferred.resolve(strHandle)
+                strHandle.dispose()
+                // Pump the VM event loop so the .then() handlers run
+                ctx.runtime.executePendingJobs()
+              }
+
+              // AX-10 — per-execution request budget.
+              requestCount++
+              if (requestCount > REQUEST_BUDGET) {
+                const directive = buildErrorDirective({
+                  status: 0,
+                  errorType: "REQUEST_BUDGET",
+                  message:
+                    `Request budget of ${REQUEST_BUDGET} audius.request calls ` +
+                    `exceeded in one execute.`,
+                  path,
+                  method
+                })
+                pendingPromises.push(Promise.resolve().then(() => settle(directive)))
+                return deferred.handle
+              }
+
               const resolvedAuth = authContext?.bearerToken
                 ? { bearerToken: authContext.bearerToken }
                 : undefined
-              const hostPromise = Effect.runPromise(
-                audiusClient.request(method, path, options as any, resolvedAuth)
-              ).then(
+
+              // AX-10 — bound each host fetch so a hung call cannot exceed the budget.
+              const timed = new Promise<unknown>((resolve, reject) => {
+                const timer = setTimeout(
+                  () => reject(new Error("request timed out")),
+                  PER_REQUEST_TIMEOUT_MS
+                )
+                Effect.runPromise(
+                  audiusClient.request(method, path, options as any, resolvedAuth)
+                ).then(
+                  (r) => { clearTimeout(timer); resolve(r) },
+                  (e) => { clearTimeout(timer); reject(e) }
+                )
+              })
+
+              const hostPromise = timed.then(
                 (result) => {
-                  const jsonStr = JSON.stringify(result)
-                  const strHandle = ctx.newString(jsonStr)
-                  deferred.resolve(strHandle)
-                  strHandle.dispose()
-                  // Pump the VM event loop so the .then() handlers run
-                  ctx.runtime.executePendingJobs()
+                  // AX-02 — strip heavy keys unless the caller opted out.
+                  const outcome = project(result, options ?? {})
+                  if (outcome.note) {
+                    output.push(`[projection] ${outcome.note}`)
+                  }
+                  settle(outcome.value)
                 },
                 (e) => {
-                  const errorMsg = e instanceof Error ? e.message : String(e)
-                  const jsonStr = JSON.stringify({ error: errorMsg })
-                  const strHandle = ctx.newString(jsonStr)
-                  deferred.resolve(strHandle)
-                  strHandle.dispose()
-                  ctx.runtime.executePendingJobs()
+                  // AX-09 — failures become typed recovery directives.
+                  settle(directiveFromError(e, path, method))
                 }
               )
 
               pendingPromises.push(hostPromise)
-
               return deferred.handle
             })
             ctx.setProp(audiusHandle, "request", requestFn)

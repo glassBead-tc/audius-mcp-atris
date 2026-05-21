@@ -13,7 +13,7 @@ import { AppConfig, AppConfigLive } from "./AppConfig.js"
 import { SpecLoaderLive } from "./api/SpecLoader.js"
 import { SpecIndex, SpecIndexLive } from "./api/SpecIndex.js"
 import { AudiusClient, AudiusClientLive } from "./api/AudiusClient.js"
-import { TypeGeneratorLive } from "./sandbox/TypeGenerator.js"
+import { TypeGenerator, TypeGeneratorLive } from "./sandbox/TypeGenerator.js"
 import { Sandbox, SandboxLive } from "./sandbox/Sandbox.js"
 import { createHandler } from "./mcp/McpServer.js"
 import { startServer } from "./mcp/McpServerTransport.js"
@@ -45,12 +45,15 @@ const SandboxLayer = SandboxLive.pipe(
   Layer.provide(Layer.merge(AudiusClientLayer, TypeGeneratorLayer))
 )
 
-// Full application layer — provides AppConfig, SpecIndex, Sandbox, AudiusClient
+// Full application layer — provides AppConfig, SpecIndex, Sandbox,
+// AudiusClient, and TypeGenerator (the last so the handler can serve the
+// audius://api/types resource).
 const AppLayer = Layer.mergeAll(
   AppConfigLive,
   SpecIndexLayer,
   SandboxLayer,
-  AudiusClientLayer
+  AudiusClientLayer,
+  TypeGeneratorLayer
 )
 
 // ---------------------------------------------------------------------------
@@ -65,7 +68,7 @@ const program = Effect.gen(function* () {
 
   // Build a runtime with all services provided, so we can run Effects
   // from within the async HTTP handler
-  const runtime = yield* Effect.runtime<AppConfig | SpecIndex | Sandbox | AudiusClient>()
+  const runtime = yield* Effect.runtime<AppConfig | SpecIndex | Sandbox | AudiusClient | TypeGenerator>()
 
   // Bridge Effect handler → async handler for the transport
   const asyncHandler = async (decoded: unknown, bearerToken?: string): Promise<unknown> => {
