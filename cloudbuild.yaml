@@ -30,8 +30,8 @@ steps:
       - --port=3000
       - --memory=512Mi
       - --cpu=1
-      - --min-instances=0
-      - --max-instances=10
+      - --min-instances=1
+      - --max-instances=1
       - --set-secrets=AUDIUS_API_KEY=AUDIUS_API_KEY:latest
 
 images:
