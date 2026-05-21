@@ -68,8 +68,8 @@ const program = Effect.gen(function* () {
   const runtime = yield* Effect.runtime<AppConfig | SpecIndex | Sandbox | AudiusClient>()
 
   // Bridge Effect handler → async handler for the transport
-  const asyncHandler = async (decoded: unknown): Promise<unknown> => {
-    return Runtime.runPromise(runtime)(effectHandler(decoded))
+  const asyncHandler = async (decoded: unknown, bearerToken?: string): Promise<unknown> => {
+    return Runtime.runPromise(runtime)(effectHandler(decoded, bearerToken))
   }
 
   // Start HTTP server (acquireRelease handles cleanup on interruption)

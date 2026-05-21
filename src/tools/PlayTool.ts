@@ -147,10 +147,12 @@ function openWithApp(appPath: string, url: string): Promise<void> {
 // ---------------------------------------------------------------------------
 
 export const handlePlay = (
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
+  bearerToken?: string
 ): Effect.Effect<typeof CallToolResult.Type, never, AudiusClient> =>
   Effect.gen(function* () {
     const audiusClient = yield* AudiusClient
+    const authContext = bearerToken ? { bearerToken } : undefined
     const trackId = args["trackId"] as string | undefined
     const query = args["query"] as string | undefined
     const preferBrowser = args["preferBrowser"] as boolean | undefined
@@ -171,7 +173,7 @@ export const handlePlay = (
     if (trackId) {
       // Fetch track by ID
       const result = yield* Effect.catchAll(
-        audiusClient.request("GET", `/tracks/${trackId}`),
+        audiusClient.request("GET", `/tracks/${trackId}`, undefined, authContext),
         (error) => Effect.succeed({ error: error.message } as unknown)
       )
 
@@ -190,9 +192,7 @@ export const handlePlay = (
     } else if (query) {
       // Search for track
       const result = yield* Effect.catchAll(
-        audiusClient.request("GET", "/tracks/search", {
-          query: { query }
-        }),
+        audiusClient.request("GET", "/tracks/search", { query: { query } }, authContext),
         (error) => Effect.succeed({ error: error.message } as unknown)
       )
 

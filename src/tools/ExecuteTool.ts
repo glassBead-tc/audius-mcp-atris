@@ -49,7 +49,8 @@ export const executeToolDefinition = Tool.make({
 // ---------------------------------------------------------------------------
 
 export const handleExecute = (
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
+  bearerToken?: string
 ): Effect.Effect<typeof CallToolResult.Type, never, Sandbox> =>
   Effect.gen(function* () {
     const sandbox = yield* Sandbox
@@ -67,8 +68,9 @@ export const handleExecute = (
       })
     }
 
+    const authContext = bearerToken ? { bearerToken } : undefined
     const result = yield* Effect.catchAll(
-      sandbox.execute(code, timeout),
+      sandbox.execute(code, timeout, authContext),
       (error) =>
         Effect.succeed({
           output: [] as string[],

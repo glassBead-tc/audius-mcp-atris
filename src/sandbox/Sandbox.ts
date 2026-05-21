@@ -42,7 +42,8 @@ export class Sandbox extends Context.Tag("Sandbox")<
   {
     readonly execute: (
       code: string,
-      timeoutMs?: number
+      timeoutMs?: number,
+      authContext?: { bearerToken?: string }
     ) => Effect.Effect<SandboxResult, Error>
   }
 >() {}
@@ -62,7 +63,8 @@ export const SandboxLive: Layer.Layer<Sandbox, Error, AudiusClient | TypeGenerat
 
     const execute = (
       code: string,
-      timeoutMs?: number
+      timeoutMs?: number,
+      authContext?: { bearerToken?: string }
     ): Effect.Effect<SandboxResult, Error> =>
       Effect.tryPromise({
         try: async () => {
@@ -112,8 +114,11 @@ export const SandboxLive: Layer.Layer<Sandbox, Error, AudiusClient | TypeGenerat
               const deferred = ctx.newPromise()
 
               // Kick off the host-side API call asynchronously
+              const resolvedAuth = authContext?.bearerToken
+                ? { bearerToken: authContext.bearerToken }
+                : undefined
               const hostPromise = Effect.runPromise(
-                audiusClient.request(method, path, options as any)
+                audiusClient.request(method, path, options as any, resolvedAuth)
               ).then(
                 (result) => {
                   const jsonStr = JSON.stringify(result)

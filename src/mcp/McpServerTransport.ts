@@ -17,7 +17,8 @@ import { mcpJson } from "./McpSerialization.js"
 // ---------------------------------------------------------------------------
 
 export type McpRequestHandler = (
-  decoded: unknown
+  decoded: unknown,
+  bearerToken?: string
 ) => Promise<unknown>
 
 export interface McpTransportConfig {
@@ -37,7 +38,7 @@ function generateSessionId(): string {
 }
 
 // Active sessions
-const sessions = new Map<string, { createdAt: number }>()
+const sessions = new Map<string, { createdAt: number, bearerToken?: string }>()
 
 // ---------------------------------------------------------------------------
 // Transport
@@ -96,6 +97,12 @@ export const startServer = (
         return
       }
 
+      // Extract bearer token from Authorization header
+      const authHeader = req.headers["authorization"] as string | undefined
+      const requestBearerToken = authHeader?.startsWith("Bearer ")
+        ? authHeader.slice(7)
+        : undefined
+
       // POST — handle JSON-RPC request
       if (req.method === "POST") {
         const contentType = req.headers["content-type"] ?? ""
@@ -148,9 +155,13 @@ export const startServer = (
             (m) => (m as Record<string, unknown>)["tag"] === "initialize"
           )
 
+          // Resolve bearer token: prefer request-level header, fall back to session
+          const sessionId = req.headers["mcp-session-id"] as string | undefined
+          const session = sessionId ? sessions.get(sessionId) : undefined
+          const bearerToken = requestBearerToken ?? session?.bearerToken
+
           // Validate session on non-initialize requests
           if (!isInitialize) {
-            const sessionId = req.headers["mcp-session-id"] as string | undefined
             if (!sessionId || !sessions.has(sessionId)) {
               res.writeHead(404, { "Content-Type": "application/json" })
               res.end(JSON.stringify({
@@ -170,7 +181,7 @@ export const startServer = (
             // Handle the request
             let result: unknown
             try {
-              result = await config.handler(msg)
+              result = await config.handler(msg, bearerToken)
             } catch (cause) {
               result = {
                 _tag: "Exit",
@@ -196,11 +207,11 @@ export const startServer = (
               }
             }
 
-            // Create session on initialize
+            // Create session on initialize, storing the bearer token
             if (internal["tag"] === "initialize") {
-              const sessionId = config.onSessionStart?.() ?? generateSessionId()
-              sessions.set(sessionId, { createdAt: Date.now() })
-              res.setHeader("MCP-Session-Id", sessionId)
+              const newSessionId = config.onSessionStart?.() ?? generateSessionId()
+              sessions.set(newSessionId, { createdAt: Date.now(), bearerToken: requestBearerToken })
+              res.setHeader("MCP-Session-Id", newSessionId)
             }
           }
 

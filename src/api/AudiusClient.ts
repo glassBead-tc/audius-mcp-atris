@@ -18,13 +18,18 @@ export interface RequestOptions {
   readonly headers?: Record<string, string>
 }
 
+export interface AuthContext {
+  readonly bearerToken: string
+}
+
 export class AudiusClient extends Context.Tag("AudiusClient")<
   AudiusClient,
   {
     readonly request: (
       method: string,
       path: string,
-      options?: RequestOptions
+      options?: RequestOptions,
+      authContext?: AuthContext
     ) => Effect.Effect<unknown, Error>
   }
 >() {}
@@ -37,13 +42,23 @@ export const AudiusClientLive: Layer.Layer<AudiusClient, never, AppConfig> = Lay
     const request = (
       method: string,
       path: string,
-      options?: RequestOptions
+      options?: RequestOptions,
+      authContext?: AuthContext
     ): Effect.Effect<unknown, Error> =>
       Effect.gen(function* () {
         // Validate path to prevent SSRF via host hijacking
         if (typeof path !== "string" || !path.startsWith("/") || path.includes("@")) {
           return yield* Effect.fail(new Error(`Invalid API path: ${path}`))
         }
+
+        // Validate query shape — must be an object, not a string
+        if (options?.query !== undefined && (typeof options.query !== "object" || options.query === null)) {
+          return yield* Effect.fail(new Error(
+            `Invalid options.query: expected an object like { query: "search term" }, got ${typeof options.query}. ` +
+            `Example: audius.request("GET", "/tracks/search", { query: { query: "What You Want" } })`
+          ))
+        }
+
         // Build URL with query params
         const url = new URL(`${BASE_URL}${path}`)
         if (options?.query) {
@@ -61,6 +76,9 @@ export const AudiusClientLive: Layer.Layer<AudiusClient, never, AppConfig> = Lay
         }
         if (config.apiKey) {
           headers["x-api-key"] = config.apiKey
+        }
+        if (authContext?.bearerToken) {
+          headers["Authorization"] = `Bearer ${authContext.bearerToken}`
         }
         if (options?.body) {
           headers["Content-Type"] = "application/json"

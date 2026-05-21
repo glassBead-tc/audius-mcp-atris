@@ -76,9 +76,18 @@ The sandbox supports multi-step code that chains API calls. Examples:
 These workflows run in a single execute call — no round trips needed.
 
 ## Available in the sandbox
-- \`audius.request(method, path, options?)\` — authenticated API calls
+- \`audius.request(method, path, options?)\` — uses the logged-in user's Audius bearer token when the MCP client supplies one. User-scoped endpoints like \`/me\` require that bearer token. Public reads (trending, search) work with the server API key alone.
 - \`console.log()\` — output captured and returned
 - Return values are automatically captured
+
+## Query params shape
+Pass query params as an object inside \`options.query\`, not as a bare string:
+\`\`\`js
+// correct
+audius.request("GET", "/tracks/search", { query: { query: "What You Want" } })
+// wrong — will be rejected
+audius.request("GET", "/tracks/search", { query: "What You Want" })
+\`\`\`
 
 ## API Categories
 Use search({ tag: "<tag>" }) with: tracks, users, playlists, challenges, tips, and more.
@@ -94,10 +103,10 @@ Use search({ tag: "<tag>" }) with: tracks, users, playlists, challenges, tips, a
  * Takes an internal Effect RPC message (decoded by McpSerialization)
  * and returns the response in internal format.
  */
-export type McpEffectHandler = (decoded: unknown) => Effect.Effect<unknown, never, AppConfig | SpecIndex | Sandbox | AudiusClient>
+export type McpEffectHandler = (decoded: unknown, bearerToken?: string) => Effect.Effect<unknown, never, AppConfig | SpecIndex | Sandbox | AudiusClient>
 
 export const createHandler = (): McpEffectHandler => {
-  return (decoded: unknown): Effect.Effect<unknown, never, AppConfig | SpecIndex | Sandbox | AudiusClient> => {
+  return (decoded: unknown, bearerToken?: string): Effect.Effect<unknown, never, AppConfig | SpecIndex | Sandbox | AudiusClient> => {
     const msg = decoded as Record<string, unknown>
     const tag = msg["tag"] as string
     const id = msg["id"] as string
@@ -134,7 +143,7 @@ export const createHandler = (): McpEffectHandler => {
         }))
 
       case "tools/call":
-        return handleToolCall(id, payload ?? {})
+        return handleToolCall(id, payload ?? {}, bearerToken)
 
       case "logging/setLevel":
         // Acknowledge but don't do anything
@@ -182,7 +191,8 @@ export const createHandler = (): McpEffectHandler => {
 
 function handleToolCall(
   id: string,
-  payload: Record<string, unknown>
+  payload: Record<string, unknown>,
+  bearerToken?: string
 ): Effect.Effect<unknown, never, AppConfig | SpecIndex | Sandbox | AudiusClient> {
   const name = payload["name"] as string
   const args = (payload["arguments"] as Record<string, unknown>) ?? {}
@@ -196,13 +206,13 @@ function handleToolCall(
 
     case "execute":
       return Effect.map(
-        handleExecute(args),
+        handleExecute(args, bearerToken),
         (result) => makeResponse(id, result)
       )
 
     case "play":
       return Effect.map(
-        handlePlay(args),
+        handlePlay(args, bearerToken),
         (result) => makeResponse(id, result)
       )
 
