@@ -42,7 +42,6 @@ substitutions:
   _REGION: us-central1
   _SERVICE_NAME: audius-mcp
   _AR_REPO: audius-mcp
-  _REPO_OWNER: glassBead-tc
 
 options:
   logging: CLOUD_LOGGING_ONLY
