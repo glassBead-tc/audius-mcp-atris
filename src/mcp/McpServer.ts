@@ -20,6 +20,8 @@ import { executeToolDefinition, handleExecute } from "../tools/ExecuteTool.js"
 import { playToolDefinition, handlePlay } from "../tools/PlayTool.js"
 import { subgraphToolDefinition, handleSubgraph } from "../tools/SubgraphTool.js"
 import { workflowsResource, WORKFLOWS_URI, WORKFLOWS_CONTENT } from "../resources/Workflows.js"
+import { CallToolResult } from "./McpSchema.js"
+import { capResult } from "./ResponseGuard.js"
 
 // ---------------------------------------------------------------------------
 // Server info
@@ -36,61 +38,59 @@ const PROTOCOL_VERSION = "2025-11-25"
 const INSTRUCTIONS = `
 # Audius MCP Server — Code Mode
 
-This server provides access to the Audius music platform API through two tools:
+Access the Audius music platform (219 REST API endpoints) through a small set of
+tools. You discover endpoints, then write JavaScript that runs in a sandbox and
+calls them — instead of facing hundreds of individual tools.
 
-## Workflow
-1. **search** — Discover API endpoints by tag, path, method, or keyword
-2. **execute** — Run JavaScript code against the API in a sandbox
+## Tools
+1. **search** — find Audius API endpoints. Returns compact ranked rows
+   (method, path, summary, tags). Filter by \`tag\`, \`query\`, \`path\`, or \`method\`;
+   call with no filter for the list of tags.
+2. **execute** — run JavaScript in a sandbox. An authenticated \`audius\` client is
+   available: \`audius.request(method, path, options?)\`. \`console.log()\` is
+   captured; the value you \`return\` is the result.
+3. **play** — resolve a track (by id or search query) to its Audius URLs.
+4. **subgraph** — query the Audius protocol subgraph (on-chain staking, governance).
 
-## Examples
+## Recommended workflow
+1. \`search({ tag: "tracks" })\` — discover the endpoints you need.
+2. \`execute(...)\` — call them, and REDUCE the data before returning.
 
-### Find trending tracks
-1. search({ tag: "tracks" })
-2. execute({ code: "return await audius.request('GET', '/tracks/trending')" })
+## CRITICAL: the sandbox is a reducer, not a pipe
+Your \`execute\` return value is charged to the model's context window, and Audius
+API responses are large (one track is ~6 KB; trending is ~800 KB). NEVER \`return\`
+a raw API response — compute inside the sandbox and return only the conclusion:
 
-### Search for an artist
-1. search({ query: "search users" })
-2. execute({ code: "return await audius.request('GET', '/users/search', { query: { query: 'deadmau5' } })" })
+\`\`\`js
+// GOOD — returns ~600 chars
+const t = await audius.request('GET', '/tracks/trending', { query: { genre: 'Electronic', limit: 100 } })
+return t.data.slice(0, 5).map(x => ({ title: x.title, artist: x.user.name, plays: x.play_count }))
 
-### Get track details
-1. execute({ code: "return await audius.request('GET', '/tracks/D7KyD')" })
+// BAD — returns ~800 KB; the server will withhold it and return a truncation notice
+return await audius.request('GET', '/tracks/trending')
+\`\`\`
 
-### Play a track
-- play({ query: "Tiny Little Adiantum" }) — searches and opens in desktop app or browser
-- play({ trackId: "D7KyD" }) — opens specific track by ID
+Results larger than the server's token budget are withheld and replaced with a
+truncation envelope that explains how to narrow them.
 
-## Play music
-The play tool opens tracks in the Audius desktop app (if installed) or browser.
+## Response envelope
+Audius list endpoints wrap their payload: \`{ data: [ ... ] }\`. Read \`.data\`.
+User-scoped endpoints (e.g. \`/me\`) require a user bearer token from the MCP client;
+public reads (trending, search) work with the server API key alone.
 
-## On-chain data
-The subgraph tool queries protocol data (staking, governance, nodes) via The Graph.
-
-## Advanced workflows
-The sandbox supports multi-step code that chains API calls. Examples:
-- **Genre Popularity Index** — distribute points across trending tracks with Pareto weighting, aggregate by genre
-- **Trending Snapshot** — mood distribution, avg BPM by genre, top artists from current trending
-- **Artist Social Graph** — map who an artist follows, their remix connections
-- **Deep Artist Comparison** — compare two artists across plays, engagement, genres, supporters
-- **Track Genealogy** — trace a track's remix lineage and catalog context
-
-These workflows run in a single execute call — no round trips needed.
-
-## Available in the sandbox
-- \`audius.request(method, path, options?)\` — uses the logged-in user's Audius bearer token when the MCP client supplies one. User-scoped endpoints like \`/me\` require that bearer token. Public reads (trending, search) work with the server API key alone.
-- \`console.log()\` — output captured and returned
-- Return values are automatically captured
-
-## Query params shape
+## Query params
 Pass query params as an object inside \`options.query\`, not as a bare string:
 \`\`\`js
 // correct
-audius.request("GET", "/tracks/search", { query: { query: "What You Want" } })
-// wrong — will be rejected
-audius.request("GET", "/tracks/search", { query: "What You Want" })
+audius.request("GET", "/tracks/search", { query: { query: "deadmau5" } })
+// wrong — rejected
+audius.request("GET", "/tracks/search", { query: "deadmau5" })
 \`\`\`
 
-## API Categories
-Use search({ tag: "<tag>" }) with: tracks, users, playlists, challenges, tips, and more.
+## Ready-made recipes
+The \`audius://workflows\` resource holds 13 ready-to-run analysis recipes — genre
+popularity, rising stars, artist comparison, BPM landscape and more — each a single
+\`execute\` call that reduces data correctly. Read it and adapt.
 `.trim()
 
 // ---------------------------------------------------------------------------
@@ -194,39 +194,33 @@ function handleToolCall(
   payload: Record<string, unknown>,
   bearerToken?: string
 ): Effect.Effect<unknown, never, AppConfig | SpecIndex | Sandbox | AudiusClient> {
-  const name = payload["name"] as string
-  const args = (payload["arguments"] as Record<string, unknown>) ?? {}
+  return Effect.gen(function* () {
+    const config = yield* AppConfig
+    const name = payload["name"] as string
+    const args = (payload["arguments"] as Record<string, unknown>) ?? {}
 
-  switch (name) {
-    case "search":
-      return Effect.map(
-        handleSearch(args),
-        (result) => makeResponse(id, result)
-      )
+    let result: typeof CallToolResult.Type
+    switch (name) {
+      case "search":
+        result = yield* handleSearch(args)
+        break
+      case "execute":
+        result = yield* handleExecute(args, bearerToken)
+        break
+      case "play":
+        result = yield* handlePlay(args, bearerToken)
+        break
+      case "subgraph":
+        result = yield* handleSubgraph(args)
+        break
+      default:
+        return makeErrorResponse(id, -32602, `Unknown tool: ${name}`)
+    }
 
-    case "execute":
-      return Effect.map(
-        handleExecute(args, bearerToken),
-        (result) => makeResponse(id, result)
-      )
-
-    case "play":
-      return Effect.map(
-        handlePlay(args, bearerToken),
-        (result) => makeResponse(id, result)
-      )
-
-    case "subgraph":
-      return Effect.map(
-        handleSubgraph(args),
-        (result) => makeResponse(id, result)
-      )
-
-    default:
-      return Effect.succeed(
-        makeErrorResponse(id, -32602, `Unknown tool: ${name}`)
-      )
-  }
+    // AX-01a — every tool result passes through the output cap before the wire,
+    // so no payload can ever exceed the agent's context budget.
+    return makeResponse(id, capResult(result, config.responseTokenBudget))
+  })
 }
 
 // ---------------------------------------------------------------------------

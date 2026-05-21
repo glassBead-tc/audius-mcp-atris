@@ -33,6 +33,30 @@ export interface SearchFilters {
   readonly tag?: string
   readonly path?: string
   readonly method?: string
+  /** Max rows to return (default 50). Keeps the result bounded by construction. */
+  readonly limit?: number
+}
+
+/**
+ * Compact one-line endpoint metadata — what `search` returns (AX-05).
+ * Deliberately omits `responseSchema`/`requestBody`/`parameters`: those are the
+ * payload-bomb fields, and belong in `inspect_endpoint`'s focused deep view.
+ */
+export interface CompactEndpoint {
+  readonly method: string
+  readonly path: string
+  readonly operationId?: string
+  readonly summary?: string
+  readonly tags: string[]
+}
+
+/** Bounded, ranked result of a `search` call. */
+export interface SearchResult {
+  /** Total endpoints matching the filters, before the limit was applied. */
+  readonly total: number
+  /** Number of rows actually returned. */
+  readonly shown: number
+  readonly endpoints: CompactEndpoint[]
 }
 
 // ---------------------------------------------------------------------------
@@ -143,10 +167,48 @@ function simplifySchema(schema: unknown, depth = 0): unknown {
 // Search
 // ---------------------------------------------------------------------------
 
+const DEFAULT_SEARCH_LIMIT = 50
+const MAX_SUMMARY_CHARS = 100
+
+function truncateSummary(s: string): string {
+  const clean = s.replace(/\s+/g, " ").trim()
+  return clean.length > MAX_SUMMARY_CHARS
+    ? clean.slice(0, MAX_SUMMARY_CHARS - 1) + "…"
+    : clean
+}
+
+function toCompact(e: IndexedEndpoint): CompactEndpoint {
+  return {
+    method: e.method,
+    path: e.path,
+    operationId: e.operationId,
+    summary: e.summary ? truncateSummary(e.summary) : undefined,
+    tags: e.tags
+  }
+}
+
+/**
+ * Relevance score for ranking — a path/operationId hit outranks a summary
+ * hit, which outranks a tag-only match. With no query terms, score is 0 and
+ * results fall back to shortest-path ordering (more central endpoints first).
+ */
+function scoreEndpoint(e: IndexedEndpoint, terms: string[]): number {
+  let score = 0
+  const path = e.path.toLowerCase()
+  const opId = (e.operationId ?? "").toLowerCase()
+  const summary = (e.summary ?? "").toLowerCase()
+  for (const term of terms) {
+    if (path.includes(term)) score += 100
+    if (opId.includes(term)) score += 60
+    if (summary.includes(term)) score += 20
+  }
+  return score
+}
+
 function searchEndpoints(
   index: IndexedEndpoint[],
   filters: SearchFilters
-): EndpointMeta[] {
+): SearchResult {
   let results = index
 
   if (filters.tag) {
@@ -168,15 +230,32 @@ function searchEndpoints(
     )
   }
 
-  if (filters.query) {
-    const terms = filters.query.toLowerCase().split(/\s+/)
+  const terms = filters.query
+    ? filters.query.toLowerCase().split(/\s+/).filter(Boolean)
+    : []
+
+  if (terms.length > 0) {
     results = results.filter((e) =>
       terms.every((term) => e.searchText.includes(term))
     )
   }
 
-  // Return without internal searchText field
-  return results.map(({ searchText: _, ...rest }) => rest)
+  // Rank: query relevance first, then shorter paths (more central endpoints).
+  const ranked = [...results].sort((a, b) => {
+    const ds = scoreEndpoint(b, terms) - scoreEndpoint(a, terms)
+    if (ds !== 0) return ds
+    return a.path.length - b.path.length
+  })
+
+  const limit =
+    filters.limit && filters.limit > 0 ? filters.limit : DEFAULT_SEARCH_LIMIT
+  const shown = ranked.slice(0, limit)
+
+  return {
+    total: ranked.length,
+    shown: shown.length,
+    endpoints: shown.map(toCompact)
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -186,7 +265,7 @@ function searchEndpoints(
 export class SpecIndex extends Context.Tag("SpecIndex")<
   SpecIndex,
   {
-    readonly search: (filters: SearchFilters) => EndpointMeta[]
+    readonly search: (filters: SearchFilters) => SearchResult
     readonly getAllTags: () => string[]
     readonly getEndpointCount: () => number
   }
