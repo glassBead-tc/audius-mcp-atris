@@ -3,9 +3,11 @@
  *
  * Provides a single /mcp endpoint that:
  * - POST: receives JSON-RPC requests, dispatches to handler, returns responses
- * - DELETE: terminates session
+ * - DELETE: no-op (stateless — nothing to clean up)
  *
- * Session management via MCP-Session-Id header.
+ * Stateless design: session IDs are generated and returned on initialize so
+ * MCP clients are satisfied, but are never stored or validated server-side.
+ * Bearer token always comes from the Authorization header on each request.
  * Uses mcpJson serialization bridge for JSON-RPC ↔ Effect RPC translation.
  */
 import { Effect, Scope } from "effect"
@@ -24,11 +26,10 @@ export type McpRequestHandler = (
 export interface McpTransportConfig {
   readonly port: number
   readonly handler: McpRequestHandler
-  readonly onSessionStart?: () => string
 }
 
 // ---------------------------------------------------------------------------
-// Session management
+// Session ID generation (stateless — IDs are returned to clients but never stored)
 // ---------------------------------------------------------------------------
 
 let sessionCounter = 0
@@ -36,9 +37,6 @@ let sessionCounter = 0
 function generateSessionId(): string {
   return `session-${++sessionCounter}-${Date.now().toString(36)}`
 }
-
-// Active sessions
-const sessions = new Map<string, { createdAt: number, bearerToken?: string }>()
 
 // ---------------------------------------------------------------------------
 // Transport
@@ -86,12 +84,8 @@ export const startServer = (
         return
       }
 
-      // DELETE — terminate session
+      // DELETE — stateless, nothing to clean up
       if (req.method === "DELETE") {
-        const sessionId = req.headers["mcp-session-id"] as string | undefined
-        if (sessionId) {
-          sessions.delete(sessionId)
-        }
         res.writeHead(204)
         res.end()
         return
@@ -150,28 +144,8 @@ export const startServer = (
           // Decode JSON-RPC → internal format
           const decoded = parser.decode(body)
 
-          // Check if batch contains an initialize request
-          const isInitialize = decoded.some(
-            (m) => (m as Record<string, unknown>)["tag"] === "initialize"
-          )
-
-          // Resolve bearer token: prefer request-level header, fall back to session
-          const sessionId = req.headers["mcp-session-id"] as string | undefined
-          const session = sessionId ? sessions.get(sessionId) : undefined
-          const bearerToken = requestBearerToken ?? session?.bearerToken
-
-          // Validate session on non-initialize requests
-          if (!isInitialize) {
-            if (!sessionId || !sessions.has(sessionId)) {
-              res.writeHead(404, { "Content-Type": "application/json" })
-              res.end(JSON.stringify({
-                jsonrpc: "2.0",
-                id: null,
-                error: { code: -32600, message: "Session not found. Send initialize first." }
-              }))
-              return
-            }
-          }
+          // Bearer token comes from the request header on every request
+          const bearerToken = requestBearerToken
 
           // Process each message
           const responses: unknown[] = []
@@ -207,10 +181,9 @@ export const startServer = (
               }
             }
 
-            // Create session on initialize, storing the bearer token
+            // Return a session ID on initialize so MCP clients are satisfied
             if (internal["tag"] === "initialize") {
-              const newSessionId = config.onSessionStart?.() ?? generateSessionId()
-              sessions.set(newSessionId, { createdAt: Date.now(), bearerToken: requestBearerToken })
+              const newSessionId = generateSessionId()
               res.setHeader("MCP-Session-Id", newSessionId)
             }
           }
