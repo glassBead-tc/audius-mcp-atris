@@ -32,7 +32,7 @@ steps:
       - --cpu=1
       - --min-instances=0
       - --max-instances=10
-      - --set-secrets=AUDIUS_API_KEY=audius-api-key:latest
+      - --set-secrets=AUDIUS_API_KEY=AUDIUS_API_KEY:latest
 
 images:
   - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/${_SERVICE_NAME}:$COMMIT_SHA
