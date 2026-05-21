@@ -38,7 +38,9 @@ export const executeToolDefinition = Tool.make({
   annotations: ToolAnnotations.make({
     title: "Execute Audius API Code",
     readOnlyHint: false,
-    destructiveHint: false,
+    // Write methods (POST/PUT/DELETE) perform real mutations when a user
+    // bearer token is supplied — declare the tool as potentially destructive.
+    destructiveHint: true,
     idempotentHint: false,
     openWorldHint: true
   })

@@ -32,7 +32,7 @@ import { listPrompts, getPrompt, buildPromptResult } from "./Prompts.js"
 
 const SERVER_INFO = {
   name: "audius-mcp",
-  version: "2.0.0",
+  version: "3.0.0",
   description: "Audius Music Platform MCP Server (Code Mode)"
 }
 
@@ -297,6 +297,7 @@ function handleToolCall(
     const config = yield* AppConfig
     const name = payload["name"] as string
     const args = (payload["arguments"] as Record<string, unknown>) ?? {}
+    const startTime = Date.now()
 
     let result: typeof CallToolResult.Type
     switch (name) {
@@ -321,7 +322,15 @@ function handleToolCall(
 
     // AX-01a — every tool result passes through the output cap before the wire,
     // so no payload can ever exceed the agent's context budget.
-    return makeResponse(id, capResult(result, config.responseTokenBudget))
+    const capped = capResult(result, config.responseTokenBudget)
+
+    // AX-25 — per-call structured log so agent experience is observable.
+    yield* Effect.logInfo(
+      `[tool] name=${name} durationMs=${Date.now() - startTime} ` +
+      `chars=${JSON.stringify(capped).length} isError=${capped.isError ?? false}`
+    )
+
+    return makeResponse(id, capped)
   })
 }
 

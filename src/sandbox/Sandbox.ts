@@ -215,6 +215,27 @@ export const SandboxLive: Layer.Layer<Sandbox, Error, AudiusClient | TypeGenerat
                   .then(function(jsonStr) { return JSON.parse(jsonStr); });
               };
 
+              // AX-12 — audius.paginate(path, opts): walk a paginated endpoint
+              // and return a single flattened { data: [...] }, bounded by opts.max.
+              audius.paginate = async function(path, opts) {
+                opts = opts || {};
+                var pageSize = opts.pageSize || 50;
+                var max = opts.max || 200;
+                var out = [];
+                var offset = 0;
+                while (out.length < max) {
+                  var q = Object.assign({}, opts.query || {}, { limit: pageSize, offset: offset });
+                  var res = await audius.request('GET', path, { query: q, raw: opts.raw });
+                  if (res && res.ok === false) return res;
+                  var data = (res && res.data) || [];
+                  if (data.length === 0) break;
+                  out = out.concat(data);
+                  if (data.length < pageSize) break;
+                  offset += pageSize;
+                }
+                return { data: out.slice(0, max) };
+              };
+
               var __result__ = undefined;
               var __execError__ = undefined;
 

@@ -13,6 +13,8 @@ RUN npm install -g pnpm@10.6.5
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile --prod
 COPY --from=builder /app/dist ./dist
+# AX-22 — vendored OpenAPI spec, used as the offline fallback at startup.
+COPY specs ./specs
 EXPOSE 3000
 ENV PORT=3000
 ENV NODE_ENV=production
