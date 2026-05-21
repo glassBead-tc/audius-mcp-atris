@@ -1,0 +1,6 @@
+name: audius-mcp-deploy
+filename: cloudbuild.yaml
+repositoryEventConfig:
+  repository: projects/atris-496608/locations/us-central1/connections/audius-github/repositories/audius-mcp-atris
+  push:
+    branch: ^main$

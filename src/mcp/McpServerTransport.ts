@@ -69,8 +69,16 @@ export const startServer = (
         return
       }
 
-      // Only handle /mcp endpoint
       const url = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`)
+
+      // Health check for Cloud Run and load balancers
+      if (req.method === "GET" && (url.pathname === "/health" || url.pathname === "/")) {
+        res.writeHead(200, { "Content-Type": "application/json" })
+        res.end(JSON.stringify({ status: "ok" }))
+        return
+      }
+
+      // Only handle /mcp endpoint
       if (url.pathname !== "/mcp") {
         res.writeHead(404, { "Content-Type": "application/json" })
         res.end(JSON.stringify({ error: "Not found. Use POST /mcp" }))

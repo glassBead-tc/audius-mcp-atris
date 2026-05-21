@@ -1,0 +1,13 @@
+.gcloudignore
+.git
+.gitignore
+node_modules/
+dist/
+.env
+.env.local
+.env.*.local
+*.log
+.idea/
+.vscode/
+.DS_Store
+.claude/
