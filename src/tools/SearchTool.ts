@@ -16,9 +16,10 @@ export const searchToolDefinition = Tool.make({
   name: "search",
   title: "Search Audius API",
   description:
-    "Search the Audius API specification to discover endpoints, parameters, and response schemas. " +
-    "Use this before writing code with execute(). Filter by tag (e.g., 'tracks', 'users', 'playlists'), " +
-    "path pattern, HTTP method, or free-text query.",
+    "Find Audius API endpoints. Returns compact ranked rows (method, path, summary, tags) — " +
+    "bounded and safe to read. Filter by tag (e.g. 'tracks', 'users', 'playlists'), path pattern, " +
+    "HTTP method, or free-text query; call with no filter to list all tags. " +
+    "Use this before writing code with execute().",
   inputSchema: {
     type: "object",
     properties: {
@@ -38,6 +39,10 @@ export const searchToolDefinition = Tool.make({
         type: "string",
         description: "Filter by HTTP method (GET, POST, PUT, DELETE)",
         enum: ["GET", "POST", "PUT", "DELETE"]
+      },
+      limit: {
+        type: "number",
+        description: "Maximum rows to return (default 50)"
       }
     }
   },
@@ -64,7 +69,8 @@ export const handleSearch = (
       query: args["query"] as string | undefined,
       tag: args["tag"] as string | undefined,
       path: args["path"] as string | undefined,
-      method: args["method"] as string | undefined
+      method: args["method"] as string | undefined,
+      limit: typeof args["limit"] === "number" ? (args["limit"] as number) : undefined
     }
 
     const results = specIndex.search(filters)
@@ -89,10 +95,7 @@ export const handleSearch = (
       })
     }
 
-    const text = JSON.stringify({
-      count: results.length,
-      endpoints: results
-    }, null, 2)
+    const text = JSON.stringify(results, null, 2)
 
     return CallToolResult.make({
       content: [TextContent.make({ type: "text" as const, text })]

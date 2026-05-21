@@ -1,5 +1,26 @@
 # Changelog
 
+## Unreleased — Agent Experience Alignment
+
+A multi-release program (specs in `specs/agent-experience-alignment/`) that brings the
+server into alignment with the 2026-05-21 agent-experience study. Restores the missing
+"second half" of Code Mode: compressing **data volume**, not just tool count.
+
+### Release 1 — Context Safety
+- **AX-01a** — `ResponseGuard` output cap: every tool result passes through a single
+  chokepoint; results over `RESPONSE_TOKEN_BUDGET` (default 20,000 tokens) are withheld
+  and replaced with a self-contained truncation envelope. Context overflow is now
+  structurally impossible.
+- **AX-05** — `search` returns compact ranked rows (method, path, summary, tags) with a
+  `limit`, instead of embedding a fully-expanded response schema per endpoint. The
+  `search({tag:"tracks"})` payload drops from ~779 KB to ~8.5 KB.
+- **AX-17** — `INSTRUCTIONS` rewritten: accurate tool list, no phantom workflow names,
+  names the `audius://workflows` resource, and teaches the projection idiom and the
+  `{ data }` response envelope.
+- **AX-08** — sandbox `console` polyfill: `console.error/warn/info/debug` are defined and
+  captured; an unwrapped `console.error` no longer throws and kills the execution.
+- **AX-24** — behavioral test suite (`pnpm test` now builds, then runs `node --test`).
+
 ## 2.4.0 (2025-07-01)
 - Added stream-track and open-track-in-desktop tools for direct audio streaming.
 - Introduced AUDIO_STREAMING configuration option.

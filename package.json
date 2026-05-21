@@ -12,7 +12,7 @@
     "start": "node dist/index.js",
     "dev": "tsc && node dist/index.js",
     "lint": "eslint . --ext .ts",
-    "test": "npm run build",
+    "test": "npm run build && node --test",
     "prepublishOnly": "npm run test"
   },
   "keywords": [

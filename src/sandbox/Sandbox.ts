@@ -86,18 +86,23 @@ export const SandboxLive: Layer.Layer<Sandbox, Error, AudiusClient | TypeGenerat
             // Track pending promises so we can pump the event loop
             const pendingPromises: Array<Promise<void>> = []
 
-            // Inject console.log
+            // Inject console.* — AX-08: polyfill log/error/warn/info/debug so an
+            // unwrapped console.error (a near-universal debugging reflex) never
+            // throws "not a function" and kills the whole execution.
             const consoleHandle = ctx.newObject()
-            const logFn = ctx.newFunction("log", (...args) => {
-              const parts = args.map((arg) => {
-                const dumped = ctx.dump(arg)
-                return typeof dumped === "string" ? dumped : JSON.stringify(dumped)
+            for (const level of ["log", "error", "warn", "info", "debug"] as const) {
+              const fn = ctx.newFunction(level, (...args) => {
+                const parts = args.map((arg) => {
+                  const dumped = ctx.dump(arg)
+                  return typeof dumped === "string" ? dumped : JSON.stringify(dumped)
+                })
+                const prefix = level === "log" ? "" : `[${level}] `
+                output.push(prefix + parts.join(" "))
               })
-              output.push(parts.join(" "))
-            })
-            ctx.setProp(consoleHandle, "log", logFn)
+              ctx.setProp(consoleHandle, level, fn)
+              fn.dispose()
+            }
             ctx.setProp(ctx.global, "console", consoleHandle)
-            logFn.dispose()
             consoleHandle.dispose()
 
             // Inject audius.request using deferred promises.
