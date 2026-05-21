@@ -1,6 +1,6 @@
 {
   "name": "audius-mcp-atris",
-  "version": "2.4.0",
+  "version": "3.0.0",
   "description": "Audius MCP Server — Code Mode with Effect-TS",
   "main": "dist/index.js",
   "type": "module",

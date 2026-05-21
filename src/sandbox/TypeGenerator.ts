@@ -33,6 +33,11 @@ export const TypeGeneratorLive: Layer.Layer<TypeGenerator, never, SpecLoader> = 
 function generateDeclarations(spec: OpenApiSpec): string {
   const lines: string[] = [
     "// Audius API type declarations (auto-generated from OpenAPI spec)",
+    "//",
+    "// Response envelope: list endpoints wrap their payload as { data: [ ... ] }.",
+    "// Auth: endpoints marked [auth] require a user bearer token (e.g. /me*).",
+    "// Errors: a failed audius.request resolves { ok:false, errorType, nextActions, ... }.",
+    "// Projection: responses are trimmed by default — pass { raw: true } for the full payload.",
     "",
     "interface RequestOptions {",
     "  query?: Record<string, string | number | boolean>;",
@@ -73,8 +78,9 @@ function generateDeclarations(spec: OpenApiSpec): string {
         .filter((p) => p.required)
         .map((p) => `${p.name}: ${schemaToTsType(p.schema)}`)
 
+      const authMark = path.toLowerCase().startsWith("/me") ? "[auth] " : ""
       lines.push(
-        `  // ${method.toUpperCase()} ${path}${summary ? ` — ${truncate(summary, 80)}` : ""}`
+        `  // ${authMark}${method.toUpperCase()} ${path}${summary ? ` — ${truncate(summary, 80)}` : ""}`
       )
       if (paramList.length > 0) {
         lines.push(`  //   Required params: ${paramList.join(", ")}`)

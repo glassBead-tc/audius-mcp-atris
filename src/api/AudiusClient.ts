@@ -9,6 +9,7 @@
  */
 import { Context, Effect, Layer } from "effect"
 import { AppConfig } from "../AppConfig.js"
+import { TtlCache } from "./Cache.js"
 
 const BASE_URL = "https://api.audius.co/v1"
 
@@ -39,6 +40,9 @@ export const AudiusClientLive: Layer.Layer<AudiusClient, never, AppConfig> = Lay
   Effect.gen(function* () {
     const config = yield* AppConfig
 
+    // AX-23 — per-instance TTL cache for hot, idempotent public reads.
+    const cache = new TtlCache(45_000)
+
     const request = (
       method: string,
       path: string,
@@ -66,6 +70,17 @@ export const AudiusClientLive: Layer.Layer<AudiusClient, never, AppConfig> = Lay
             if (value !== undefined) {
               url.searchParams.set(key, String(value))
             }
+          }
+        }
+
+        // AX-23 — serve hot, idempotent reads from the per-instance cache.
+        const cacheable =
+          method.toUpperCase() === "GET" && !options?.body && !authContext?.bearerToken
+        const cacheKey = url.toString()
+        if (cacheable) {
+          const hit = cache.get(cacheKey)
+          if (hit !== undefined) {
+            return hit
           }
         }
 
@@ -108,6 +123,10 @@ export const AudiusClientLive: Layer.Layer<AudiusClient, never, AppConfig> = Lay
           try: () => response.json() as Promise<unknown>,
           catch: (e) => new Error(`Failed to parse JSON response: ${e}`)
         })
+
+        if (cacheable) {
+          cache.set(cacheKey, json)
+        }
 
         return json
       })
