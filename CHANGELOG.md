@@ -21,6 +21,26 @@ server into alignment with the 2026-05-21 agent-experience study. Restores the m
   captured; an unwrapped `console.error` no longer throws and kills the execution.
 - **AX-24** — behavioral test suite (`pnpm test` now builds, then runs `node --test`).
 
+### Release 2 — Make It Good
+- **AX-09** — typed error model (`src/api/Errors.ts`): API failures resolve inside the
+  sandbox as recovery directives `{ ok:false, errorType, status, message, context,
+  nextActions, prohibition }` instead of a JSON-string nested in a string. Success
+  responses are unchanged.
+- **AX-02** — default projection (`src/api/Projection.ts`): `audius.request` responses
+  have heavy media / wallet / CID keys stripped unless the caller passes `{ raw:true }`,
+  `{ detail:"full" }`, or `{ fields:[...] }` (dot-path projection).
+- **AX-04** — projection announces itself: when keys are dropped, a `[projection] …`
+  note is added to the execute output.
+- **AX-06** — new `inspect_endpoint` tool: one endpoint in depth — parameters, response
+  schema, the `{data}` envelope, an `requiresAuth` flag, and a runnable example.
+- **AX-19** — learning surface exposed as resources: `audius://api/types` (the generated
+  TypeScript declarations) and `audius://sandbox/runtime` (the sandbox manifest).
+- **AX-20** — five workflow recipes registered as MCP prompts (`audius-rising-stars`,
+  `audius-genre-report`, `audius-artist-compare`, `audius-hidden-gems`,
+  `audius-bpm-landscape`); the `prompts` capability is now declared.
+- **AX-10** — sandbox reliability: each `audius.request` is bounded by a 10 s host
+  timeout, and an execute call may make at most 64 requests (`REQUEST_BUDGET`).
+
 ## 2.4.0 (2025-07-01)
 - Added stream-track and open-track-in-desktop tools for direct audio streaming.
 - Introduced AUDIO_STREAMING configuration option.

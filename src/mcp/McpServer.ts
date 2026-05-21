@@ -19,9 +19,12 @@ import { searchToolDefinition, handleSearch } from "../tools/SearchTool.js"
 import { executeToolDefinition, handleExecute } from "../tools/ExecuteTool.js"
 import { playToolDefinition, handlePlay } from "../tools/PlayTool.js"
 import { subgraphToolDefinition, handleSubgraph } from "../tools/SubgraphTool.js"
+import { inspectEndpointToolDefinition, handleInspectEndpoint } from "../tools/InspectEndpointTool.js"
 import { workflowsResource, WORKFLOWS_URI, WORKFLOWS_CONTENT } from "../resources/Workflows.js"
+import { TypeGenerator } from "../sandbox/TypeGenerator.js"
 import { CallToolResult } from "./McpSchema.js"
 import { capResult } from "./ResponseGuard.js"
+import { listPrompts, getPrompt, buildPromptResult } from "./Prompts.js"
 
 // ---------------------------------------------------------------------------
 // Server info
@@ -46,15 +49,18 @@ calls them — instead of facing hundreds of individual tools.
 1. **search** — find Audius API endpoints. Returns compact ranked rows
    (method, path, summary, tags). Filter by \`tag\`, \`query\`, \`path\`, or \`method\`;
    call with no filter for the list of tags.
-2. **execute** — run JavaScript in a sandbox. An authenticated \`audius\` client is
+2. **inspect_endpoint** — describe one endpoint in depth: parameters, response
+   schema, whether it needs auth, and a runnable example. Use after \`search\`.
+3. **execute** — run JavaScript in a sandbox. An authenticated \`audius\` client is
    available: \`audius.request(method, path, options?)\`. \`console.log()\` is
    captured; the value you \`return\` is the result.
-3. **play** — resolve a track (by id or search query) to its Audius URLs.
-4. **subgraph** — query the Audius protocol subgraph (on-chain staking, governance).
+4. **play** — resolve a track (by id or search query) to its Audius URLs.
+5. **subgraph** — query the Audius protocol subgraph (on-chain staking, governance).
 
 ## Recommended workflow
 1. \`search({ tag: "tracks" })\` — discover the endpoints you need.
-2. \`execute(...)\` — call them, and REDUCE the data before returning.
+2. \`inspect_endpoint({ path })\` — check one endpoint's exact params (optional).
+3. \`execute(...)\` — call them, and REDUCE the data before returning.
 
 ## CRITICAL: the sandbox is a reducer, not a pipe
 Your \`execute\` return value is charged to the model's context window, and Audius
@@ -90,8 +96,65 @@ audius.request("GET", "/tracks/search", { query: "deadmau5" })
 ## Ready-made recipes
 The \`audius://workflows\` resource holds 13 ready-to-run analysis recipes — genre
 popularity, rising stars, artist comparison, BPM landscape and more — each a single
-\`execute\` call that reduces data correctly. Read it and adapt.
+\`execute\` call that reduces data correctly. Read it and adapt. Several are also
+available as prompts (\`audius-rising-stars\`, \`audius-genre-report\`, …).
+
+## More references
+- \`audius://api/types\` — generated type declarations for every Audius endpoint.
+- \`audius://sandbox/runtime\` — what the execute sandbox provides, and its limits.
+- API responses are projected by default (heavy media / wallet / CID fields are
+  stripped); pass \`{ raw: true }\` in \`options\` for the untrimmed payload.
+- API failures return a typed directive \`{ ok: false, errorType, nextActions, … }\` —
+  read it and act on \`nextActions\`; do not retry verbatim.
 `.trim()
+
+// ---------------------------------------------------------------------------
+// Resources — the learning surface (AX-19)
+// ---------------------------------------------------------------------------
+
+const API_TYPES_URI = "audius://api/types"
+const SANDBOX_RUNTIME_URI = "audius://sandbox/runtime"
+
+const apiTypesResource = {
+  uri: API_TYPES_URI,
+  name: "Audius API Type Declarations",
+  description:
+    "Generated TypeScript declarations for every Audius API endpoint — the full " +
+    "surface available to audius.request() in the execute sandbox.",
+  mimeType: "text/plain"
+}
+
+const sandboxRuntimeResource = {
+  uri: SANDBOX_RUNTIME_URI,
+  name: "Sandbox Runtime Manifest",
+  description:
+    "What the execute QuickJS sandbox provides and lacks — globals, the audius " +
+    "client contract, projection behaviour, and resource limits.",
+  mimeType: "application/json"
+}
+
+const SANDBOX_RUNTIME_MANIFEST = {
+  engine: "QuickJS (WASM)",
+  memoryLimitMB: 64,
+  defaultTimeoutMs: 30000,
+  freshContextPerCall: true,
+  present: [
+    "Date", "Math", "JSON", "RegExp", "Map", "Set", "WeakMap", "WeakSet",
+    "Promise", "Proxy", "Reflect", "TypedArrays",
+    "console.log", "console.error", "console.warn", "console.info", "console.debug"
+  ],
+  absent: ["fetch", "setTimeout", "crypto", "TextEncoder", "TextDecoder"],
+  provided: {
+    "audius.request(method, path, options?)":
+      "Calls the Audius API. On success returns the JSON response, projected by " +
+      "default (heavy media/wallet/CID fields stripped — pass { raw: true } in " +
+      "options for the full payload, or { fields: ['data.title', ...] } to pick). " +
+      "On failure returns a typed directive { ok: false, errorType, nextActions, ... }.",
+    "console.*": "log / error / warn / info / debug are all captured and returned."
+  },
+  responseEnvelope: "Audius list endpoints wrap their payload as { data: [ ... ] }.",
+  limits: { requestBudgetPerExecute: 64, perRequestTimeoutMs: 10000 }
+}
 
 // ---------------------------------------------------------------------------
 // Handler
@@ -103,10 +166,10 @@ popularity, rising stars, artist comparison, BPM landscape and more — each a s
  * Takes an internal Effect RPC message (decoded by McpSerialization)
  * and returns the response in internal format.
  */
-export type McpEffectHandler = (decoded: unknown, bearerToken?: string) => Effect.Effect<unknown, never, AppConfig | SpecIndex | Sandbox | AudiusClient>
+export type McpEffectHandler = (decoded: unknown, bearerToken?: string) => Effect.Effect<unknown, never, AppConfig | SpecIndex | Sandbox | AudiusClient | TypeGenerator>
 
 export const createHandler = (): McpEffectHandler => {
-  return (decoded: unknown, bearerToken?: string): Effect.Effect<unknown, never, AppConfig | SpecIndex | Sandbox | AudiusClient> => {
+  return (decoded: unknown, bearerToken?: string): Effect.Effect<unknown, never, AppConfig | SpecIndex | Sandbox | AudiusClient | TypeGenerator> => {
     const msg = decoded as Record<string, unknown>
     const tag = msg["tag"] as string
     const id = msg["id"] as string
@@ -123,7 +186,8 @@ export const createHandler = (): McpEffectHandler => {
           protocolVersion: PROTOCOL_VERSION,
           capabilities: {
             tools: {},
-            resources: {}
+            resources: {},
+            prompts: {}
           },
           serverInfo: SERVER_INFO,
           instructions: INSTRUCTIONS
@@ -136,6 +200,7 @@ export const createHandler = (): McpEffectHandler => {
         return Effect.succeed(makeResponse(id, {
           tools: [
             stripMake(searchToolDefinition),
+            stripMake(inspectEndpointToolDefinition),
             stripMake(executeToolDefinition),
             stripMake(playToolDefinition),
             stripMake(subgraphToolDefinition)
@@ -151,7 +216,7 @@ export const createHandler = (): McpEffectHandler => {
 
       case "resources/list":
         return Effect.succeed(makeResponse(id, {
-          resources: [workflowsResource]
+          resources: [workflowsResource, apiTypesResource, sandboxRuntimeResource]
         }))
 
       case "resources/read": {
@@ -165,6 +230,27 @@ export const createHandler = (): McpEffectHandler => {
             }]
           }))
         }
+        if (uri === SANDBOX_RUNTIME_URI) {
+          return Effect.succeed(makeResponse(id, {
+            contents: [{
+              uri: SANDBOX_RUNTIME_URI,
+              mimeType: "application/json",
+              text: JSON.stringify(SANDBOX_RUNTIME_MANIFEST, null, 2)
+            }]
+          }))
+        }
+        if (uri === API_TYPES_URI) {
+          return Effect.gen(function* () {
+            const typeGen = yield* TypeGenerator
+            return makeResponse(id, {
+              contents: [{
+                uri: API_TYPES_URI,
+                mimeType: "text/plain",
+                text: typeGen.declarations
+              }]
+            })
+          })
+        }
         return Effect.succeed(makeErrorResponse(id, -32602, `Resource not found: ${uri}`))
       }
 
@@ -172,7 +258,20 @@ export const createHandler = (): McpEffectHandler => {
         return Effect.succeed(makeResponse(id, { resourceTemplates: [] }))
 
       case "prompts/list":
-        return Effect.succeed(makeResponse(id, { prompts: [] }))
+        return Effect.succeed(makeResponse(id, { prompts: listPrompts() }))
+
+      case "prompts/get": {
+        const p = payload ?? {}
+        const promptName = p["name"] as string
+        const promptArgs = (p["arguments"] as Record<string, string>) ?? {}
+        const def = getPrompt(promptName)
+        if (!def) {
+          return Effect.succeed(
+            makeErrorResponse(id, -32602, `Prompt not found: ${promptName}`)
+          )
+        }
+        return Effect.succeed(makeResponse(id, buildPromptResult(def, promptArgs)))
+      }
 
       case "completion/complete":
         return Effect.succeed(makeResponse(id, {
@@ -193,7 +292,7 @@ function handleToolCall(
   id: string,
   payload: Record<string, unknown>,
   bearerToken?: string
-): Effect.Effect<unknown, never, AppConfig | SpecIndex | Sandbox | AudiusClient> {
+): Effect.Effect<unknown, never, AppConfig | SpecIndex | Sandbox | AudiusClient | TypeGenerator> {
   return Effect.gen(function* () {
     const config = yield* AppConfig
     const name = payload["name"] as string
@@ -203,6 +302,9 @@ function handleToolCall(
     switch (name) {
       case "search":
         result = yield* handleSearch(args)
+        break
+      case "inspect_endpoint":
+        result = yield* handleInspectEndpoint(args)
         break
       case "execute":
         result = yield* handleExecute(args, bearerToken)
