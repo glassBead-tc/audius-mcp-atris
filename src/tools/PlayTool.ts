@@ -1,18 +1,14 @@
 /**
- * Play tool — open a track in the Audius desktop app or browser.
+ * Play tool — resolve a track to its Audius URLs (AX-14).
  *
- * Flow:
- * 1. Resolve the track (by ID or search query) via the Audius API
- * 2. Attempt to open in the Audius desktop app via audius:// protocol
- * 3. Fall back to opening in the user's default browser
- *
- * This tool runs system commands (open/xdg-open/start) so it only
- * works when the MCP server is running on the user's local machine.
+ * Atris is deployed on Cloud Run: a headless container, not the user's
+ * device. A server-side process cannot open media on a remote user's
+ * machine, so this tool does NOT shell out and does NOT claim playback.
+ * It resolves the track and hands back openable URLs — the web link and
+ * the `audius://` desktop deep link — and whoever sits beside the user
+ * (the MCP client) performs the actual open.
  */
 import { Effect } from "effect"
-import { exec } from "node:child_process"
-import { access, constants } from "node:fs/promises"
-import { platform } from "node:os"
 import { AudiusClient } from "../api/AudiusClient.js"
 import { CallToolResult, TextContent, ToolAnnotations, Tool } from "../mcp/McpSchema.js"
 
@@ -22,125 +18,34 @@ import { CallToolResult, TextContent, ToolAnnotations, Tool } from "../mcp/McpSc
 
 export const playToolDefinition = Tool.make({
   name: "play",
-  title: "Play Track on Audius",
+  title: "Resolve a Track on Audius",
   description:
-    "Play a track on the user's machine by opening it in the Audius desktop app " +
-    "(if installed) or in their default browser. Provide either a track ID or a " +
-    "search query to find and play a track. The server must be running locally.",
+    "Resolve a track to its Audius URLs — a web link (audius.co/...) and an " +
+    "audius:// desktop deep link. Provide either a track ID or a search query. " +
+    "Returns the URLs for the MCP client to open; it does not play audio itself.",
   inputSchema: {
     type: "object",
     properties: {
       trackId: {
         type: "string",
-        description: "Audius track ID to play (e.g., 'D7KyD')"
+        description: "Audius track ID to resolve (e.g., 'D7KyD')"
       },
       query: {
         type: "string",
-        description: "Search query to find a track (uses first result). " +
+        description:
+          "Search query to find a track (uses the first result). " +
           "Use this when you know the track name but not the ID."
-      },
-      preferBrowser: {
-        type: "boolean",
-        description: "Force opening in browser even if desktop app is available (default: false)"
       }
     }
   },
   annotations: ToolAnnotations.make({
-    title: "Play Track on Audius",
+    title: "Resolve a Track on Audius",
     readOnlyHint: true,
     destructiveHint: false,
     idempotentHint: true,
     openWorldHint: true
   })
 })
-
-// ---------------------------------------------------------------------------
-// Platform utilities
-// ---------------------------------------------------------------------------
-
-/** Known paths where the Audius desktop app might be installed */
-const DESKTOP_APP_PATHS: Record<string, string[]> = {
-  darwin: [
-    "/Applications/Audius.app",
-    `${process.env["HOME"]}/Applications/Audius.app`
-  ],
-  win32: [
-    `${process.env["LOCALAPPDATA"]}\\Programs\\Audius\\Audius.exe`,
-    `${process.env["PROGRAMFILES"]}\\Audius\\Audius.exe`
-  ],
-  linux: [
-    "/usr/bin/audius",
-    "/usr/local/bin/audius",
-    `${process.env["HOME"]}/.local/bin/audius`,
-    // Snap/Flatpak
-    "/snap/bin/audius",
-    `${process.env["HOME"]}/.local/share/flatpak/exports/bin/com.audius.Audius`
-  ]
-}
-
-async function findDesktopApp(): Promise<string | null> {
-  const os = platform()
-  const paths = DESKTOP_APP_PATHS[os] ?? []
-
-  for (const p of paths) {
-    if (!p) continue
-    try {
-      await access(p, constants.F_OK)
-      return p
-    } catch {
-      // Not found at this path, try next
-    }
-  }
-  return null
-}
-
-function openUrl(url: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const os = platform()
-    let cmd: string
-
-    switch (os) {
-      case "darwin":
-        cmd = `open "${url}"`
-        break
-      case "win32":
-        cmd = `start "" "${url}"`
-        break
-      default: // linux and others
-        cmd = `xdg-open "${url}"`
-        break
-    }
-
-    exec(cmd, (error) => {
-      if (error) reject(error)
-      else resolve()
-    })
-  })
-}
-
-function openWithApp(appPath: string, url: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const os = platform()
-    let cmd: string
-
-    switch (os) {
-      case "darwin":
-        cmd = `open -a "${appPath}" "${url}"`
-        break
-      case "win32":
-        cmd = `"${appPath}" "${url}"`
-        break
-      default:
-        cmd = `"${appPath}" "${url}"`
-        break
-    }
-
-    exec(cmd, (error) => {
-      if (error) reject(error)
-      else resolve()
-    })
-  })
-}
 
 // ---------------------------------------------------------------------------
 // Handler
@@ -155,47 +60,41 @@ export const handlePlay = (
     const authContext = bearerToken ? { bearerToken } : undefined
     const trackId = args["trackId"] as string | undefined
     const query = args["query"] as string | undefined
-    const preferBrowser = args["preferBrowser"] as boolean | undefined
 
     if (!trackId && !query) {
       return CallToolResult.make({
         content: [TextContent.make({
           type: "text" as const,
-          text: "Error: Provide either 'trackId' or 'query' to find a track to play."
+          text: "Error: provide either 'trackId' or 'query' to resolve a track."
         })],
         isError: true
       })
     }
 
-    // Step 1: Resolve track info
+    // Resolve the track via the Audius API.
     let track: Record<string, unknown> | undefined
 
     if (trackId) {
-      // Fetch track by ID
       const result = yield* Effect.catchAll(
         audiusClient.request("GET", `/tracks/${trackId}`, undefined, authContext),
         (error) => Effect.succeed({ error: error.message } as unknown)
       )
-
       const data = result as Record<string, unknown>
       if (data["error"]) {
         return CallToolResult.make({
           content: [TextContent.make({
             type: "text" as const,
-            text: `Error fetching track ${trackId}: ${data["error"]}`
+            text: `Error resolving track ${trackId}: ${data["error"]}`
           })],
           isError: true
         })
       }
-
       track = (data["data"] as Record<string, unknown>) ?? data
     } else if (query) {
-      // Search for track
       const result = yield* Effect.catchAll(
         audiusClient.request("GET", "/tracks/search", { query: { query } }, authContext),
         (error) => Effect.succeed({ error: error.message } as unknown)
       )
-
       const data = result as Record<string, unknown>
       if (data["error"]) {
         return CallToolResult.make({
@@ -206,7 +105,6 @@ export const handlePlay = (
           isError: true
         })
       }
-
       const tracks = (data["data"] as unknown[]) ?? []
       if (tracks.length === 0) {
         return CallToolResult.make({
@@ -217,7 +115,6 @@ export const handlePlay = (
           isError: true
         })
       }
-
       track = tracks[0] as Record<string, unknown>
     }
 
@@ -225,74 +122,34 @@ export const handlePlay = (
       return CallToolResult.make({
         content: [TextContent.make({
           type: "text" as const,
-          text: "Error: Could not resolve track."
+          text: "Error: could not resolve a track."
         })],
         isError: true
       })
     }
 
-    // Step 2: Build URLs
+    // Build the openable URLs.
     const permalink = track["permalink"] as string | undefined
-    const title = track["title"] as string ?? "Unknown Track"
-    const artist = (track["user"] as Record<string, unknown>)?.["name"] as string ?? "Unknown Artist"
+    const id = (track["id"] as string | undefined) ?? trackId ?? ""
+    const title = (track["title"] as string | undefined) ?? "Unknown Track"
+    const artist =
+      ((track["user"] as Record<string, unknown>)?.["name"] as string | undefined) ??
+      "Unknown Artist"
 
-    // Build web URL from permalink or fall back to track ID
     const webUrl = permalink
       ? (permalink.startsWith("http") ? permalink : `https://audius.co${permalink}`)
-      : `https://audius.co/tracks/${trackId ?? ""}`
+      : `https://audius.co/tracks/${id}`
+    const deepLink = `audius://${webUrl.replace(/^https?:\/\//, "")}`
 
-    // Step 3: Try to open in desktop app, fall back to browser
-    let openedWith = "browser"
-
-    if (!preferBrowser) {
-      const appPath = yield* Effect.tryPromise({
-        try: () => findDesktopApp(),
-        catch: () => new Error("Failed to search for desktop app")
-      }).pipe(Effect.catchAll(() => Effect.succeed(null)))
-
-      if (appPath) {
-        // Try opening with the desktop app
-        const openResult = yield* Effect.tryPromise({
-          try: () => openWithApp(appPath, webUrl),
-          catch: (e) => new Error(`Failed to open desktop app: ${e}`)
-        }).pipe(Effect.catchAll(() => Effect.succeed("failed" as const)))
-
-        if (openResult !== "failed") {
-          openedWith = "desktop app"
-        }
-      }
-    }
-
-    // Fall back to browser if desktop didn't work
-    if (openedWith === "browser") {
-      const openResult = yield* Effect.tryPromise({
-        try: () => openUrl(webUrl),
-        catch: (e) => new Error(`Failed to open browser: ${e}`)
-      }).pipe(Effect.catchAll((error) => Effect.succeed(error)))
-
-      if (openResult instanceof Error) {
-        return CallToolResult.make({
-          content: [TextContent.make({
-            type: "text" as const,
-            text: `Found "${title}" by ${artist} but failed to open it: ${openResult.message}\n\nURL: ${webUrl}`
-          })],
-          isError: true
-        })
-      }
-    }
-
-    // Step 4: Return success
     return CallToolResult.make({
       content: [TextContent.make({
         type: "text" as const,
         text: JSON.stringify({
-          status: "playing",
-          openedWith,
-          track: {
-            title,
-            artist,
-            url: webUrl
-          }
+          status: "resolved",
+          track: { id, title, artist },
+          webUrl,
+          deepLink,
+          note: "Open webUrl (or deepLink for the desktop app) on the user's device."
         }, null, 2)
       })]
     })

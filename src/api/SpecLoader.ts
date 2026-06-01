@@ -7,6 +7,8 @@
  * - Exposes as Effect service
  */
 import { Context, Effect, Layer } from "effect"
+import { readFile } from "node:fs/promises"
+import { fileURLToPath } from "node:url"
 import YAML from "yaml"
 
 const SPEC_URL = "https://api.audius.co/v1/swagger.yaml"
@@ -96,6 +98,45 @@ function followRef(ref: string, root: unknown): unknown {
 }
 
 // ---------------------------------------------------------------------------
+// Spec text loading — network first, vendored fallback second (AX-22)
+// ---------------------------------------------------------------------------
+
+interface LoadedSpec {
+  readonly text: string
+  readonly source: "network" | "bundled"
+}
+
+async function fetchSpecText(): Promise<string> {
+  const response = await fetch(SPEC_URL)
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`)
+  }
+  return response.text()
+}
+
+async function bundledSpecText(): Promise<string> {
+  // dist/api/SpecLoader.js -> ../../specs/openapi-spec.yaml (repo / image root).
+  const url = new URL("../../specs/openapi-spec.yaml", import.meta.url)
+  return readFile(fileURLToPath(url), "utf-8")
+}
+
+/** Load the raw spec text: the live Audius spec first, the vendored copy second. */
+async function loadSpecText(): Promise<LoadedSpec> {
+  try {
+    return { text: await fetchSpecText(), source: "network" }
+  } catch (netErr) {
+    try {
+      return { text: await bundledSpecText(), source: "bundled" }
+    } catch {
+      throw new Error(
+        `Failed to load the Audius API spec from the network (${netErr}) ` +
+        `and no usable bundled fallback at specs/openapi-spec.yaml`
+      )
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Service
 // ---------------------------------------------------------------------------
 
@@ -107,26 +148,20 @@ export class SpecLoader extends Context.Tag("SpecLoader")<
 export const SpecLoaderLive: Layer.Layer<SpecLoader, Error> = Layer.effect(
   SpecLoader,
   Effect.gen(function* () {
-    const response = yield* Effect.tryPromise({
-      try: () => fetch(SPEC_URL),
-      catch: (e) => new Error(`Failed to fetch spec: ${e}`)
-    })
-    if (!response.ok) {
-      const errText = yield* Effect.tryPromise({
-        try: () => response.text(),
-        catch: () => new Error("Failed to read error body")
-      })
-      return yield* Effect.fail(new Error(`Failed to fetch spec: HTTP ${response.status} — ${errText.slice(0, 200)}`))
-    }
-    const text = yield* Effect.tryPromise({
-      try: () => response.text(),
-      catch: (e) => new Error(`Failed to read spec body: ${e}`)
+    // AX-22 — network-first, bundled-fallback. An Audius docs outage degrades
+    // Atris to a slightly stale spec instead of failing to boot.
+    const loaded = yield* Effect.tryPromise({
+      try: loadSpecText,
+      catch: (e) => new Error(String(e))
     })
 
-    const raw = YAML.parse(text) as Record<string, unknown>
+    const raw = YAML.parse(loaded.text) as Record<string, unknown>
     const resolved = resolveRefs(raw, raw, new Set()) as OpenApiSpec
 
-    yield* Effect.logInfo(`Loaded Audius API spec: ${Object.keys(resolved.paths ?? {}).length} paths`)
+    yield* Effect.logInfo(
+      `Loaded Audius API spec from ${loaded.source}: ` +
+      `${Object.keys(resolved.paths ?? {}).length} paths`
+    )
 
     return { spec: resolved }
   })

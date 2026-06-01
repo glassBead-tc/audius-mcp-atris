@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased — Agent Experience Alignment
+## 3.0.0 (2026-05-21) — Agent Experience Alignment
 
 A multi-release program (specs in `specs/agent-experience-alignment/`) that brings the
 server into alignment with the 2026-05-21 agent-experience study. Restores the missing
@@ -40,6 +40,38 @@ server into alignment with the 2026-05-21 agent-experience study. Restores the m
   `audius-bpm-landscape`); the `prompts` capability is now declared.
 - **AX-10** — sandbox reliability: each `audius.request` is bounded by a 10 s host
   timeout, and an execute call may make at most 64 requests (`REQUEST_BUDGET`).
+
+### Release 3 — Harden
+- **AX-13** — `subgraph` is gated on `GRAPH_API_KEY`: when unconfigured it returns a
+  typed `SUBGRAPH_UNCONFIGURED` directive instead of hitting a keyless endpoint that
+  rejects every query. The dead keyless endpoint was removed.
+- **AX-14** — `play` is now an honest resolver: it returns `{ webUrl, deepLink, track }`
+  for the MCP client to open, and never shells out on the headless server or claims
+  playback it cannot observe.
+- **AX-15** — tool annotations corrected: `play` is genuinely `readOnlyHint: true`;
+  `execute` is `destructiveHint: true` (write methods perform real mutations).
+- **AX-16** — the transport no longer leaks raw internals: handler exceptions are
+  logged server-side with a ref id; the client receives a generic
+  `Internal server error (ref: …)`.
+- **AX-18** — metadata fidelity: `package.json` and `SERVER_INFO` versions reconciled
+  at `3.0.0`; the startup tool-list log corrected.
+- **AX-21** — generated type declarations now document the `{data}` envelope, the
+  error shape and projection, and mark `[auth]` endpoints.
+- **AX-22** — startup resilience: `SpecLoader` is network-first with a bundled
+  fallback (`specs/openapi-spec.yaml`, copied into the Docker image); an Audius docs
+  outage no longer prevents boot.
+- **AX-23** — `src/api/Cache.ts`: a 45 s per-instance TTL cache for hot idempotent
+  public reads, easing shared-API-key contention.
+- **AX-25** — observability: every tool call emits a structured log line
+  (`name`, `durationMs`, `chars`, `isError`).
+- **AX-12** — `audius.paginate(path, opts)` sandbox helper flattens a paginated
+  endpoint into one bounded `{ data: [...] }`.
+- **AX-03** — opt-in `options.fields` dot-path projection (delivered with AX-02).
+
+Deferred (tracked, not in this release): **AX-07** — a `code` escape hatch on `search`
+needs the QuickJS sandbox to run spec queries safely; **AX-11** — `audius.sleep` adds a
+host timer to the delicate promise-pump. The structured tools cover the need today;
+these remain power-features for a later release.
 
 ## 2.4.0 (2025-07-01)
 - Added stream-track and open-track-in-desktop tools for direct audio streaming.

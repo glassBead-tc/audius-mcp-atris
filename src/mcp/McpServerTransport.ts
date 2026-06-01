@@ -157,6 +157,10 @@ export const startServer = (
             try {
               result = await config.handler(msg, bearerToken)
             } catch (cause) {
+              // AX-16 — log the full cause server-side; return a generic
+              // message with a correlation ref so internals never leak.
+              const ref = Math.random().toString(36).slice(2, 10)
+              console.error(`[mcp] internal error ref=${ref}:`, cause)
               result = {
                 _tag: "Exit",
                 requestId: internal["id"] ?? "",
@@ -166,7 +170,7 @@ export const startServer = (
                     _tag: "Fail",
                     error: {
                       code: -32603,
-                      message: `Internal error: ${cause}`
+                      message: `Internal server error (ref: ${ref})`
                     }
                   }
                 }

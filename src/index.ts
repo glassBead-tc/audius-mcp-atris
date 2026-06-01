@@ -83,7 +83,7 @@ const program = Effect.gen(function* () {
 
   yield* Effect.logInfo(`Audius MCP Server (Code Mode) listening on port ${config.port}`)
   yield* Effect.logInfo("Transport: Streamable HTTP at POST /mcp")
-  yield* Effect.logInfo("Tools: search, execute, play, subgraph")
+  yield* Effect.logInfo("Tools: search, inspect_endpoint, execute, play, subgraph")
 
   // Keep running until interrupted (SIGINT/SIGTERM trigger Effect interruption)
   yield* Effect.never

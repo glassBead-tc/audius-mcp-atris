@@ -9,6 +9,7 @@
  */
 import { Effect } from "effect"
 import { AppConfig } from "../AppConfig.js"
+import { buildErrorDirective } from "../api/Errors.js"
 import { CallToolResult, TextContent, ToolAnnotations, Tool } from "../mcp/McpSchema.js"
 
 // ---------------------------------------------------------------------------
@@ -17,10 +18,7 @@ import { CallToolResult, TextContent, ToolAnnotations, Tool } from "../mcp/McpSc
 
 const SUBGRAPH_ID = "F8TjrYuTLohz64J8uuDke9htSR1aY9TGCuEjJVVjUJaD"
 
-/** Public endpoint (rate-limited, no API key needed) */
-const PUBLIC_ENDPOINT = `https://gateway.thegraph.com/api/subgraphs/id/${SUBGRAPH_ID}`
-
-/** Authenticated endpoint template (higher rate limits) */
+/** The Graph gateway endpoint — the API key is embedded in the path. */
 const authedEndpoint = (apiKey: string) =>
   `https://gateway.thegraph.com/api/${apiKey}/subgraphs/id/${SUBGRAPH_ID}`
 
@@ -89,8 +87,23 @@ export const handleSubgraph = (
       })
     }
 
-    // Use authenticated endpoint if a Graph API key is available
-    const endpoint = config.graphApiKey ? authedEndpoint(config.graphApiKey) : PUBLIC_ENDPOINT
+    // AX-13 — subgraph requires a Graph API key. Fail honestly when it is
+    // unconfigured instead of hitting a keyless endpoint that rejects everything.
+    if (!config.graphApiKey) {
+      return CallToolResult.make({
+        content: [TextContent.make({
+          type: "text" as const,
+          text: JSON.stringify(buildErrorDirective({
+            status: 0,
+            errorType: "SUBGRAPH_UNCONFIGURED",
+            message:
+              "The subgraph tool is not configured on this deployment — GRAPH_API_KEY is not set."
+          }), null, 2)
+        })],
+        isError: true
+      })
+    }
+    const endpoint = authedEndpoint(config.graphApiKey)
 
     const response = yield* Effect.tryPromise({
       try: () =>
