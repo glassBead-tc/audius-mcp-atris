@@ -32,7 +32,9 @@ steps:
       - --cpu=1
       - --min-instances=1
       - --max-instances=10
-      - --set-secrets=AUDIUS_API_KEY=AUDIUS_API_KEY:latest
+      # NOTE: every secret listed here must exist in Secret Manager before
+      # deploying (gcloud secrets create <NAME> --data-file=-), or the deploy fails.
+      - --set-secrets=AUDIUS_API_KEY=AUDIUS_API_KEY:latest,GRAPH_API_KEY=GRAPH_API_KEY:latest,MCP_AUTH_SECRET=MCP_AUTH_SECRET:latest
 
 images:
   - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/${_SERVICE_NAME}:$COMMIT_SHA

@@ -23,9 +23,17 @@ export type McpRequestHandler = (
   bearerToken?: string
 ) => Promise<unknown>
 
+/** Optional auth router — returns true if it handled the request. */
+export type AuthRouter = (
+  req: Http.IncomingMessage,
+  res: Http.ServerResponse,
+  url: URL
+) => Promise<boolean>
+
 export interface McpTransportConfig {
   readonly port: number
   readonly handler: McpRequestHandler
+  readonly authRouter?: AuthRouter
 }
 
 // ---------------------------------------------------------------------------
@@ -57,7 +65,7 @@ export const startServer = (
       const server = Http.createServer(async (req, res) => {
       // CORS headers
       res.setHeader("Access-Control-Allow-Origin", process.env["MCP_ALLOW_ORIGIN"] ?? "http://localhost")
-      res.setHeader("Access-Control-Allow-Methods", "POST, DELETE, OPTIONS")
+      res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
       res.setHeader("Access-Control-Allow-Headers", "Content-Type, MCP-Session-Id, MCP-Protocol-Version")
       res.setHeader("Access-Control-Expose-Headers", "MCP-Session-Id, MCP-Protocol-Version")
 
@@ -74,6 +82,11 @@ export const startServer = (
       if (req.method === "GET" && (url.pathname === "/health" || url.pathname === "/")) {
         res.writeHead(200, { "Content-Type": "application/json" })
         res.end(JSON.stringify({ status: "ok" }))
+        return
+      }
+
+      // OAuth broker routes (metadata, register, authorize, callback, token)
+      if (config.authRouter && (await config.authRouter(req, res, url))) {
         return
       }
 

@@ -1,5 +1,31 @@
 # Changelog
 
+## Unreleased — Capability Roadmap Phase 2 (user auth)
+
+Spec: `specs/capability-roadmap/README.md`. MCP-native OAuth: "Log in with Audius".
+
+- **OAuth broker** (`src/auth/OAuthBroker.ts`, `src/auth/Crypto.ts`): the server
+  implements the MCP authorization spec as a stateless broker over Audius's OAuth 2.0
+  Authorization Code + PKCE flow (shipped by Audius in March 2026). Endpoints:
+  `/.well-known/oauth-protected-resource`, `/.well-known/oauth-authorization-server`,
+  `/oauth/register` (stateless RFC 7591 DCR), `/oauth/authorize` (brokers to
+  `api.audius.co/v1/oauth/authorize` with `scope=write`), `/oauth/callback`
+  (immediate upstream code exchange), `/oauth/token` (client PKCE verification +
+  refresh-rotation proxy), `/oauth/revoke` (RFC 7009 proxy).
+- All flow state (registered clients, pending logins, authorization codes) is sealed
+  with AES-256-GCM under `MCP_AUTH_SECRET` — no session store, fits stateless Cloud Run.
+  The access token handed to MCP clients IS the Audius access token, so the existing
+  bearer pass-through works unchanged; user-scoped and write endpoints light up as
+  soon as the client authenticates.
+- New env vars: `MCP_AUTH_SECRET` (enables the broker; absent = pass-through only),
+  `MCP_PUBLIC_URL` (optional; derived from request headers when unset). Both added to
+  `cloudbuild.yaml` secrets (create in Secret Manager before deploying).
+- Requires the deployment's `<public-url>/oauth/callback` to be registered as a
+  redirect URI on the Audius developer app (audius.co/settings → Developer Apps).
+- Tests: `test/oauth-broker.test.mjs` — crypto guarantees plus the full brokered flow
+  (register → authorize → callback → token → refresh) against a stubbed upstream,
+  including PKCE-failure, evil-redirect-uri, and unknown-client rejections.
+
 ## Unreleased — Capability Roadmap Phase 1 (fix what's broken)
 
 Spec: `specs/capability-roadmap/README.md`. Six fixes from the 2026-07-09 live audit.

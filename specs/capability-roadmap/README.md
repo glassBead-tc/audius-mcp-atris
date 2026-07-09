@@ -91,16 +91,29 @@ Ship the defect table above. Overlaps with AX R2/R3 items; those keep their AX i
 **Exit criterion**: the behavioral suite covers each fix; no tool lies about its own
 state; amounts and stream URLs are trustworthy.
 
-### Phase 2 — User auth (the big unlock)
+### Phase 2 — User auth (the big unlock) *(status: implemented 2026-07-09; pending live end-to-end login)*
 
 Implement "Log in with Audius" (OAuth 2.0 + PKCE) so agents can act *as a user*.
 
-- MCP-native path: the server implements the MCP 2025-11-25 authorization spec as an
-  OAuth resource server with Audius as the upstream IdP; the existing stateless bearer
-  pass-through stays as the execution path.
-- Fallback path for clients without MCP auth support: a documented manual flow
-  (authorize URL out, token in via `Authorization` header).
-- Scope handling: `read` vs `write`; INSTRUCTIONS explain what each unlocks.
+Research findings that shaped the design (2026-07-09): Audius shipped a real OAuth 2.0
+Authorization Code + PKCE flow in March 2026 (`GET/POST /v1/oauth/authorize|token|revoke`,
+opaque 1-hour access tokens, 30-day single-use rotating refresh tokens) but exposes
+**no RFC 8414 discovery and no dynamic client registration** — so MCP clients cannot
+use Audius directly, and the server brokers instead:
+
+- **Stateless broker** (`src/auth/OAuthBroker.ts`): MCP-spec metadata + RFC 7591 DCR
+  + authorize/callback/token/revoke, all flow state sealed with AES-256-GCM under
+  `MCP_AUTH_SECRET` (no database). The access token handed to MCP clients IS the
+  Audius access token — the existing bearer pass-through is the execution path.
+  Scope defaults to `write` (user decision 2026-07-09); an explicit read-only
+  request is honored.
+- Trade-off accepted: brokered authorization codes are PKCE-bound and expire in
+  2 minutes but are not strictly single-use (statelessness).
+- Deployment prerequisites: `MCP_AUTH_SECRET` (+ optional `MCP_PUBLIC_URL`) env vars;
+  `<public-url>/oauth/callback` registered as a redirect URI on the Audius dev app.
+- Writes de-risked: with `scope=write` the API server signs EntityManager transactions
+  itself against the user→app consent grant — plain bearer works on write endpoints.
+  (This pre-answers Phase 3's spike.)
 
 **Exit criterion**: an agent connected through a compliant MCP client completes
 `GET /me` and reads its own library without any out-of-band token plumbing.

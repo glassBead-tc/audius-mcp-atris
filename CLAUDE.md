@@ -11,8 +11,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Environment Variables
 
-- `AUDIUS_API_KEY` - API key for Audius REST API
+Loaded from `./.env` at startup (Node's `process.loadEnvFile()`; already-set variables win).
+
+- `AUDIUS_API_KEY` - API key for Audius REST API (also the OAuth client_id)
 - `PORT` - HTTP server port (default: 3000)
+- `GRAPH_API_KEY` - The Graph gateway key; gates the `subgraph` tool (hidden when unset)
+- `MCP_AUTH_SECRET` - enables the stateless OAuth broker ("Log in with Audius"); unset = bearer pass-through only
+- `MCP_PUBLIC_URL` - public base URL for OAuth metadata/redirects (derived from request headers when unset)
+- `RESPONSE_TOKEN_BUDGET` - max tokens per tool result (default: 20000)
 
 ## Architecture Overview
 

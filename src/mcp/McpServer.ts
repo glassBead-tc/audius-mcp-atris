@@ -52,7 +52,7 @@ const SERVER_INFO = {
 
 const PROTOCOL_VERSION = "2025-11-25"
 
-const makeInstructions = (endpointCount: number, subgraphEnabled: boolean) => `
+const makeInstructions = (endpointCount: number, subgraphEnabled: boolean, authEnabled: boolean) => `
 # Audius MCP Server — Code Mode
 
 Access the Audius music platform (${endpointCount} REST API endpoints) through a small
@@ -96,6 +96,14 @@ truncation envelope that explains how to narrow them.
 Audius list endpoints wrap their payload: \`{ data: [ ... ] }\`. Read \`.data\`.
 User-scoped endpoints (e.g. \`/me\`) require a user bearer token from the MCP client;
 public reads (trending, search) work with the server API key alone.
+${authEnabled ? `
+## Authentication (Log in with Audius)
+This server supports MCP OAuth. When the user authenticates through their MCP
+client, every \`audius.request\` in the sandbox carries their identity: \`/me\`,
+their library, favorites, reposts, playlists, and (with write scope) mutations
+on their behalf. If a user-scoped call returns 401, the user has not connected
+their Audius account — tell them to authenticate this MCP server in their
+client (the flow opens audius.co to approve access).` : ""}
 
 ## Errors, mutations, and data fidelity
 - \`audius.request\` NEVER throws on API failures — it resolves to
@@ -161,7 +169,8 @@ export const createHandler = (): McpEffectHandler => {
             serverInfo: SERVER_INFO,
             instructions: makeInstructions(
               specIndex.getEndpointCount(),
-              Boolean(config.graphApiKey)
+              Boolean(config.graphApiKey),
+              Boolean(config.mcpAuthSecret)
             )
           })
         })

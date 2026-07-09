@@ -28,6 +28,7 @@ import { TypeGeneratorLive } from "./sandbox/TypeGenerator.js"
 import { Sandbox, SandboxLive } from "./sandbox/Sandbox.js"
 import { createHandler } from "./mcp/McpServer.js"
 import { startServer } from "./mcp/McpServerTransport.js"
+import { makeOAuthBroker } from "./auth/OAuthBroker.js"
 
 // ---------------------------------------------------------------------------
 // Layer composition
@@ -83,16 +84,32 @@ const program = Effect.gen(function* () {
     return Runtime.runPromise(runtime)(effectHandler(decoded, bearerToken))
   }
 
+  // OAuth broker (Phase 2) — enabled when MCP_AUTH_SECRET is set
+  const broker = config.mcpAuthSecret
+    ? makeOAuthBroker({
+        secret: config.mcpAuthSecret,
+        audiusApiKey: config.apiKey,
+        publicUrl: config.publicUrl,
+        defaultScope: "write"
+      })
+    : undefined
+
   // Start HTTP server (acquireRelease handles cleanup on interruption)
   yield* startServer({
     port: config.port,
-    handler: asyncHandler
+    handler: asyncHandler,
+    authRouter: broker?.handle
   })
 
   yield* Effect.logInfo(`Audius MCP Server (Code Mode) listening on port ${config.port}`)
   yield* Effect.logInfo("Transport: Streamable HTTP at POST /mcp")
   yield* Effect.logInfo(
     `Tools: search, execute, play${config.graphApiKey ? ", subgraph" : " (subgraph disabled — GRAPH_API_KEY not set)"}`
+  )
+  yield* Effect.logInfo(
+    broker
+      ? `OAuth: Log in with Audius broker enabled at /oauth/* (scope: write${config.publicUrl ? `, public URL: ${config.publicUrl}` : ", public URL derived per request"})`
+      : "OAuth: broker disabled (MCP_AUTH_SECRET not set) — bearer pass-through only"
   )
 
   // Keep running until interrupted (SIGINT/SIGTERM trigger Effect interruption)

@@ -14,6 +14,18 @@ export interface AppConfigShape {
   readonly port: number
   readonly graphApiKey?: string
   /**
+   * Symmetric secret for the stateless OAuth broker (Phase 2). When set, the
+   * server exposes MCP-spec OAuth endpoints that broker "Log in with Audius";
+   * when absent, auth is limited to bearer pass-through.
+   */
+  readonly mcpAuthSecret?: string
+  /**
+   * Public base URL of this deployment (e.g. https://xyz.run.app), used in
+   * OAuth metadata and the Audius redirect_uri. Derived from request headers
+   * when unset.
+   */
+  readonly publicUrl?: string
+  /**
    * Maximum size, in estimated tokens, of any single tool result.
    * Results larger than this are replaced with a truncation envelope by
    * the ResponseGuard chokepoint (AX-01a). Token-denominated so the knob
@@ -34,10 +46,12 @@ export const AppConfigLive: Layer.Layer<AppConfig> = Layer.effect(
     const portParsed = parseInt(process.env["PORT"] ?? "3000", 10)
     const port = Number.isFinite(portParsed) ? portParsed : 3000
     const graphApiKey = process.env["GRAPH_API_KEY"] || undefined
+    const mcpAuthSecret = process.env["MCP_AUTH_SECRET"] || undefined
+    const publicUrl = process.env["MCP_PUBLIC_URL"] || undefined
     const budgetParsed = parseInt(process.env["RESPONSE_TOKEN_BUDGET"] ?? "20000", 10)
     const responseTokenBudget = Number.isFinite(budgetParsed) && budgetParsed > 0
       ? budgetParsed
       : 20000
-    return { apiKey, port, graphApiKey, responseTokenBudget }
+    return { apiKey, port, graphApiKey, mcpAuthSecret, publicUrl, responseTokenBudget }
   })
 )
