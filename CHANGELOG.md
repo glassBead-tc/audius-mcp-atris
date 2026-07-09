@@ -24,6 +24,10 @@ Spec: `specs/capability-roadmap/README.md`. Six fixes from the 2026-07-09 live a
   semantics (POST/PUT/DELETE are real writes with a user bearer), string-preserved
   big integers, and `{ url }` binary responses.
 - Tests: `test/json-bigint.test.mjs`, `test/tool-honesty.test.mjs`.
+- **P1 follow-up** — the server now loads `./.env` at startup via Node's built-in
+  `process.loadEnvFile()` (local dev only; already-set environment variables win, so
+  Cloud Run config is never overridden). Previously `.env` was silently ignored —
+  `GRAPH_API_KEY` set there never reached the subgraph tool.
 
 ## Unreleased — Agent Experience Alignment
 

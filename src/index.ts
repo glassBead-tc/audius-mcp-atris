@@ -10,6 +10,17 @@
  */
 import { Effect, Fiber, Layer, Logger, LogLevel, Runtime } from "effect"
 import { AppConfig, AppConfigLive } from "./AppConfig.js"
+
+// Load ./.env for local development (Node 20.12+ built-in; no dotenv needed).
+// Variables already present in the environment win, so Cloud Run's injected
+// config is never overridden — and a missing .env is not an error.
+try {
+  const proc = process as { loadEnvFile?: () => void }
+  proc.loadEnvFile?.()
+} catch {
+  // no .env file — deployment environments inject variables directly
+}
+
 import { SpecLoaderLive } from "./api/SpecLoader.js"
 import { SpecIndex, SpecIndexLive } from "./api/SpecIndex.js"
 import { AudiusClient, AudiusClientLive } from "./api/AudiusClient.js"
@@ -80,7 +91,9 @@ const program = Effect.gen(function* () {
 
   yield* Effect.logInfo(`Audius MCP Server (Code Mode) listening on port ${config.port}`)
   yield* Effect.logInfo("Transport: Streamable HTTP at POST /mcp")
-  yield* Effect.logInfo("Tools: search, execute, play, subgraph")
+  yield* Effect.logInfo(
+    `Tools: search, execute, play${config.graphApiKey ? ", subgraph" : " (subgraph disabled — GRAPH_API_KEY not set)"}`
+  )
 
   // Keep running until interrupted (SIGINT/SIGTERM trigger Effect interruption)
   yield* Effect.never

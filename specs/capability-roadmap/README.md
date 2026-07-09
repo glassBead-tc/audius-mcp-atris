@@ -133,7 +133,11 @@ first-class workflow recipes.
 
 ### Phase 5 — OAP protocol layer
 
-- Working subgraph (key configured; staking/governance/validator queries verified).
+- Working subgraph. **Note (2026-07-09)**: with a valid `GRAPH_API_KEY` the gateway
+  authenticates, but the pinned deployment (`F8TjrYuTLohz64J8uuDke9htSR1aY9TGCuEjJVVjUJaD`)
+  fails every query with `bad indexers: BadResponse(400)` — its lone indexer is broken
+  or the subgraph was deprecated in the OAP rebrand. First task: locate the current
+  Audius/OAP subgraph (or replace with the protocol dashboard / go-openaudio APIs).
 - Evaluate `grpc.audius.co:443` as a second client surface for protocol data.
 - Artist coins as first-class workflows (insights, members, volume leaders).
 - Teach the server to *explain* Programmable Distribution 403s (`access_authorities`).
