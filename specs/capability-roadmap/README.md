@@ -39,7 +39,7 @@ proven end-to-end (bodies reach the API; only Audius-side auth stops mutations).
 
 | Defect | Evidence | Where |
 |---|---|---|
-| Big-integer overflow | `/tips` amounts return as garbage (e.g. `-8742554432415203328`) — wei-scale ints lose precision through JSON parsing | `src/api/AudiusClient.ts`, `src/sandbox/Sandbox.ts` |
+| Big-integer fragility | Wei-scale (10^18+) integer amounts lose precision through `JSON.parse` past 2^53. (The `/tips` garbage values that flagged this turned out to be upstream Audius data — already-wrapped int64 strings — but the parsing hazard is real for any numeric big-int field.) | `src/api/AudiusClient.ts` |
 | `/tracks/{id}/stream` chokes | Client follows the redirect, downloads raw MP3 bytes, tries to JSON-parse them | `src/api/AudiusClient.ts` |
 | `play` fails on headless hosts | Resolves the track, then errors on `xdg-open: not found` instead of returning the URL (AX-14) | `src/tools/PlayTool.ts` |
 | `subgraph` always fails | No `GRAPH_API_KEY` configured; keyless fallback endpoint is dead (AX-13) | `src/tools/SubgraphTool.ts` |
@@ -67,7 +67,7 @@ signing (coin trading, staking writes), chats/DMs.
 
 ## Phases
 
-### Phase 1 — Fix what's broken *(status: in progress)*
+### Phase 1 — Fix what's broken *(status: complete, 2026-07-09)*
 
 Ship the defect table above. Overlaps with AX R2/R3 items; those keep their AX ids.
 
@@ -164,5 +164,8 @@ cheap for agents to actually use.
 
 - Audius serves **notifications and listen history for arbitrary users without auth**
   (verified 2026-07-09). Platform-side behavior; worth reporting to the Audius team.
+- `/tips` returns **int64-wrapped garbage amounts** (e.g. `"-8742554432415203328"`) —
+  the corruption is in the API's own payload (verified against the raw endpoint,
+  2026-07-09). The server passes them through faithfully.
 - The swagger duplicates a few endpoints under hyphen/underscore aliases
   (`fan_club`/`fan-club`, `follow_state`/`follow-state`), slightly inflating counts.

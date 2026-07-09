@@ -10,6 +10,7 @@
  * This module works directly with the internal Effect RPC message format
  * (decoded by McpSerialization), not raw JSON-RPC.
  */
+import { readFileSync } from "node:fs"
 import { Effect } from "effect"
 import { SpecIndex } from "../api/SpecIndex.js"
 import { Sandbox } from "../sandbox/Sandbox.js"
@@ -27,19 +28,35 @@ import { capResult } from "./ResponseGuard.js"
 // Server info
 // ---------------------------------------------------------------------------
 
+/**
+ * Version is read from package.json at module load so the server never lies
+ * about itself (capability roadmap P1-5). Falls back to 0.0.0 if the file
+ * is unreachable (e.g. exotic packaging).
+ */
+const PACKAGE_VERSION = (() => {
+  try {
+    const pkg = JSON.parse(
+      readFileSync(new URL("../../package.json", import.meta.url), "utf8")
+    ) as { version?: string }
+    return pkg.version ?? "0.0.0"
+  } catch {
+    return "0.0.0"
+  }
+})()
+
 const SERVER_INFO = {
   name: "audius-mcp",
-  version: "2.0.0",
+  version: PACKAGE_VERSION,
   description: "Audius Music Platform MCP Server (Code Mode)"
 }
 
 const PROTOCOL_VERSION = "2025-11-25"
 
-const INSTRUCTIONS = `
+const makeInstructions = (endpointCount: number, subgraphEnabled: boolean) => `
 # Audius MCP Server — Code Mode
 
-Access the Audius music platform (219 REST API endpoints) through a small set of
-tools. You discover endpoints, then write JavaScript that runs in a sandbox and
+Access the Audius music platform (${endpointCount} REST API endpoints) through a small
+set of tools. You discover endpoints, then write JavaScript that runs in a sandbox and
 calls them — instead of facing hundreds of individual tools.
 
 ## Tools
@@ -49,8 +66,10 @@ calls them — instead of facing hundreds of individual tools.
 2. **execute** — run JavaScript in a sandbox. An authenticated \`audius\` client is
    available: \`audius.request(method, path, options?)\`. \`console.log()\` is
    captured; the value you \`return\` is the result.
-3. **play** — resolve a track (by id or search query) to its Audius URLs.
-4. **subgraph** — query the Audius protocol subgraph (on-chain staking, governance).
+3. **play** — resolve a track (by id or search query) to its Audius URLs. It may
+   also open the track locally when the server runs on the user's machine; the
+   result's \`opened\` field says whether it did. Never assume audio is playing.${subgraphEnabled ? `
+4. **subgraph** — query the Audius protocol subgraph (on-chain staking, governance).` : ""}
 
 ## Recommended workflow
 1. \`search({ tag: "tracks" })\` — discover the endpoints you need.
@@ -77,6 +96,17 @@ truncation envelope that explains how to narrow them.
 Audius list endpoints wrap their payload: \`{ data: [ ... ] }\`. Read \`.data\`.
 User-scoped endpoints (e.g. \`/me\`) require a user bearer token from the MCP client;
 public reads (trending, search) work with the server API key alone.
+
+## Errors, mutations, and data fidelity
+- \`audius.request\` NEVER throws on API failures — it resolves to
+  \`{ error: "Audius API 404: ..." }\`. Always check \`res.error\` before \`res.data\`,
+  or you'll see a misleading "cannot read property of undefined".
+- POST/PUT/DELETE perform REAL mutations (favorites, reposts, playlists, follows)
+  when a user bearer token is present; without one they fail with 401/403.
+- Integer amounts longer than 15 digits (wei-scale balances, tips, coin amounts)
+  arrive as strings to preserve precision — don't coerce them back to Number.
+- Binary endpoints (e.g. \`/tracks/{id}/stream\`) don't return audio bytes; they
+  resolve to \`{ url }\` — the final signed CDN URL.
 
 ## Query params
 Pass query params as an object inside \`options.query\`, not as a bare string:
@@ -119,28 +149,40 @@ export const createHandler = (): McpEffectHandler => {
 
     switch (tag) {
       case "initialize":
-        return Effect.succeed(makeResponse(id, {
-          protocolVersion: PROTOCOL_VERSION,
-          capabilities: {
-            tools: {},
-            resources: {}
-          },
-          serverInfo: SERVER_INFO,
-          instructions: INSTRUCTIONS
-        }))
+        return Effect.gen(function* () {
+          const config = yield* AppConfig
+          const specIndex = yield* SpecIndex
+          return makeResponse(id, {
+            protocolVersion: PROTOCOL_VERSION,
+            capabilities: {
+              tools: {},
+              resources: {}
+            },
+            serverInfo: SERVER_INFO,
+            instructions: makeInstructions(
+              specIndex.getEndpointCount(),
+              Boolean(config.graphApiKey)
+            )
+          })
+        })
 
       case "ping":
         return Effect.succeed(makeResponse(id, {}))
 
       case "tools/list":
-        return Effect.succeed(makeResponse(id, {
-          tools: [
+        return Effect.gen(function* () {
+          const config = yield* AppConfig
+          const tools = [
             stripMake(searchToolDefinition),
             stripMake(executeToolDefinition),
-            stripMake(playToolDefinition),
-            stripMake(subgraphToolDefinition)
+            stripMake(playToolDefinition)
           ]
-        }))
+          // AX-13 — the subgraph tool is only advertised when it can work.
+          if (config.graphApiKey) {
+            tools.push(stripMake(subgraphToolDefinition))
+          }
+          return makeResponse(id, { tools })
+        })
 
       case "tools/call":
         return handleToolCall(id, payload ?? {}, bearerToken)

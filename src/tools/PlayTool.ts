@@ -1,13 +1,15 @@
 /**
- * Play tool — open a track in the Audius desktop app or browser.
+ * Play tool — resolve a track to its Audius URLs (AX-14: honest resolver).
  *
  * Flow:
  * 1. Resolve the track (by ID or search query) via the Audius API
- * 2. Attempt to open in the Audius desktop app via audius:// protocol
- * 3. Fall back to opening in the user's default browser
+ * 2. Opportunistically try to open it locally (desktop app, then browser)
+ * 3. Always return the resolved URLs; report whether the open succeeded
  *
- * This tool runs system commands (open/xdg-open/start) so it only
- * works when the MCP server is running on the user's local machine.
+ * Resolution succeeding is the tool's success condition. Opening is
+ * best-effort: it only works when the server runs on the user's machine,
+ * and even then only "an open command was issued" — playback is never
+ * claimed or verified.
  */
 import { Effect } from "effect"
 import { exec } from "node:child_process"
@@ -22,11 +24,14 @@ import { CallToolResult, TextContent, ToolAnnotations, Tool } from "../mcp/McpSc
 
 export const playToolDefinition = Tool.make({
   name: "play",
-  title: "Play Track on Audius",
+  title: "Resolve Track on Audius",
   description:
-    "Play a track on the user's machine by opening it in the Audius desktop app " +
-    "(if installed) or in their default browser. Provide either a track ID or a " +
-    "search query to find and play a track. The server must be running locally.",
+    "Resolve a track (by track ID or search query) to its Audius URLs. " +
+    "If the server is running on the user's local machine it will also try to " +
+    "open the track in the Audius desktop app or default browser; the result's " +
+    "`opened` field reports whether that worked. On remote/headless deployments " +
+    "it simply returns the URLs — share them with the user. Never assume audio " +
+    "is playing: this tool resolves and (at best) issues an open command.",
   inputSchema: {
     type: "object",
     properties: {
@@ -241,8 +246,12 @@ export const handlePlay = (
       ? (permalink.startsWith("http") ? permalink : `https://audius.co${permalink}`)
       : `https://audius.co/tracks/${trackId ?? ""}`
 
-    // Step 3: Try to open in desktop app, fall back to browser
-    let openedWith = "browser"
+    // Step 3: Opportunistically try to open locally — desktop app, then
+    // browser. Resolution already succeeded, so open failures downgrade to
+    // an honest `opened: false`, never a tool error.
+    let opened = false
+    let openedWith: string | undefined
+    let openFailure: string | undefined
 
     if (!preferBrowser) {
       const appPath = yield* Effect.tryPromise({
@@ -251,48 +260,50 @@ export const handlePlay = (
       }).pipe(Effect.catchAll(() => Effect.succeed(null)))
 
       if (appPath) {
-        // Try opening with the desktop app
         const openResult = yield* Effect.tryPromise({
           try: () => openWithApp(appPath, webUrl),
           catch: (e) => new Error(`Failed to open desktop app: ${e}`)
         }).pipe(Effect.catchAll(() => Effect.succeed("failed" as const)))
 
         if (openResult !== "failed") {
+          opened = true
           openedWith = "desktop app"
         }
       }
     }
 
-    // Fall back to browser if desktop didn't work
-    if (openedWith === "browser") {
+    if (!opened) {
       const openResult = yield* Effect.tryPromise({
         try: () => openUrl(webUrl),
         catch: (e) => new Error(`Failed to open browser: ${e}`)
       }).pipe(Effect.catchAll((error) => Effect.succeed(error)))
 
       if (openResult instanceof Error) {
-        return CallToolResult.make({
-          content: [TextContent.make({
-            type: "text" as const,
-            text: `Found "${title}" by ${artist} but failed to open it: ${openResult.message}\n\nURL: ${webUrl}`
-          })],
-          isError: true
-        })
+        openFailure = openResult.message
+      } else {
+        opened = true
+        openedWith = "browser"
       }
     }
 
-    // Step 4: Return success
+    // Step 4: Return the resolution — the URLs are the deliverable.
+    const streamUrl = (track["stream"] as Record<string, unknown> | undefined)?.["url"] as string | undefined
     return CallToolResult.make({
       content: [TextContent.make({
         type: "text" as const,
         text: JSON.stringify({
-          status: "playing",
-          openedWith,
+          status: "resolved",
           track: {
             title,
             artist,
-            url: webUrl
-          }
+            url: webUrl,
+            ...(streamUrl ? { streamUrl } : {})
+          },
+          opened,
+          ...(openedWith ? { openedWith } : {}),
+          note: opened
+            ? `Open command issued via ${openedWith} on the server host — playback is not verified.`
+            : `Could not open a player on this host (${openFailure ?? "no opener available"}). Share the URL with the user instead.`
         }, null, 2)
       })]
     })

@@ -17,10 +17,12 @@ import { CallToolResult, TextContent, ToolAnnotations, Tool } from "../mcp/McpSc
 
 const SUBGRAPH_ID = "F8TjrYuTLohz64J8uuDke9htSR1aY9TGCuEjJVVjUJaD"
 
-/** Public endpoint (rate-limited, no API key needed) */
-const PUBLIC_ENDPOINT = `https://gateway.thegraph.com/api/subgraphs/id/${SUBGRAPH_ID}`
-
-/** Authenticated endpoint template (higher rate limits) */
+/**
+ * The Graph's gateway requires an API key — there is no working keyless
+ * endpoint (an unauthenticated request fails with "missing authorization
+ * header"). AX-13: the tool is gated on GRAPH_API_KEY and hidden from
+ * tools/list when unconfigured.
+ */
 const authedEndpoint = (apiKey: string) =>
   `https://gateway.thegraph.com/api/${apiKey}/subgraphs/id/${SUBGRAPH_ID}`
 
@@ -76,6 +78,20 @@ export const handleSubgraph = (
   Effect.gen(function* () {
     const config = yield* AppConfig
 
+    // AX-13 — honest when unconfigured: fail fast with the reason instead of
+    // letting every query die at the gateway with an opaque auth error.
+    if (!config.graphApiKey) {
+      return CallToolResult.make({
+        content: [TextContent.make({
+          type: "text" as const,
+          text: "The subgraph tool is not configured on this server: GRAPH_API_KEY is not set, " +
+            "so on-chain protocol data (staking, delegation, governance, validators) is unavailable. " +
+            "Ask the server operator to set GRAPH_API_KEY (a The Graph gateway API key)."
+        })],
+        isError: true
+      })
+    }
+
     const query = args["query"] as string
     const variables = args["variables"] as Record<string, unknown> | undefined
 
@@ -89,8 +105,7 @@ export const handleSubgraph = (
       })
     }
 
-    // Use authenticated endpoint if a Graph API key is available
-    const endpoint = config.graphApiKey ? authedEndpoint(config.graphApiKey) : PUBLIC_ENDPOINT
+    const endpoint = authedEndpoint(config.graphApiKey)
 
     const response = yield* Effect.tryPromise({
       try: () =>

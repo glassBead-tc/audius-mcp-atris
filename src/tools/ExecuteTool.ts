@@ -20,7 +20,12 @@ export const executeToolDefinition = Tool.make({
     "Execute JavaScript code against the Audius API in an isolated sandbox. " +
     "An authenticated `audius` client is available with `audius.request(method, path, options?)`. " +
     "Use `console.log()` to output intermediate results. The return value of the last expression is captured. " +
-    "Use the search tool first to discover available endpoints.",
+    "Use the search tool first to discover available endpoints. " +
+    "Failed API calls do NOT throw — they resolve to `{ error: \"...\" }`, so check `res.error` " +
+    "before reading `res.data`. " +
+    "POST/PUT/DELETE requests perform REAL mutations on Audius (favorites, reposts, playlists, ...) " +
+    "when the MCP client supplies a user bearer token; without one they fail with 401/403. " +
+    "Integer amounts larger than 15 digits (wei-scale balances, tips) arrive as strings to preserve precision.",
   inputSchema: {
     type: "object",
     properties: {
@@ -38,7 +43,9 @@ export const executeToolDefinition = Tool.make({
   annotations: ToolAnnotations.make({
     title: "Execute Audius API Code",
     readOnlyHint: false,
-    destructiveHint: false,
+    // AX-15 — the sandbox client passes any HTTP method through: with a user
+    // bearer token, code can perform real mutations (including DELETEs).
+    destructiveHint: true,
     idempotentHint: false,
     openWorldHint: true
   })

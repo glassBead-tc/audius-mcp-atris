@@ -1,5 +1,30 @@
 # Changelog
 
+## Unreleased — Capability Roadmap Phase 1 (fix what's broken)
+
+Spec: `specs/capability-roadmap/README.md`. Six fixes from the 2026-07-09 live audit.
+
+- **P1-1** — big-integer-safe JSON parsing (`src/api/Json.ts`): pure integer literals
+  longer than 15 digits are preserved as strings end-to-end into the sandbox, so
+  wei-scale amounts can never be corrupted by `JSON.parse`. (The garbage `/tips`
+  amounts that flagged this are upstream Audius data — now passed through faithfully.)
+- **P1-2** — binary-response guard: non-JSON responses (e.g. `/tracks/{id}/stream`,
+  which redirects to a signed CDN MP3) resolve to `{ url }` instead of downloading
+  the body and choking on JSON parsing.
+- **P1-3 / AX-14** — `play` is an honest resolver: resolution success is tool success;
+  it returns the track URLs (plus `streamUrl` when present) and reports `opened:
+  true/false` instead of erroring on headless hosts or claiming "playing".
+- **P1-4 / AX-13** — `subgraph` is gated on `GRAPH_API_KEY`: hidden from `tools/list`
+  when unconfigured and fails fast with the reason if called anyway; the dead keyless
+  Graph-gateway fallback is removed.
+- **P1-5** — the server reports its real package.json version and derives the endpoint
+  count in INSTRUCTIONS from the live spec index (was hardcoded "219"/2.0.0).
+- **P1-6 / AX-15, AX-21 (partial)** — `execute` advertises `destructiveHint: true` and
+  its description + INSTRUCTIONS document the `{ error }` result shape, mutation
+  semantics (POST/PUT/DELETE are real writes with a user bearer), string-preserved
+  big integers, and `{ url }` binary responses.
+- Tests: `test/json-bigint.test.mjs`, `test/tool-honesty.test.mjs`.
+
 ## Unreleased — Agent Experience Alignment
 
 A multi-release program (specs in `specs/agent-experience-alignment/`) that brings the

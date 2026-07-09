@@ -9,6 +9,7 @@
  */
 import { Context, Effect, Layer } from "effect"
 import { AppConfig } from "../AppConfig.js"
+import { parseJsonPreservingLargeInts } from "./Json.js"
 
 const BASE_URL = "https://api.audius.co/v1"
 
@@ -104,8 +105,30 @@ export const AudiusClientLive: Layer.Layer<AudiusClient, never, AppConfig> = Lay
           )
         }
 
-        const json = yield* Effect.tryPromise({
-          try: () => response.json() as Promise<unknown>,
+        // Binary/redirect endpoints (e.g. /tracks/{id}/stream resolves to a
+        // signed CDN MP3). Don't download or JSON-parse the body — hand back
+        // the final post-redirect URL so the agent can use it directly.
+        const contentType = response.headers.get("content-type") ?? ""
+        if (!contentType.includes("json")) {
+          yield* Effect.promise(() =>
+            response.body?.cancel().catch(() => undefined) ?? Promise.resolve(undefined)
+          )
+          return {
+            url: response.url,
+            contentType: contentType || "unknown",
+            note: "Non-JSON response; body not downloaded. Use this URL directly."
+          }
+        }
+
+        const text = yield* Effect.tryPromise({
+          try: () => response.text(),
+          catch: (e) => new Error(`Failed to read response body: ${e}`)
+        })
+
+        // Wei-scale integer amounts (tips, transactions, coins) must survive
+        // as strings — plain JSON.parse corrupts them past 2^53.
+        const json = yield* Effect.try({
+          try: () => parseJsonPreservingLargeInts(text),
           catch: (e) => new Error(`Failed to parse JSON response: ${e}`)
         })
 
