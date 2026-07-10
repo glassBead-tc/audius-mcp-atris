@@ -185,13 +185,20 @@ export const makeOAuthBroker = (config: OAuthBrokerConfig): OAuthBroker => {
   const upstream = (config.upstreamBase ?? DEFAULT_UPSTREAM).replace(/\/$/, "")
   const defaultScope = config.defaultScope ?? "write"
 
-  /** Public base URL: explicit override, else derived from the request. */
-  const baseUrl = (req: IncomingMessage): string => {
-    if (config.publicUrl) return config.publicUrl.replace(/\/$/, "")
+  /** Base URL as the client addressed us — used for OAuth metadata, which
+   * RFC 9728 requires to match the resource URL the client is accessing
+   * (e.g. localhost vs 127.0.0.1 are different resources). */
+  const requestBase = (req: IncomingMessage): string => {
     const proto = (req.headers["x-forwarded-proto"] as string | undefined) ?? "http"
     const host = req.headers.host ?? "localhost"
     return `${proto}://${host}`
   }
+
+  /** Base URL for the upstream Audius redirect_uri — must exactly match a
+   * redirect URI registered on the Audius dev app, so an explicit
+   * MCP_PUBLIC_URL wins over request derivation. */
+  const baseUrl = (req: IncomingMessage): string =>
+    config.publicUrl ? config.publicUrl.replace(/\/$/, "") : requestBase(req)
 
   // -- Metadata ------------------------------------------------------------
 
@@ -508,11 +515,11 @@ main{text-align:center;max-width:28rem;padding:2rem}h1{font-size:1.4rem}p{color:
 
     // RFC 9728 allows the resource path appended to the well-known path.
     if (method === "GET" && (path === "/.well-known/oauth-protected-resource" || path === "/.well-known/oauth-protected-resource/mcp")) {
-      sendJson(res, 200, protectedResourceMetadata(baseUrl(req)))
+      sendJson(res, 200, protectedResourceMetadata(requestBase(req)))
       return true
     }
     if (method === "GET" && (path === "/.well-known/oauth-authorization-server" || path === "/.well-known/oauth-authorization-server/mcp")) {
-      sendJson(res, 200, authServerMetadata(baseUrl(req)))
+      sendJson(res, 200, authServerMetadata(requestBase(req)))
       return true
     }
     if (path === "/oauth/register" && method === "POST") {
