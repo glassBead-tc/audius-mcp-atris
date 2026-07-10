@@ -126,7 +126,29 @@ use Audius directly, and the server brokers instead:
 **Exit criterion**: an agent connected through a compliant MCP client completes
 `GET /me` and reads its own library without any out-of-band token plumbing.
 
-### Phase 3 — Prove writes *(status: blocked upstream as of 2026-07-10 — see findings)*
+### Phase 3 — Prove writes *(status: PROVEN 2026-07-10 — implementation pending)*
+
+**RESOLVED.** The full round-trip (favorite → verify-indexed → unfavorite →
+verify-indexed) succeeded against the authenticated account using
+`Authorization: Basic base64("x:" + AUDIUS_API_SECRET)` + the required `user_id`
+query param. Root cause of the earlier silent discards, traced to source
+(`AudiusProject/api` `request_helpers.go:64-75` @ b41b8659): when a developer app has
+no server-registered `api_secret` (all dashboard-created apps; migration 0189
+backfilled NULL), `getApiSigner` silently signs the EntityManager transaction with
+Audius's own first-party wallet; consensus performs no authorization, so it mines;
+the ETL indexer's `ValidateSigner` finds no grant from the user to that wallet and
+discards with only a server-side Warn log. Adjacent upstream defects: access keys
+mint but always 401 for such apps; SDK v15 REST writes send no Authorization header
+(500). Alternatives: `POST /v1/developer-apps/{address}/register-api-key` (stores the
+secret server-side; makes OAuth-bearer writes work — but does not verify secret↔address)
+or the legacy `POST /relay` (validates grants loudly pre-submission). Upstream bug
+report drafted from the source trace.
+
+**Remaining implementation work** (below) is unchanged, now with a proven auth shape.
+
+---
+
+*(original phase plan, updated with spike history)*
 
 All 54 write endpoints are indexed and transport-callable; none is proven.
 
