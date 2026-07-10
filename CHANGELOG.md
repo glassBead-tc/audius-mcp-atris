@@ -1,5 +1,30 @@
 # Changelog
 
+## Unreleased — Capability Roadmap Phase 3 (writes)
+
+Spec: `specs/capability-roadmap/README.md`. Root cause of the write mystery is
+documented in `docs/upstream-bug-report.md` (source-traced upstream bug: OAuth-bearer
+writes for apps without a server-registered secret are signed with the wrong wallet and
+silently discarded by the indexer).
+
+- **App-signed writes**: when `AUDIUS_API_SECRET` is set and a session login is active,
+  POST/PUT/DELETE requests are signed with HTTP Basic (password = app secret — the only
+  third-party write shape the indexer currently honors for dashboard-created apps) and
+  the required `user_id` is injected from the verified login. Login remains the
+  authorization gate; the secret never acts without an authenticated user and is never
+  exposed to the sandbox. `options.auth: "bearer"` forces the user token for endpoints
+  that authenticate the user rather than the app.
+- **Destructive-op guard**: DELETE requires `{ confirm: true }` in options; refused
+  host-side before any HTTP.
+- **`audius.sleep(ms)`** (AX-11, capped 30s/call): enables the write → sleep →
+  verify-indexed pattern.
+- **Two-phase write teaching**: `execute` description + INSTRUCTIONS now state that a
+  200 with `{ block_number, transaction_hash }` is a receipt, not proof of effect —
+  verify with a follow-up read after indexing.
+- `AUDIUS_API_BASE` env override for the API base URL (testing; future OAP migration).
+- Tests: `test/write-path.test.mjs` — auth-shape rules against a stub API (app-signing
+  gated on session login, user_id injection, bearer fallbacks, confirm guard).
+
 ## Unreleased — Capability Roadmap Phase 2 (user auth)
 
 Spec: `specs/capability-roadmap/README.md`. MCP-native OAuth: "Log in with Audius".

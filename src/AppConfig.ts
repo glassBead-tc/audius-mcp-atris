@@ -11,6 +11,13 @@ import { Context, Effect, Layer } from "effect"
 
 export interface AppConfigShape {
   readonly apiKey: string
+  /**
+   * Developer app API secret (the app's private key). When set and a session
+   * login is active, the server signs write requests with it (HTTP Basic) —
+   * the only third-party write shape the Audius indexer currently honors for
+   * apps without a server-registered secret. Never exposed to the sandbox.
+   */
+  readonly apiSecret?: string
   readonly port: number
   readonly graphApiKey?: string
   /**
@@ -43,6 +50,7 @@ export const AppConfigLive: Layer.Layer<AppConfig> = Layer.effect(
   AppConfig,
   Effect.sync(() => {
     const apiKey = process.env["AUDIUS_API_KEY"] ?? ""
+    const apiSecret = process.env["AUDIUS_API_SECRET"] || undefined
     const portParsed = parseInt(process.env["PORT"] ?? "3000", 10)
     const port = Number.isFinite(portParsed) ? portParsed : 3000
     const graphApiKey = process.env["GRAPH_API_KEY"] || undefined
@@ -52,6 +60,6 @@ export const AppConfigLive: Layer.Layer<AppConfig> = Layer.effect(
     const responseTokenBudget = Number.isFinite(budgetParsed) && budgetParsed > 0
       ? budgetParsed
       : 20000
-    return { apiKey, port, graphApiKey, mcpAuthSecret, publicUrl, responseTokenBudget }
+    return { apiKey, apiSecret, port, graphApiKey, mcpAuthSecret, publicUrl, responseTokenBudget }
   })
 )

@@ -43,7 +43,7 @@ export class Sandbox extends Context.Tag("Sandbox")<
     readonly execute: (
       code: string,
       timeoutMs?: number,
-      authContext?: { bearerToken?: string }
+      authContext?: { bearerToken?: string; userId?: string }
     ) => Effect.Effect<SandboxResult, Error>
   }
 >() {}
@@ -64,7 +64,7 @@ export const SandboxLive: Layer.Layer<Sandbox, Error, AudiusClient | TypeGenerat
     const execute = (
       code: string,
       timeoutMs?: number,
-      authContext?: { bearerToken?: string }
+      authContext?: { bearerToken?: string; userId?: string }
     ): Effect.Effect<SandboxResult, Error> =>
       Effect.tryPromise({
         try: async () => {
@@ -119,8 +119,8 @@ export const SandboxLive: Layer.Layer<Sandbox, Error, AudiusClient | TypeGenerat
               const deferred = ctx.newPromise()
 
               // Kick off the host-side API call asynchronously
-              const resolvedAuth = authContext?.bearerToken
-                ? { bearerToken: authContext.bearerToken }
+              const resolvedAuth = (authContext?.bearerToken || authContext?.userId)
+                ? authContext
                 : undefined
               const hostPromise = Effect.runPromise(
                 audiusClient.request(method, path, options as any, resolvedAuth)
@@ -148,6 +148,24 @@ export const SandboxLive: Layer.Layer<Sandbox, Error, AudiusClient | TypeGenerat
               return deferred.handle
             })
             ctx.setProp(audiusHandle, "request", requestFn)
+
+            // audius.sleep(ms) — cooperative pause (AX-11), capped at 30s.
+            // Exists so agents can do write → sleep → verify-indexed inline:
+            // Audius writes are two-phase and only materialize once indexed.
+            const sleepFn = ctx.newFunction("sleep", (msHandle) => {
+              const requested = Number(ctx.dump(msHandle))
+              const ms = Math.min(Math.max(Number.isFinite(requested) ? requested : 0, 0), 30_000)
+              const deferred = ctx.newPromise()
+              const hostPromise = new Promise<void>((resolve) => setTimeout(resolve, ms)).then(() => {
+                deferred.resolve(ctx.undefined)
+                ctx.runtime.executePendingJobs()
+              })
+              pendingPromises.push(hostPromise)
+              return deferred.handle
+            })
+            ctx.setProp(audiusHandle, "sleep", sleepFn)
+            sleepFn.dispose()
+
             ctx.setProp(ctx.global, "audius", audiusHandle)
             requestFn.dispose()
             audiusHandle.dispose()

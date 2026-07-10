@@ -126,7 +126,7 @@ use Audius directly, and the server brokers instead:
 **Exit criterion**: an agent connected through a compliant MCP client completes
 `GET /me` and reads its own library without any out-of-band token plumbing.
 
-### Phase 3 — Prove writes *(status: PROVEN 2026-07-10 — implementation pending)*
+### Phase 3 — Prove writes *(status: PROVEN + IMPLEMENTED 2026-07-10; final in-sandbox round-trip pending restart)*
 
 **RESOLVED.** The full round-trip (favorite → verify-indexed → unfavorite →
 verify-indexed) succeeded against the authenticated account using

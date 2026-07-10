@@ -11,16 +11,31 @@ import { Context, Effect, Layer } from "effect"
 import { AppConfig } from "../AppConfig.js"
 import { parseJsonPreservingLargeInts } from "./Json.js"
 
-const BASE_URL = "https://api.audius.co/v1"
+const BASE_URL = process.env["AUDIUS_API_BASE"] ?? "https://api.audius.co/v1"
 
 export interface RequestOptions {
   readonly query?: Record<string, string | number | boolean | undefined>
   readonly body?: unknown
   readonly headers?: Record<string, string>
+  /** Required for DELETE requests — the destructive-operation speed bump. */
+  readonly confirm?: boolean
+  /**
+   * Force a specific auth scheme. Default: writes are app-signed (Basic) when
+   * possible, everything else uses the user bearer. "bearer" forces the user
+   * token even on writes — needed for endpoints that authenticate the user
+   * rather than the app (e.g. developer-app management).
+   */
+  readonly auth?: "bearer" | "app"
 }
 
 export interface AuthContext {
-  readonly bearerToken: string
+  readonly bearerToken?: string
+  /**
+   * Verified user id of the active session login. Its presence is what
+   * authorizes write signing: writes are signed with the app secret and
+   * user_id is injected only when a user has logged in via the login tool.
+   */
+  readonly userId?: string
 }
 
 export class AudiusClient extends Context.Tag("AudiusClient")<
@@ -60,6 +75,20 @@ export const AudiusClientLive: Layer.Layer<AudiusClient, never, AppConfig> = Lay
           ))
         }
 
+        const httpMethod = method.toUpperCase()
+        const isWrite = httpMethod === "POST" || httpMethod === "PUT" || httpMethod === "DELETE"
+
+        // Destructive-operation guard: DELETE performs a real, user-visible
+        // removal (unfavorite, unfollow, delete playlist/comment). Require an
+        // explicit opt-in so agents pause before destroying state.
+        if (httpMethod === "DELETE" && options?.confirm !== true) {
+          return yield* Effect.fail(new Error(
+            "DELETE is a destructive operation. Re-run with { confirm: true } in options " +
+            "after confirming the action with the user, e.g. " +
+            `audius.request("DELETE", "${path}", { confirm: true })`
+          ))
+        }
+
         // Build URL with query params
         const url = new URL(`${BASE_URL}${path}`)
         if (options?.query) {
@@ -78,8 +107,26 @@ export const AudiusClientLive: Layer.Layer<AudiusClient, never, AppConfig> = Lay
         if (config.apiKey) {
           headers["x-api-key"] = config.apiKey
         }
-        if (authContext?.bearerToken) {
-          headers["Authorization"] = `Bearer ${authContext.bearerToken}`
+
+        // Auth. Writes: sign with the app secret (HTTP Basic; password = app
+        // private key) — the shape the Audius indexer honors — and inject the
+        // logged-in user's id, which the write endpoints require. Gated on an
+        // active session login (authContext.userId) so the secret never acts
+        // without a user having authenticated. Reads: bearer for viewer
+        // context (/me, has_current_user_* flags).
+        if (!headers["Authorization"]) {
+          const appSigned = options?.auth !== "bearer" &&
+            (isWrite || options?.auth === "app") &&
+            config.apiSecret !== undefined && authContext?.userId !== undefined
+          if (appSigned) {
+            headers["Authorization"] =
+              `Basic ${Buffer.from(`app:${config.apiSecret}`).toString("base64")}`
+            if (!url.searchParams.has("user_id")) {
+              url.searchParams.set("user_id", authContext!.userId!)
+            }
+          } else if (authContext?.bearerToken) {
+            headers["Authorization"] = `Bearer ${authContext.bearerToken}`
+          }
         }
         if (options?.body) {
           headers["Content-Type"] = "application/json"

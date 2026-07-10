@@ -116,7 +116,15 @@ login tool.` : ""}
   \`{ error: "Audius API 404: ..." }\`. Always check \`res.error\` before \`res.data\`,
   or you'll see a misleading "cannot read property of undefined".
 - POST/PUT/DELETE perform REAL mutations (favorites, reposts, playlists, follows)
-  when a user bearer token is present; without one they fail with 401/403.
+  once the user has logged in (login tool). The server signs writes and injects
+  the required \`user_id\` automatically.
+- **Writes are TWO-PHASE**: a 200 with \`{ block_number, transaction_hash }\` is a
+  transaction receipt, NOT proof of effect — the change only exists once the
+  network indexes it (typically seconds). Verify with a follow-up read:
+  \`await audius.sleep(3000)\` then re-fetch. Never report a mutation as done
+  based on the receipt alone.
+- DELETE is destructive and requires \`{ confirm: true }\` in options — confirm
+  with the user first.
 - Integer amounts longer than 15 digits (wei-scale balances, tips, coin amounts)
   arrive as strings to preserve precision — don't coerce them back to Number.
 - Binary endpoints (e.g. \`/tracks/{id}/stream\`) don't return audio bytes; they
@@ -262,8 +270,15 @@ function handleToolCall(
     const args = (payload["arguments"] as Record<string, unknown>) ?? {}
 
     // Effective user identity: an explicit Authorization header wins; else
-    // fall back to the session login established via the `login` tool.
-    const effectiveBearer = bearerToken ?? (yield* Effect.promise(() => userAuth.bearer()))
+    // fall back to the session login established via the `login` tool. The
+    // verified userId (session logins only) is what authorizes app-signed
+    // writes in AudiusClient.
+    const sessionBearer = bearerToken ? undefined : yield* Effect.promise(() => userAuth.bearer())
+    const authContext = bearerToken
+      ? { bearerToken }
+      : sessionBearer
+        ? { bearerToken: sessionBearer, ...(userAuth.userId() ? { userId: userAuth.userId() } : {}) }
+        : undefined
 
     let result: typeof CallToolResult.Type
     switch (name) {
@@ -271,10 +286,10 @@ function handleToolCall(
         result = yield* handleSearch(args)
         break
       case "execute":
-        result = yield* handleExecute(args, effectiveBearer)
+        result = yield* handleExecute(args, authContext)
         break
       case "play":
-        result = yield* handlePlay(args, effectiveBearer)
+        result = yield* handlePlay(args, authContext)
         break
       case "subgraph":
         result = yield* handleSubgraph(args)

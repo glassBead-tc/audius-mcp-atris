@@ -153,11 +153,10 @@ function openWithApp(appPath: string, url: string): Promise<void> {
 
 export const handlePlay = (
   args: Record<string, unknown>,
-  bearerToken?: string
+  authContext?: { bearerToken?: string; userId?: string }
 ): Effect.Effect<typeof CallToolResult.Type, never, AudiusClient> =>
   Effect.gen(function* () {
     const audiusClient = yield* AudiusClient
-    const authContext = bearerToken ? { bearerToken } : undefined
     const trackId = args["trackId"] as string | undefined
     const query = args["query"] as string | undefined
     const preferBrowser = args["preferBrowser"] as boolean | undefined

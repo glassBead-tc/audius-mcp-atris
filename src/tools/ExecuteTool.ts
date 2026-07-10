@@ -18,13 +18,16 @@ export const executeToolDefinition = Tool.make({
   title: "Execute Audius API Code",
   description:
     "Execute JavaScript code against the Audius API in an isolated sandbox. " +
-    "An authenticated `audius` client is available with `audius.request(method, path, options?)`. " +
+    "An authenticated `audius` client is available with `audius.request(method, path, options?)` " +
+    "and `audius.sleep(ms)` (max 30s per call). " +
     "Use `console.log()` to output intermediate results. The return value of the last expression is captured. " +
     "Use the search tool first to discover available endpoints. " +
     "Failed API calls do NOT throw — they resolve to `{ error: \"...\" }`, so check `res.error` " +
     "before reading `res.data`. " +
-    "POST/PUT/DELETE requests perform REAL mutations on Audius (favorites, reposts, playlists, ...) " +
-    "when the MCP client supplies a user bearer token; without one they fail with 401/403. " +
+    "POST/PUT/DELETE perform REAL mutations when a user is logged in (login tool). " +
+    "Writes are TWO-PHASE: a 200 with { block_number, transaction_hash } is a receipt, NOT proof of " +
+    "effect — the change only exists once indexed (~seconds). Verify with a follow-up read after " +
+    "`await audius.sleep(3000)`. DELETE additionally requires `{ confirm: true }` in options. " +
     "Integer amounts larger than 15 digits (wei-scale balances, tips) arrive as strings to preserve precision.",
   inputSchema: {
     type: "object",
@@ -57,7 +60,7 @@ export const executeToolDefinition = Tool.make({
 
 export const handleExecute = (
   args: Record<string, unknown>,
-  bearerToken?: string
+  authContext?: { bearerToken?: string; userId?: string }
 ): Effect.Effect<typeof CallToolResult.Type, never, Sandbox> =>
   Effect.gen(function* () {
     const sandbox = yield* Sandbox
@@ -74,8 +77,6 @@ export const handleExecute = (
         isError: true
       })
     }
-
-    const authContext = bearerToken ? { bearerToken } : undefined
     const result = yield* Effect.catchAll(
       sandbox.execute(code, timeout, authContext),
       (error) =>

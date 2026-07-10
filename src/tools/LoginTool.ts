@@ -122,6 +122,10 @@ export const handleLogin = (
         return text({ status: "not_authenticated", hint: `Token did not validate: ${data["error"]}. Start a new login.` })
       }
       const u = (data["data"] as Record<string, unknown>) ?? {}
+      if (typeof u["id"] === "string") {
+        // The verified id is what authorizes app-signed writes downstream.
+        userAuth.setUserId(u["id"])
+      }
       return text({
         status: "authenticated",
         user: { id: u["id"], handle: u["handle"], name: u["name"], verified: u["verified"] },

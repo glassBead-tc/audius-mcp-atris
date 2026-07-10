@@ -76,6 +76,8 @@ const UserAuthLive = Layer.effect(
         claimLogin: () => "unknown",
         isActive: () => false,
         bearer: () => Promise.resolve(undefined),
+        userId: () => undefined,
+        setUserId: () => undefined,
         logout: () => Promise.resolve(false)
       }
       return disabled
@@ -102,6 +104,8 @@ const UserAuthLive = Layer.effect(
       claimLogin: store.claim,
       isActive: store.isActive,
       bearer: store.bearer,
+      userId: store.userId,
+      setUserId: store.setUserId,
       logout: store.logout,
       authRouter: broker.handle
     }

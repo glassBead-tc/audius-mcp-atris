@@ -47,6 +47,10 @@ export interface UserAuthService {
   readonly isActive: () => boolean
   /** Current access token, auto-refreshing when near expiry. */
   readonly bearer: () => Promise<string | undefined>
+  /** Verified user id of the active login (set after /me verification). */
+  readonly userId: () => string | undefined
+  /** Record the verified user id for the active login. */
+  readonly setUserId: (id: string) => void
   /** Revoke upstream (best-effort) and clear the active login. */
   readonly logout: () => Promise<boolean>
   /** HTTP router for the OAuth broker endpoints (undefined when disabled). */
@@ -84,12 +88,15 @@ export interface TokenStore {
   readonly claim: (loginId: string) => "claimed" | "pending" | "unknown"
   readonly isActive: () => boolean
   readonly bearer: () => Promise<string | undefined>
+  readonly userId: () => string | undefined
+  readonly setUserId: (id: string) => void
   readonly logout: () => Promise<boolean>
 }
 
 export const makeTokenStore = (config: TokenStoreConfig): TokenStore => {
   const pending = new Map<string, { tokens: StoredTokens; at: number }>()
   let active: StoredTokens | undefined
+  let activeUserId: string | undefined
   // Serializes refreshes: a concurrent refresh would consume the same
   // single-use refresh token twice and revoke the whole family upstream.
   let chain: Promise<unknown> = Promise.resolve()
@@ -133,12 +140,19 @@ export const makeTokenStore = (config: TokenStoreConfig): TokenStore => {
       if (entry) {
         pending.delete(loginId)
         active = entry.tokens
+        activeUserId = undefined // set after /me verification
         return "claimed"
       }
       return active ? "pending" : "unknown"
     },
 
     isActive: () => active !== undefined,
+
+    userId: () => (active !== undefined ? activeUserId : undefined),
+
+    setUserId: (id) => {
+      activeUserId = id
+    },
 
     bearer: () => {
       const run = chain.then(async (): Promise<string | undefined> => {
@@ -162,6 +176,7 @@ export const makeTokenStore = (config: TokenStoreConfig): TokenStore => {
       const had = active !== undefined
       const refreshToken = active?.refreshToken
       active = undefined
+      activeUserId = undefined
       if (refreshToken) {
         try {
           await fetch(`${config.upstreamBase}/oauth/revoke`, {
@@ -189,5 +204,7 @@ export const UserAuthDisabled: Layer.Layer<UserAuth> = Layer.succeed(UserAuth, {
   claimLogin: () => "unknown",
   isActive: () => false,
   bearer: () => Promise.resolve(undefined),
+  userId: () => undefined,
+  setUserId: () => undefined,
   logout: () => Promise.resolve(false)
 })
