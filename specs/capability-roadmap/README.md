@@ -126,20 +126,42 @@ use Audius directly, and the server brokers instead:
 **Exit criterion**: an agent connected through a compliant MCP client completes
 `GET /me` and reads its own library without any out-of-band token plumbing.
 
-### Phase 3 — Prove writes
+### Phase 3 — Prove writes *(status: blocked upstream as of 2026-07-10 — see findings)*
 
 All 54 write endpoints are indexed and transport-callable; none is proven.
 
-- **Spike first (open risk)**: do Audius REST writes accept a plain OAuth bearer, or do
-  they require EntityManager wallet-signing as the JS SDK does? Test favorite/unfavorite
-  against a real account. The answer shapes everything below (worst case: an SDK-backed
-  signing sidecar for writes).
-- Prove and document: favorite, repost, follow, playlist create/update/delete, comments.
-- Safety: destructive operations (DELETE, unfollow, playlist deletion) require an
-  explicit `confirm: true` in the sandbox call or equivalent guard.
+**Spike findings (2026-07-10)** — the spike ran; the answer is worse than either
+hypothesis. Audius writes are two-phase: the REST call returns 200 with a mined
+transaction receipt (`block_number`, `transaction_hash`), and the state change only
+exists once the network's indexers apply the transaction. Every third-party delegated
+write we produced was **mined and then silently discarded at indexing**:
+
+| Write path | Result |
+|---|---|
+| First-party (audius.co web app, user wallet) | works, indexes in seconds |
+| Grant creation via OAuth consent | works, indexes in seconds |
+| REST + OAuth bearer — 2 apps, fresh grant, explicit `user_id`, clean target | 200 + mined tx, never indexed |
+| Official `@audius/sdk` 15.3.1 (apiKey+apiSecret) | 500 "missing Authorization header" |
+| Developer-app access key as bearer | 401 "Invalid or expired access token" |
+
+Ruled out: missing `user_id` (required per swagger — a real bug in our early calls,
+fixed), wrong developer app (Codespace secret shadowing — fixed), stale pre-March-2026
+grant (revoked and re-consented; fresh grant indexed instantly, writes still discarded),
+platform-wide indexer outage (first-party writes index fine). The official SDK failing
+against its own API suggests upstream mid-migration breakage in the 2026 Go API server's
+delegated-write path. Source-level trace of `AudiusProject/api` + `OpenAudio/go-openaudio`
+in progress; upstream bug report to follow.
+
+**Implications for the server regardless of resolution**:
+- A 200 from a write endpoint is NOT proof of effect — the server must teach agents to
+  verify indexed state after mutations (or verify server-side) and must surface the
+  two-phase semantics in tool docs.
+- Remaining plan once upstream is fixed: prove favorite, repost, follow, playlist
+  create/update/delete, comments; destructive operations require an explicit
+  `confirm: true` guard.
 
 **Exit criterion**: a written test (behind an env-gated flag) performs
-favorite → verify → unfavorite as the authenticated user.
+favorite → verify-indexed → unfavorite → verify-indexed as the authenticated user.
 
 ### Phase 4 — Uploads & commerce
 
