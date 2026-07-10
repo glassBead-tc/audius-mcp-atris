@@ -11,7 +11,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Environment Variables
 
-Loaded from `./.env` at startup (Node's `process.loadEnvFile()`; already-set variables win).
+Loaded from `./.env` at startup; **`.env` values override inherited shell variables**
+(Codespace secrets once silently shadowed the key in `.env`). Deployments without a
+`.env` file (Cloud Run) use injected environment variables as-is.
 
 - `AUDIUS_API_KEY` - API key for Audius REST API (also the OAuth client_id)
 - `PORT` - HTTP server port (default: 3000)

@@ -11,12 +11,18 @@
 import { Effect, Fiber, Layer, Logger, LogLevel, Runtime } from "effect"
 import { AppConfig, AppConfigLive } from "./AppConfig.js"
 
-// Load ./.env for local development (Node 20.12+ built-in; no dotenv needed).
-// Variables already present in the environment win, so Cloud Run's injected
-// config is never overridden — and a missing .env is not an error.
+// Load ./.env for local development — and let it WIN over inherited shell
+// variables. Codespaces inject user secrets (e.g. a stale AUDIUS_API_KEY)
+// into every terminal, which silently beat the operator's explicit .env and
+// once pointed this server at the wrong developer app. Cloud Run is
+// unaffected: it has no .env file, so its injected config stands.
+import { readFileSync as readEnvFile } from "node:fs"
+import { parseEnv } from "node:util"
 try {
-  const proc = process as { loadEnvFile?: () => void }
-  proc.loadEnvFile?.()
+  const parsed = parseEnv(readEnvFile(".env", "utf8"))
+  for (const [k, v] of Object.entries(parsed)) {
+    if (typeof v === "string") process.env[k] = v
+  }
 } catch {
   // no .env file — deployment environments inject variables directly
 }
