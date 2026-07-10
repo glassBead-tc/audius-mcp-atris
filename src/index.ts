@@ -29,6 +29,7 @@ import { Sandbox, SandboxLive } from "./sandbox/Sandbox.js"
 import { createHandler } from "./mcp/McpServer.js"
 import { startServer } from "./mcp/McpServerTransport.js"
 import { makeOAuthBroker } from "./auth/OAuthBroker.js"
+import { UserAuth, UserAuthService, makeTokenStore } from "./auth/UserAuth.js"
 
 // ---------------------------------------------------------------------------
 // Layer composition
@@ -57,12 +58,58 @@ const SandboxLayer = SandboxLive.pipe(
   Layer.provide(Layer.merge(AudiusClientLayer, TypeGeneratorLayer))
 )
 
-// Full application layer — provides AppConfig, SpecIndex, Sandbox, AudiusClient
+// UserAuth (Phase 2): OAuth broker + session login store, enabled by MCP_AUTH_SECRET
+const UserAuthLive = Layer.effect(
+  UserAuth,
+  Effect.gen(function* () {
+    const config = yield* AppConfig
+    if (!config.mcpAuthSecret) {
+      const disabled: UserAuthService = {
+        enabled: false,
+        startLogin: () => null,
+        claimLogin: () => "unknown",
+        isActive: () => false,
+        bearer: () => Promise.resolve(undefined),
+        logout: () => Promise.resolve(false)
+      }
+      return disabled
+    }
+
+    const store = makeTokenStore({
+      upstreamBase: "https://api.audius.co/v1",
+      clientId: config.apiKey
+    })
+    const broker = makeOAuthBroker({
+      secret: config.mcpAuthSecret,
+      audiusApiKey: config.apiKey,
+      publicUrl: config.publicUrl,
+      defaultScope: "write",
+      onSessionTokens: (loginId, tokens) => store.deposit(loginId, tokens as never)
+    })
+    // Session logins need a concrete base URL for the Audius redirect_uri;
+    // it must exactly match a redirect URI registered on the Audius dev app.
+    const base = config.publicUrl ?? `http://127.0.0.1:${config.port}`
+
+    const service: UserAuthService = {
+      enabled: true,
+      startLogin: () => broker.startSessionLogin(base),
+      claimLogin: store.claim,
+      isActive: store.isActive,
+      bearer: store.bearer,
+      logout: store.logout,
+      authRouter: broker.handle
+    }
+    return service
+  })
+).pipe(Layer.provide(AppConfigLive))
+
+// Full application layer — provides AppConfig, SpecIndex, Sandbox, AudiusClient, UserAuth
 const AppLayer = Layer.mergeAll(
   AppConfigLive,
   SpecIndexLayer,
   SandboxLayer,
-  AudiusClientLayer
+  AudiusClientLayer,
+  UserAuthLive
 )
 
 // ---------------------------------------------------------------------------
@@ -71,34 +118,25 @@ const AppLayer = Layer.mergeAll(
 
 const program = Effect.gen(function* () {
   const config = yield* AppConfig
+  const userAuth = yield* UserAuth
 
   // Create the Effect-based handler
   const effectHandler = createHandler()
 
   // Build a runtime with all services provided, so we can run Effects
   // from within the async HTTP handler
-  const runtime = yield* Effect.runtime<AppConfig | SpecIndex | Sandbox | AudiusClient>()
+  const runtime = yield* Effect.runtime<AppConfig | SpecIndex | Sandbox | AudiusClient | UserAuth>()
 
   // Bridge Effect handler → async handler for the transport
   const asyncHandler = async (decoded: unknown, bearerToken?: string): Promise<unknown> => {
     return Runtime.runPromise(runtime)(effectHandler(decoded, bearerToken))
   }
 
-  // OAuth broker (Phase 2) — enabled when MCP_AUTH_SECRET is set
-  const broker = config.mcpAuthSecret
-    ? makeOAuthBroker({
-        secret: config.mcpAuthSecret,
-        audiusApiKey: config.apiKey,
-        publicUrl: config.publicUrl,
-        defaultScope: "write"
-      })
-    : undefined
-
   // Start HTTP server (acquireRelease handles cleanup on interruption)
   yield* startServer({
     port: config.port,
     handler: asyncHandler,
-    authRouter: broker?.handle
+    authRouter: userAuth.authRouter
   })
 
   yield* Effect.logInfo(`Audius MCP Server (Code Mode) listening on port ${config.port}`)
@@ -107,9 +145,9 @@ const program = Effect.gen(function* () {
     `Tools: search, execute, play${config.graphApiKey ? ", subgraph" : " (subgraph disabled — GRAPH_API_KEY not set)"}`
   )
   yield* Effect.logInfo(
-    broker
-      ? `OAuth: Log in with Audius broker enabled at /oauth/* (scope: write${config.publicUrl ? `, public URL: ${config.publicUrl}` : ", public URL derived per request"})`
-      : "OAuth: broker disabled (MCP_AUTH_SECRET not set) — bearer pass-through only"
+    userAuth.enabled
+      ? `OAuth: Log in with Audius enabled — login tool + broker at /oauth/* (scope: write, base: ${config.publicUrl ?? `http://127.0.0.1:${config.port}`})`
+      : "OAuth: disabled (MCP_AUTH_SECRET not set) — bearer pass-through only"
   )
 
   // Keep running until interrupted (SIGINT/SIGTERM trigger Effect interruption)

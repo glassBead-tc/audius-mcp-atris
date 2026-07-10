@@ -11,6 +11,7 @@
  * Uses mcpJson serialization bridge for JSON-RPC ↔ Effect RPC translation.
  */
 import { Effect, Scope } from "effect"
+import { appendFileSync } from "node:fs"
 import * as Http from "node:http"
 import { mcpJson } from "./McpSerialization.js"
 
@@ -109,6 +110,17 @@ export const startServer = (
       const requestBearerToken = authHeader?.startsWith("Bearer ")
         ? authHeader.slice(7)
         : undefined
+
+      // Auth diagnostics (Phase 2): presence only, never token contents.
+      // MCP_DEBUG_LOG=<path> additionally appends to a file for inspection.
+      if (req.method === "POST") {
+        const line = `[transport] POST /mcp auth=${requestBearerToken ? `bearer(${requestBearerToken.length} chars)` : "none"}`
+        console.error(line)
+        const debugLog = process.env["MCP_DEBUG_LOG"]
+        if (debugLog) {
+          appendFileSync(debugLog, `${new Date().toISOString()} ${line}\n`)
+        }
+      }
 
       // POST — handle JSON-RPC request
       if (req.method === "POST") {

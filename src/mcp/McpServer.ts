@@ -20,6 +20,8 @@ import { searchToolDefinition, handleSearch } from "../tools/SearchTool.js"
 import { executeToolDefinition, handleExecute } from "../tools/ExecuteTool.js"
 import { playToolDefinition, handlePlay } from "../tools/PlayTool.js"
 import { subgraphToolDefinition, handleSubgraph } from "../tools/SubgraphTool.js"
+import { loginToolDefinition, handleLogin } from "../tools/LoginTool.js"
+import { UserAuth } from "../auth/UserAuth.js"
 import { workflowsResource, WORKFLOWS_URI, WORKFLOWS_CONTENT } from "../resources/Workflows.js"
 import { CallToolResult } from "./McpSchema.js"
 import { capResult } from "./ResponseGuard.js"
@@ -98,12 +100,16 @@ User-scoped endpoints (e.g. \`/me\`) require a user bearer token from the MCP cl
 public reads (trending, search) work with the server API key alone.
 ${authEnabled ? `
 ## Authentication (Log in with Audius)
-This server supports MCP OAuth. When the user authenticates through their MCP
-client, every \`audius.request\` in the sandbox carries their identity: \`/me\`,
-their library, favorites, reposts, playlists, and (with write scope) mutations
-on their behalf. If a user-scoped call returns 401, the user has not connected
-their Audius account — tell them to authenticate this MCP server in their
-client (the flow opens audius.co to approve access).` : ""}
+Two ways for the user to connect their Audius account:
+1. **login tool** (recommended): call \`login {action:"start"}\`, show the user the
+   \`consent_url\`, have them approve in a browser, then \`login {action:"status",
+   login_id}\`. The server holds the session and auto-refreshes tokens.
+2. **MCP-native OAuth**: if the MCP client attaches a bearer token, it wins over
+   the session login.
+Once authenticated, every \`audius.request\` carries the user's identity: \`/me\`,
+their library, favorites, reposts, playlists, and (write scope) mutations on
+their behalf. If a user-scoped call returns 401, no login is active — use the
+login tool.` : ""}
 
 ## Errors, mutations, and data fidelity
 - \`audius.request\` NEVER throws on API failures — it resolves to
@@ -141,10 +147,10 @@ popularity, rising stars, artist comparison, BPM landscape and more — each a s
  * Takes an internal Effect RPC message (decoded by McpSerialization)
  * and returns the response in internal format.
  */
-export type McpEffectHandler = (decoded: unknown, bearerToken?: string) => Effect.Effect<unknown, never, AppConfig | SpecIndex | Sandbox | AudiusClient>
+export type McpEffectHandler = (decoded: unknown, bearerToken?: string) => Effect.Effect<unknown, never, AppConfig | SpecIndex | Sandbox | AudiusClient | UserAuth>
 
 export const createHandler = (): McpEffectHandler => {
-  return (decoded: unknown, bearerToken?: string): Effect.Effect<unknown, never, AppConfig | SpecIndex | Sandbox | AudiusClient> => {
+  return (decoded: unknown, bearerToken?: string): Effect.Effect<unknown, never, AppConfig | SpecIndex | Sandbox | AudiusClient | UserAuth> => {
     const msg = decoded as Record<string, unknown>
     const tag = msg["tag"] as string
     const id = msg["id"] as string
@@ -189,6 +195,10 @@ export const createHandler = (): McpEffectHandler => {
           // AX-13 — the subgraph tool is only advertised when it can work.
           if (config.graphApiKey) {
             tools.push(stripMake(subgraphToolDefinition))
+          }
+          // login requires the OAuth broker (MCP_AUTH_SECRET).
+          if (config.mcpAuthSecret) {
+            tools.push(stripMake(loginToolDefinition))
           }
           return makeResponse(id, { tools })
         })
@@ -244,11 +254,16 @@ function handleToolCall(
   id: string,
   payload: Record<string, unknown>,
   bearerToken?: string
-): Effect.Effect<unknown, never, AppConfig | SpecIndex | Sandbox | AudiusClient> {
+): Effect.Effect<unknown, never, AppConfig | SpecIndex | Sandbox | AudiusClient | UserAuth> {
   return Effect.gen(function* () {
     const config = yield* AppConfig
+    const userAuth = yield* UserAuth
     const name = payload["name"] as string
     const args = (payload["arguments"] as Record<string, unknown>) ?? {}
+
+    // Effective user identity: an explicit Authorization header wins; else
+    // fall back to the session login established via the `login` tool.
+    const effectiveBearer = bearerToken ?? (yield* Effect.promise(() => userAuth.bearer()))
 
     let result: typeof CallToolResult.Type
     switch (name) {
@@ -256,13 +271,16 @@ function handleToolCall(
         result = yield* handleSearch(args)
         break
       case "execute":
-        result = yield* handleExecute(args, bearerToken)
+        result = yield* handleExecute(args, effectiveBearer)
         break
       case "play":
-        result = yield* handlePlay(args, bearerToken)
+        result = yield* handlePlay(args, effectiveBearer)
         break
       case "subgraph":
         result = yield* handleSubgraph(args)
+        break
+      case "login":
+        result = yield* handleLogin(args)
         break
       default:
         return makeErrorResponse(id, -32602, `Unknown tool: ${name}`)

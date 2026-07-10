@@ -43,11 +43,23 @@ export interface OAuthBrokerConfig {
   readonly upstreamBase?: string
   /** Scope requested from Audius when the client doesn't specify. */
   readonly defaultScope?: string
+  /**
+   * Sink for tokens obtained via session-mode logins (the `login` tool path).
+   * Called by the callback handler with the login id and the raw Audius
+   * token response.
+   */
+  readonly onSessionTokens?: (loginId: string, tokens: Record<string, unknown>) => void
 }
 
 export interface OAuthBroker {
   /** Returns true if the request was an auth route and has been handled. */
   readonly handle: (req: IncomingMessage, res: ServerResponse, url: URL) => Promise<boolean>
+  /**
+   * Begin a session-mode login (the `login` tool path): returns the Audius
+   * consent URL the user must open. The callback deposits the resulting
+   * tokens via onSessionTokens instead of redirecting to an MCP client.
+   */
+  readonly startSessionLogin: (base: string) => { loginId: string; url: string }
 }
 
 interface RegisteredClient {
@@ -60,6 +72,13 @@ interface PendingLogin {
   readonly cc: string // client's code_challenge
   readonly cru: string // client's redirect_uri
   readonly cs?: string // client's state
+}
+
+/** Session-mode login (the `login` tool path) — no downstream MCP client. */
+interface PendingSessionLogin {
+  readonly m: "session"
+  readonly v: string // upstream PKCE verifier
+  readonly li: string // login id the tokens get deposited under
 }
 
 interface UpstreamTokens {
@@ -196,6 +215,51 @@ export const makeOAuthBroker = (config: OAuthBrokerConfig): OAuthBroker => {
     scopes_supported: ["read", "write"]
   })
 
+  /** Build the upstream Audius consent URL for a sealed pending login. */
+  const upstreamAuthorizeUrl = (base: string, scope: string, sealedState: string, verifier: string): string => {
+    const authorizeUrl = new URL(`${upstream}/oauth/authorize`)
+    authorizeUrl.searchParams.set("response_type", "code")
+    authorizeUrl.searchParams.set("scope", scope)
+    authorizeUrl.searchParams.set("api_key", config.audiusApiKey)
+    authorizeUrl.searchParams.set("redirect_uri", `${base}/oauth/callback`)
+    authorizeUrl.searchParams.set("state", sealedState)
+    authorizeUrl.searchParams.set("code_challenge", s256Challenge(verifier))
+    authorizeUrl.searchParams.set("code_challenge_method", "S256")
+    authorizeUrl.searchParams.set("response_mode", "query")
+    authorizeUrl.searchParams.set("display", "fullScreen")
+    return authorizeUrl.toString()
+  }
+
+  /** Exchange an upstream authorization code for Audius tokens. */
+  const exchangeUpstreamCode = async (base: string, code: string, verifier: string): Promise<
+    { ok: true; tokens: UpstreamTokens } | { ok: false; error: string; description: string }
+  > => {
+    try {
+      const resp = await fetch(`${upstream}/oauth/token`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          grant_type: "authorization_code",
+          code,
+          code_verifier: verifier,
+          client_id: config.audiusApiKey,
+          redirect_uri: `${base}/oauth/callback`
+        })
+      })
+      const json = (await resp.json()) as Record<string, unknown>
+      if (!resp.ok || typeof json["access_token"] !== "string") {
+        return {
+          ok: false,
+          error: (json["error"] as string) ?? "server_error",
+          description: (json["error_description"] as string) ?? `Audius token exchange failed (HTTP ${resp.status})`
+        }
+      }
+      return { ok: true, tokens: json as unknown as UpstreamTokens }
+    } catch (e) {
+      return { ok: false, error: "server_error", description: `Audius token exchange failed: ${e}` }
+    }
+  }
+
   // -- /oauth/register (RFC 7591, stateless) --------------------------------
 
   const handleRegister = async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
@@ -275,26 +339,51 @@ export const makeOAuthBroker = (config: OAuthBrokerConfig): OAuthBroker => {
       ...(state !== undefined ? { cs: state } : {})
     }
     const upstreamState = seal(key, LOGIN_PURPOSE, pending, LOGIN_TTL_SECONDS)
+    sendRedirect(res, upstreamAuthorizeUrl(baseUrl(req), scope, upstreamState, pending.v))
+  }
 
-    const authorizeUrl = new URL(`${upstream}/oauth/authorize`)
-    authorizeUrl.searchParams.set("response_type", "code")
-    authorizeUrl.searchParams.set("scope", scope)
-    authorizeUrl.searchParams.set("api_key", config.audiusApiKey)
-    authorizeUrl.searchParams.set("redirect_uri", `${baseUrl(req)}/oauth/callback`)
-    authorizeUrl.searchParams.set("state", upstreamState)
-    authorizeUrl.searchParams.set("code_challenge", s256Challenge(pending.v))
-    authorizeUrl.searchParams.set("code_challenge_method", "S256")
-    authorizeUrl.searchParams.set("response_mode", "query")
-    authorizeUrl.searchParams.set("display", "fullScreen")
+  // -- Session-mode login (the `login` tool path) ------------------------------
 
-    sendRedirect(res, authorizeUrl.toString())
+  const startSessionLogin = (base: string): { loginId: string; url: string } => {
+    const pending: PendingSessionLogin = { m: "session", v: randomToken(48), li: randomToken(16) }
+    const sealedState = seal(key, LOGIN_PURPOSE, pending, LOGIN_TTL_SECONDS)
+    return { loginId: pending.li, url: upstreamAuthorizeUrl(base, defaultScope, sealedState, pending.v) }
   }
 
   // -- /oauth/callback (from Audius) ------------------------------------------
 
+  const sendCallbackPage = (res: ServerResponse, status: number, title: string, detail: string): void => {
+    res.writeHead(status, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" })
+    res.end(`<!doctype html><html><head><title>Audius MCP</title><style>
+body{font-family:system-ui,sans-serif;display:grid;place-items:center;min-height:90vh;margin:0;background:#f5f3ff;color:#1f2937}
+main{text-align:center;max-width:28rem;padding:2rem}h1{font-size:1.4rem}p{color:#6b7280}
+</style></head><body><main><h1>${title}</h1><p>${detail}</p></main></body></html>`)
+  }
+
   const handleCallback = async (req: IncomingMessage, res: ServerResponse, url: URL): Promise<void> => {
     const q = url.searchParams
-    const pending = unseal<PendingLogin>(key, LOGIN_PURPOSE, q.get("state") ?? "")
+    const state = q.get("state") ?? ""
+    const sessionPending = unseal<PendingSessionLogin>(key, LOGIN_PURPOSE, state)
+
+    // -- Session-mode (login tool): deposit tokens, render a page ------------
+    if (sessionPending && sessionPending.m === "session") {
+      const upstreamError = q.get("error")
+      if (upstreamError) {
+        return sendCallbackPage(res, 400, "Login failed", `Audius reported: ${upstreamError} — ${q.get("error_description") ?? "no details"}. Return to your agent and try again.`)
+      }
+      const code = q.get("code")
+      if (!code) return sendCallbackPage(res, 400, "Login failed", "Audius returned no authorization code. Return to your agent and try again.")
+
+      const result = await exchangeUpstreamCode(baseUrl(req), code, sessionPending.v)
+      if (!result.ok) {
+        return sendCallbackPage(res, 502, "Login failed", `${result.error}: ${result.description}`)
+      }
+      config.onSessionTokens?.(sessionPending.li, result.tokens as unknown as Record<string, unknown>)
+      return sendCallbackPage(res, 200, "✅ Logged in with Audius", "You can close this tab and return to your agent — it will pick the session up from here.")
+    }
+
+    // -- Client-mode (MCP-native OAuth) ---------------------------------------
+    const pending = unseal<PendingLogin>(key, LOGIN_PURPOSE, state)
     if (!pending) {
       return oauthError(res, 400, "invalid_request", "Login state is missing, expired (10 min), or tampered — restart the login")
     }
@@ -315,32 +404,12 @@ export const makeOAuthBroker = (config: OAuthBrokerConfig): OAuthBroker => {
 
     // Exchange immediately — the upstream verifier only exists inside the
     // sealed state, so this is the one moment the exchange can happen.
-    let tokens: UpstreamTokens
-    try {
-      const resp = await fetch(`${upstream}/oauth/token`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          grant_type: "authorization_code",
-          code,
-          code_verifier: pending.v,
-          client_id: config.audiusApiKey,
-          redirect_uri: `${baseUrl(req)}/oauth/callback`
-        })
-      })
-      const json = (await resp.json()) as Record<string, unknown>
-      if (!resp.ok || typeof json["access_token"] !== "string") {
-        return clientRedirect({
-          error: (json["error"] as string) ?? "server_error",
-          error_description: (json["error_description"] as string) ?? `Audius token exchange failed (HTTP ${resp.status})`
-        })
-      }
-      tokens = json as unknown as UpstreamTokens
-    } catch (e) {
-      return clientRedirect({ error: "server_error", error_description: `Audius token exchange failed: ${e}` })
+    const result = await exchangeUpstreamCode(baseUrl(req), code, pending.v)
+    if (!result.ok) {
+      return clientRedirect({ error: result.error, error_description: result.description })
     }
 
-    const sealedCode: SealedCode = { t: tokens, cc: pending.cc, cru: pending.cru }
+    const sealedCode: SealedCode = { t: result.tokens, cc: pending.cc, cru: pending.cru }
     clientRedirect({ code: seal(key, CODE_PURPOSE, sealedCode, CODE_TTL_SECONDS) })
   }
 
@@ -469,5 +538,5 @@ export const makeOAuthBroker = (config: OAuthBrokerConfig): OAuthBroker => {
     return false
   }
 
-  return { handle }
+  return { handle, startSessionLogin }
 }

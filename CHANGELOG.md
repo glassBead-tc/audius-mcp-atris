@@ -25,6 +25,17 @@ Spec: `specs/capability-roadmap/README.md`. MCP-native OAuth: "Log in with Audiu
 - Tests: `test/oauth-broker.test.mjs` — crypto guarantees plus the full brokered flow
   (register → authorize → callback → token → refresh) against a stubbed upstream,
   including PKCE-failure, evil-redirect-uri, and unknown-client rejections.
+- **`login` tool (session-login path)** — workaround for MCP clients that complete
+  OAuth but never attach the bearer token (anthropics/claude-code#46140, confirmed
+  empirically: every post-auth request arrived `auth=none`). `login {action:"start"}`
+  returns an Audius consent URL; the approval lands on `/oauth/callback` (session-mode
+  sealed state), and the tokens are deposited in an in-memory single-active-login
+  store (`src/auth/UserAuth.ts`) that tool calls fall back to when no Authorization
+  header is present. The store auto-refreshes tokens (serialized — Audius refresh
+  tokens are single-use with family revocation) and `login {action:"logout"}` revokes
+  upstream. Single-user by design; multi-user deployments should use MCP-native OAuth.
+- Transport: auth diagnostics — every `POST /mcp` logs bearer presence (never
+  contents) to stderr, and to `MCP_DEBUG_LOG=<path>` when set.
 
 ## Unreleased — Capability Roadmap Phase 1 (fix what's broken)
 

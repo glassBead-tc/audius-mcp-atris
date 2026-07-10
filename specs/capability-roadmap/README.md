@@ -114,6 +114,14 @@ use Audius directly, and the server brokers instead:
 - Writes de-risked: with `scope=write` the API server signs EntityManager transactions
   itself against the user→app consent grant — plain bearer works on write endpoints.
   (This pre-answers Phase 3's spike.)
+- **Session-login path (`login` tool)**: Claude Code has a confirmed bug
+  (anthropics/claude-code#46140 + #52565) where MCP OAuth completes but the bearer is
+  never attached to requests (verified: post-auth requests arrive `auth=none`) and the
+  token is never persisted. The `login` tool routes around it: consent URL → our
+  callback → in-memory single-active-login store with server-side serialized refresh;
+  tool calls without an Authorization header fall back to it. Local-dev note: Audius
+  dev-app redirect URIs want `http://127.0.0.1:<port>/oauth/callback` (not
+  `localhost`), so `MCP_PUBLIC_URL` should be set accordingly.
 
 **Exit criterion**: an agent connected through a compliant MCP client completes
 `GET /me` and reads its own library without any out-of-band token plumbing.
