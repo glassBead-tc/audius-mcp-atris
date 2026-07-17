@@ -17,8 +17,8 @@ Loaded from `./.env` at startup; **`.env` values override inherited shell variab
 
 - `AUDIUS_API_KEY` - API key for Audius REST API (also the OAuth client_id)
 - `PORT` - HTTP server port (default: 3000)
-- `GRAPH_API_KEY` - The Graph gateway key; gates the `subgraph` tool (hidden when unset)
 - `MCP_AUTH_SECRET` - enables the stateless OAuth broker ("Log in with Audius"); unset = bearer pass-through only
+- `AUDIUS_RPC_BASE` - OAP ConnectRPC node for `protocol.request` sandbox reads (default: https://rpc.audius.co)
 - `MCP_PUBLIC_URL` - public base URL for OAuth metadata/redirects (derived from request headers when unset)
 - `RESPONSE_TOKEN_BUDGET` - max tokens per tool result (default: 20000)
 
@@ -48,7 +48,8 @@ src/
 ├── api/
 │   ├── SpecLoader.ts           # Fetch + parse Audius swagger.yaml
 │   ├── SpecIndex.ts            # Searchable index over parsed spec
-│   └── AudiusClient.ts         # HTTP client for Audius REST API
+│   ├── AudiusClient.ts         # HTTP client for Audius REST API
+│   └── ProtocolClient.ts       # Read-only OAP ConnectRPC client (rpc.audius.co)
 ├── tools/
 │   ├── SearchTool.ts           # search() tool
 │   └── ExecuteTool.ts          # execute() tool

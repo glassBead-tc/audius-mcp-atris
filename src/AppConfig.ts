@@ -4,7 +4,6 @@
  * Reads from environment variables:
  * - AUDIUS_API_KEY: API key for Audius REST API
  * - PORT: HTTP server port (default: 3000)
- * - GRAPH_API_KEY: API key for The Graph (optional; gates the subgraph tool)
  * - RESPONSE_TOKEN_BUDGET: max tokens any single tool result may emit (default: 20000)
  */
 import { Context, Effect, Layer } from "effect"
@@ -19,7 +18,6 @@ export interface AppConfigShape {
    */
   readonly apiSecret?: string
   readonly port: number
-  readonly graphApiKey?: string
   /**
    * Symmetric secret for the stateless OAuth broker (Phase 2). When set, the
    * server exposes MCP-spec OAuth endpoints that broker "Log in with Audius";
@@ -53,13 +51,12 @@ export const AppConfigLive: Layer.Layer<AppConfig> = Layer.effect(
     const apiSecret = process.env["AUDIUS_API_SECRET"] || undefined
     const portParsed = parseInt(process.env["PORT"] ?? "3000", 10)
     const port = Number.isFinite(portParsed) ? portParsed : 3000
-    const graphApiKey = process.env["GRAPH_API_KEY"] || undefined
     const mcpAuthSecret = process.env["MCP_AUTH_SECRET"] || undefined
     const publicUrl = process.env["MCP_PUBLIC_URL"] || undefined
     const budgetParsed = parseInt(process.env["RESPONSE_TOKEN_BUDGET"] ?? "20000", 10)
     const responseTokenBudget = Number.isFinite(budgetParsed) && budgetParsed > 0
       ? budgetParsed
       : 20000
-    return { apiKey, apiSecret, port, graphApiKey, mcpAuthSecret, publicUrl, responseTokenBudget }
+    return { apiKey, apiSecret, port, mcpAuthSecret, publicUrl, responseTokenBudget }
   })
 )

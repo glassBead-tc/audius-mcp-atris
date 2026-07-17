@@ -58,3 +58,37 @@ loudly at submission instead of mining and being dropped by the indexer.
    two apps, fresh grants, clean target tracks, explicit and implicit `user_id`).
 5. Same request with `Authorization: Basic base64(x:<api_secret>)` → 200 and indexed
    within seconds.
+
+## Update 2026-07-17: correctly-signed writes also discarded after chain halt/recovery
+
+A distinct, more severe instance observed after the mainnet chain halt of 2026-07-17
+(blocks stopped at 28272228 ~03:28 UTC, resumed ~06:02 UTC): **writes signed with the
+correct, granted app wallet now also mine and never index.**
+
+On-chain evidence via the OAP ConnectRPC JSON API (permissionless read):
+
+```
+POST https://rpc.audius.co/core.v1.CoreService/GetBlock  {"height": 28274560}
+```
+
+Block 28274560 (2026-07-17 ~06:16 UTC) contains the transaction from
+`POST /v1/tracks/4gYKz5b/favorites` (Basic app-secret auth, receipt block_number
+28274560):
+
+```json
+{"userId":"143127", "entityType":"Track", "entityId":"1467218021",
+ "action":"Save", "signer":"0x028b0571B497d65Faf19Aef806A797F17A18e19B"}
+```
+
+- The signer IS the developer app's wallet (not the first-party fallback).
+- The user's grant to that wallet is active
+  (`GET /v1/grantees/0x028b0571b497d65faf19aef806a797f17a18e19b/users` → user 143127).
+- Identical request shape was verified indexing within seconds on 2026-07-10.
+- Not indexed after 90+ seconds (nor were two earlier test writes at blocks
+  28274153/28274194, ~15 minutes prior).
+
+So the ETL/indexing layer is rejecting (or not processing) ManageEntity txs that pass
+every documented validation — signer correct, grant active, chain healthy and
+producing blocks. This began with (or was exposed by) the chain halt earlier the same
+day and persisted after block production recovered. Same silent failure mode as the
+original report: 200 + mined receipt, no state, no client-visible error.

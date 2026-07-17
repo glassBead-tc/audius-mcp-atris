@@ -19,7 +19,6 @@ import { AudiusClient } from "../api/AudiusClient.js"
 import { searchToolDefinition, handleSearch } from "../tools/SearchTool.js"
 import { executeToolDefinition, handleExecute } from "../tools/ExecuteTool.js"
 import { playToolDefinition, handlePlay } from "../tools/PlayTool.js"
-import { subgraphToolDefinition, handleSubgraph } from "../tools/SubgraphTool.js"
 import { loginToolDefinition, handleLogin } from "../tools/LoginTool.js"
 import { UserAuth } from "../auth/UserAuth.js"
 import { makeBearerIdentity } from "../auth/BearerIdentity.js"
@@ -55,7 +54,7 @@ const SERVER_INFO = {
 
 const PROTOCOL_VERSION = "2025-11-25"
 
-const makeInstructions = (endpointCount: number, subgraphEnabled: boolean, authEnabled: boolean) => `
+const makeInstructions = (endpointCount: number, authEnabled: boolean) => `
 # Audius MCP Server — Code Mode
 
 Access the Audius music platform (${endpointCount} REST API endpoints) through a small
@@ -71,8 +70,7 @@ calls them — instead of facing hundreds of individual tools.
    captured; the value you \`return\` is the result.
 3. **play** — resolve a track (by id or search query) to its Audius URLs. It may
    also open the track locally when the server runs on the user's machine; the
-   result's \`opened\` field says whether it did. Never assume audio is playing.${subgraphEnabled ? `
-4. **subgraph** — query the Audius protocol subgraph (on-chain staking, governance).` : ""}
+   result's \`opened\` field says whether it did. Never assume audio is playing.
 
 ## Recommended workflow
 1. \`search({ tag: "tracks" })\` — discover the endpoints you need.
@@ -133,6 +131,20 @@ login tool.` : ""}
 - Binary endpoints (e.g. \`/tracks/{id}/stream\`) don't return audio bytes; they
   resolve to \`{ url }\` — the final signed CDN URL.
 
+## Protocol reads (Open Audio Protocol)
+Inside \`execute\`, a second client \`protocol.request(path, body?)\` queries the OAP
+chain directly (ConnectRPC JSON, read-only). Paths are \`/<pkg>.v1.<Service>/<Method>\`:
+- \`/core.v1.CoreService/GetStatus\` — chain health, current height, validators/peers,
+  mempool. First stop when writes mine but never index (halted chain vs indexer drop).
+- \`/core.v1.CoreService/GetBlock\` \`{height}\`, \`GetBlocks\` \`{height:[...]}\`,
+  \`GetTransaction\` \`{txHash}\` — full transaction contents, including ManageEntity
+  writes (userId, entityType, action, signer) — any write receipt is auditable on-chain.
+- \`/etl.v1.ETLService/\` \`GetPlays\`, \`GetManageEntities\`, \`GetValidators\`
+- \`/eth.v1.EthService/\` \`GetRegisteredEndpoints\`, \`GetServiceProviders\` — the
+  Ethereum L1 staking registry (node operators, stake, delegation).
+- \`/storage.v1.StorageService/GetStatus\`, \`/system.v1.SystemService/Ping\`
+Protocol responses are LARGE (GetStatus ~30 KB) — reduce in-sandbox like everything else.
+
 ## Query params
 Pass query params as an object inside \`options.query\`, not as a bare string:
 \`\`\`js
@@ -186,7 +198,6 @@ export const createHandler = (): McpEffectHandler => {
             serverInfo: SERVER_INFO,
             instructions: makeInstructions(
               specIndex.getEndpointCount(),
-              Boolean(config.graphApiKey),
               Boolean(config.mcpAuthSecret)
             )
           })
@@ -203,10 +214,6 @@ export const createHandler = (): McpEffectHandler => {
             stripMake(executeToolDefinition),
             stripMake(playToolDefinition)
           ]
-          // AX-13 — the subgraph tool is only advertised when it can work.
-          if (config.graphApiKey) {
-            tools.push(stripMake(subgraphToolDefinition))
-          }
           // login requires the OAuth broker (MCP_AUTH_SECRET).
           if (config.mcpAuthSecret) {
             tools.push(stripMake(loginToolDefinition))
@@ -333,9 +340,6 @@ function handleToolCall(
         break
       case "play":
         result = yield* handlePlay(args, authContext)
-        break
-      case "subgraph":
-        result = yield* handleSubgraph(args)
         break
       case "login":
         result = yield* handleLogin(args)

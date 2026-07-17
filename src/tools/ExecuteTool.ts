@@ -3,6 +3,7 @@
  *
  * The sandbox provides an authenticated `audius` client with:
  * - audius.request(method, path, options?) — make API calls
+ * - protocol.request(path, body?) — read-only OAP ConnectRPC calls
  * - console.log() — captured output
  */
 import { Effect } from "effect"
@@ -20,6 +21,9 @@ export const executeToolDefinition = Tool.make({
     "Execute JavaScript code against the Audius API in an isolated sandbox. " +
     "An authenticated `audius` client is available with `audius.request(method, path, options?)` " +
     "and `audius.sleep(ms)` (max 30s per call). " +
+    "A read-only `protocol` client — `protocol.request(path, body?)` — calls the Open Audio " +
+    "Protocol ConnectRPC JSON API (chain status, blocks, on-chain transactions, validators, " +
+    "staking registry), e.g. `protocol.request('/core.v1.CoreService/GetStatus')`. " +
     "Use `console.log()` to output intermediate results. The return value of the last expression is captured. " +
     "Use the search tool first to discover available endpoints. " +
     "Failed API calls do NOT throw — they resolve to `{ error: \"...\" }`, so check `res.error` " +

@@ -30,6 +30,7 @@ try {
 import { SpecLoaderLive } from "./api/SpecLoader.js"
 import { SpecIndex, SpecIndexLive } from "./api/SpecIndex.js"
 import { AudiusClient, AudiusClientLive } from "./api/AudiusClient.js"
+import { ProtocolClientLive } from "./api/ProtocolClient.js"
 import { TypeGeneratorLive } from "./sandbox/TypeGenerator.js"
 import { Sandbox, SandboxLive } from "./sandbox/Sandbox.js"
 import { createHandler } from "./mcp/McpServer.js"
@@ -59,9 +60,9 @@ const AudiusClientLayer = AudiusClientLive.pipe(
   Layer.provide(AppConfigLive)
 )
 
-// Sandbox depends on AudiusClient + TypeGenerator
+// Sandbox depends on AudiusClient + ProtocolClient + TypeGenerator
 const SandboxLayer = SandboxLive.pipe(
-  Layer.provide(Layer.merge(AudiusClientLayer, TypeGeneratorLayer))
+  Layer.provide(Layer.mergeAll(AudiusClientLayer, ProtocolClientLive, TypeGeneratorLayer))
 )
 
 // UserAuth (Phase 2): OAuth broker + session login store, enabled by MCP_AUTH_SECRET
@@ -152,7 +153,7 @@ const program = Effect.gen(function* () {
   yield* Effect.logInfo(`Audius MCP Server (Code Mode) listening on port ${config.port}`)
   yield* Effect.logInfo("Transport: Streamable HTTP at POST /mcp")
   yield* Effect.logInfo(
-    `Tools: search, execute, play${config.graphApiKey ? ", subgraph" : " (subgraph disabled — GRAPH_API_KEY not set)"}`
+    "Tools: search, execute, play — sandbox includes read-only OAP protocol client"
   )
   yield* Effect.logInfo(
     userAuth.enabled

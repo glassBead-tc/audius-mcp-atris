@@ -3,6 +3,7 @@
  *
  * Provides isolated JavaScript execution with:
  * - audius.request() host function bridged to AudiusClient
+ * - protocol.request() host function bridged to ProtocolClient (OAP reads)
  * - console.log capture
  * - Memory and execution time limits
  * - Fresh context per execution (no state leakage)
@@ -18,6 +19,7 @@
 import { Context, Effect, Layer } from "effect"
 import { getQuickJS } from "quickjs-emscripten"
 import { AudiusClient } from "../api/AudiusClient.js"
+import { ProtocolClient } from "../api/ProtocolClient.js"
 import { TypeGenerator } from "./TypeGenerator.js"
 
 // ---------------------------------------------------------------------------
@@ -48,10 +50,11 @@ export class Sandbox extends Context.Tag("Sandbox")<
   }
 >() {}
 
-export const SandboxLive: Layer.Layer<Sandbox, Error, AudiusClient | TypeGenerator> = Layer.effect(
+export const SandboxLive: Layer.Layer<Sandbox, Error, AudiusClient | ProtocolClient | TypeGenerator> = Layer.effect(
   Sandbox,
   Effect.gen(function* () {
     const audiusClient = yield* AudiusClient
+    const protocolClient = yield* ProtocolClient
     const typeGen = yield* TypeGenerator
 
     // Load the sync QuickJS module once (not async/asyncify variant).
@@ -170,6 +173,40 @@ export const SandboxLive: Layer.Layer<Sandbox, Error, AudiusClient | TypeGenerat
             requestFn.dispose()
             audiusHandle.dispose()
 
+            // Inject protocol.request — read-only OAP ConnectRPC reads
+            // (chain status, blocks, txs, validators, staking registry).
+            // Same deferred-promise bridge as audius.request.
+            const protocolHandle = ctx.newObject()
+            const protocolFn = ctx.newFunction("request", (...args) => {
+              const path = ctx.dump(args[0]) as string
+              const body = args[1] ? ctx.dump(args[1]) : undefined
+
+              const deferred = ctx.newPromise()
+              const hostPromise = Effect.runPromise(
+                protocolClient.request(path, body)
+              ).then(
+                (result) => {
+                  const strHandle = ctx.newString(JSON.stringify(result))
+                  deferred.resolve(strHandle)
+                  strHandle.dispose()
+                  ctx.runtime.executePendingJobs()
+                },
+                (e) => {
+                  const errorMsg = e instanceof Error ? e.message : String(e)
+                  const strHandle = ctx.newString(JSON.stringify({ error: errorMsg }))
+                  deferred.resolve(strHandle)
+                  strHandle.dispose()
+                  ctx.runtime.executePendingJobs()
+                }
+              )
+              pendingPromises.push(hostPromise)
+              return deferred.handle
+            })
+            ctx.setProp(protocolHandle, "request", protocolFn)
+            ctx.setProp(ctx.global, "protocol", protocolHandle)
+            protocolFn.dispose()
+            protocolHandle.dispose()
+
             // Inject user code as a global string to avoid template literal injection
             const userCodeHandle = ctx.newString(code)
             ctx.setProp(ctx.global, "__userCode__", userCodeHandle)
@@ -187,6 +224,12 @@ export const SandboxLive: Layer.Layer<Sandbox, Error, AudiusClient | TypeGenerat
               var _origRequest = audius.request;
               audius.request = function(method, path, options) {
                 return _origRequest(method, path, options)
+                  .then(function(jsonStr) { return JSON.parse(jsonStr); });
+              };
+
+              var _origProtocol = protocol.request;
+              protocol.request = function(path, body) {
+                return _origProtocol(path, body)
                   .then(function(jsonStr) { return JSON.parse(jsonStr); });
               };
 
