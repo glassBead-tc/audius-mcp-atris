@@ -10,7 +10,7 @@
  * This module works directly with the internal Effect RPC message format
  * (decoded by McpSerialization), not raw JSON-RPC.
  */
-import { readFileSync } from "node:fs"
+import { readFileSync, appendFileSync as appendFileSyncAuth } from "node:fs"
 import { Effect } from "effect"
 import { SpecIndex } from "../api/SpecIndex.js"
 import { Sandbox } from "../sandbox/Sandbox.js"
@@ -22,6 +22,7 @@ import { playToolDefinition, handlePlay } from "../tools/PlayTool.js"
 import { subgraphToolDefinition, handleSubgraph } from "../tools/SubgraphTool.js"
 import { loginToolDefinition, handleLogin } from "../tools/LoginTool.js"
 import { UserAuth } from "../auth/UserAuth.js"
+import { makeBearerIdentity } from "../auth/BearerIdentity.js"
 import { workflowsResource, WORKFLOWS_URI, WORKFLOWS_CONTENT } from "../resources/Workflows.js"
 import { CallToolResult } from "./McpSchema.js"
 import { capResult } from "./ResponseGuard.js"
@@ -101,11 +102,13 @@ public reads (trending, search) work with the server API key alone.
 ${authEnabled ? `
 ## Authentication (Log in with Audius)
 Two ways for the user to connect their Audius account:
-1. **login tool** (recommended): call \`login {action:"start"}\`, show the user the
-   \`consent_url\`, have them approve in a browser, then \`login {action:"status",
-   login_id}\`. The server holds the session and auto-refreshes tokens.
-2. **MCP-native OAuth**: if the MCP client attaches a bearer token, it wins over
-   the session login.
+1. **MCP-native OAuth** (default): if the MCP client attaches a bearer token, it
+   wins over the session login. The server verifies it (\`/me\`) and full write
+   scope follows automatically.
+2. **login tool** (fallback for clients that never attach bearers): call
+   \`login {action:"start"}\`, show the user the \`consent_url\`, have them approve
+   in a browser, then \`login {action:"status", login_id}\`. The server holds the
+   session and auto-refreshes tokens.
 Once authenticated, every \`audius.request\` carries the user's identity: \`/me\`,
 their library, favorites, reposts, playlists, and (write scope) mutations on
 their behalf. If a user-scoped call returns 401, no login is active — use the
@@ -116,8 +119,8 @@ login tool.` : ""}
   \`{ error: "Audius API 404: ..." }\`. Always check \`res.error\` before \`res.data\`,
   or you'll see a misleading "cannot read property of undefined".
 - POST/PUT/DELETE perform REAL mutations (favorites, reposts, playlists, follows)
-  once the user has logged in (login tool). The server signs writes and injects
-  the required \`user_id\` automatically.
+  once the user is authenticated (MCP OAuth or login tool). The server signs
+  writes and injects the required \`user_id\` automatically.
 - **Writes are TWO-PHASE**: a 200 with \`{ block_number, transaction_hash }\` is a
   transaction receipt, NOT proof of effect — the change only exists once the
   network indexes it (typically seconds). Verify with a follow-up read:
@@ -258,6 +261,23 @@ export const createHandler = (): McpEffectHandler => {
 // Tool call dispatch
 // ---------------------------------------------------------------------------
 
+/**
+ * Verified identities for MCP-native OAuth bearers (the broker hands clients
+ * the raw Audius access token, so /me validates it). Module-level: one cache
+ * per server process, shared across sessions.
+ */
+const bearerIdentity = makeBearerIdentity()
+
+// Auth diagnostics: mirror identity decisions to MCP_DEBUG_LOG (ids only, never tokens)
+const authDebug = (msg: string) => {
+  const debugLog = process.env["MCP_DEBUG_LOG"]
+  if (debugLog) {
+    try {
+      appendFileSyncAuth(debugLog, `${new Date().toISOString()} [auth] ${msg}\n`)
+    } catch { /* diagnostics only */ }
+  }
+}
+
 function handleToolCall(
   id: string,
   payload: Record<string, unknown>,
@@ -266,16 +286,39 @@ function handleToolCall(
   return Effect.gen(function* () {
     const config = yield* AppConfig
     const userAuth = yield* UserAuth
+    const audiusClient = yield* AudiusClient
     const name = payload["name"] as string
     const args = (payload["arguments"] as Record<string, unknown>) ?? {}
 
     // Effective user identity: an explicit Authorization header wins; else
-    // fall back to the session login established via the `login` tool. The
-    // verified userId (session logins only) is what authorizes app-signed
-    // writes in AudiusClient.
+    // fall back to the session login established via the `login` tool. Either
+    // way, only a VERIFIED user id (GET /me) authorizes app-signed writes in
+    // AudiusClient. Bearer verification is cached and only runs for the tools
+    // that carry user identity into the sandbox.
+    const needsIdentity = name === "execute" || name === "play"
+    const bearerUserId = bearerToken && needsIdentity
+      ? yield* Effect.promise(() =>
+          bearerIdentity.resolve(bearerToken, (token) =>
+            Effect.runPromise(
+              audiusClient.request("GET", "/me", undefined, { bearerToken: token }).pipe(
+                Effect.map((me) => {
+                  const u = ((me as Record<string, unknown>)["data"] ?? {}) as Record<string, unknown>
+                  return typeof u["id"] === "string" ? u["id"] : undefined
+                }),
+                Effect.tap((id) => Effect.sync(() => authDebug(`verify /me -> userId=${id}`))),
+                Effect.catchAll((e) => {
+                  authDebug(`verify /me FAILED: ${e instanceof Error ? e.message : String(e)}`)
+                  return Effect.succeed(undefined)
+                })
+              )
+            )
+          )
+        )
+      : undefined
+    if (needsIdentity && bearerToken) authDebug(`tool=${name} resolved bearerUserId=${bearerUserId}`)
     const sessionBearer = bearerToken ? undefined : yield* Effect.promise(() => userAuth.bearer())
     const authContext = bearerToken
-      ? { bearerToken }
+      ? { bearerToken, ...(bearerUserId !== undefined ? { userId: bearerUserId } : {}) }
       : sessionBearer
         ? { bearerToken: sessionBearer, ...(userAuth.userId() ? { userId: userAuth.userId() } : {}) }
         : undefined

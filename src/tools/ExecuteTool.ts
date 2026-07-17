@@ -24,7 +24,7 @@ export const executeToolDefinition = Tool.make({
     "Use the search tool first to discover available endpoints. " +
     "Failed API calls do NOT throw — they resolve to `{ error: \"...\" }`, so check `res.error` " +
     "before reading `res.data`. " +
-    "POST/PUT/DELETE perform REAL mutations when a user is logged in (login tool). " +
+    "POST/PUT/DELETE perform REAL mutations when a user is authenticated (MCP OAuth or login tool). " +
     "Writes are TWO-PHASE: a 200 with { block_number, transaction_hash } is a receipt, NOT proof of " +
     "effect — the change only exists once indexed (~seconds). Verify with a follow-up read after " +
     "`await audius.sleep(3000)`. DELETE additionally requires `{ confirm: true }` in options. " +
