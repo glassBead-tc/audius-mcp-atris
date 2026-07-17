@@ -1,0 +1,49 @@
+{
+  "expectations": [
+    {
+      "text": "A dedicated handoff document exists in the repo (ideally repo/.claude/handoffs/)",
+      "passed": true,
+      "evidence": "repo/HANDOFF.md (63 lines) \u2014 in the repo, at root rather than .claude/handoffs"
+    },
+    {
+      "text": "Doc records the hourly user-crontab entry as external state the repo does not track, including the actual cron line",
+      "passed": true,
+      "evidence": "Lines 25+: exact cron line, personal-crontab caveat"
+    },
+    {
+      "text": "Doc lists scripts/collect.sh and docs/research/api-map.md as uncommitted work",
+      "passed": true,
+      "evidence": "Lines 10-12 mark both UNCOMMITTED"
+    },
+    {
+      "text": "Doc names both surprises explicitly: parallel research fan-out (positive) and the curated history.csv overwrite (negative)",
+      "passed": false,
+      "evidence": "Overwrite appears as 'Incident log (why the guard exists)'; fan-out as a workflow note. Events present, surprise audit absent \u2014 zero occurrences of surprise framing"
+    },
+    {
+      "text": "scripts/collect.sh is actually changed so overwriting curated data is structurally prevented \u2014 a warning comment alone fails",
+      "passed": true,
+      "evidence": "Guard refuses history.csv by name (exit 1, tested) + set -euo pipefail makes cron failures loud"
+    },
+    {
+      "text": "The parallel research fan-out pattern is encoded somewhere reusable beyond the handoff doc (memory entry, CLAUDE.md, or docs)",
+      "passed": true,
+      "evidence": "memory/chartlab.md records the pattern and the user's standing preference"
+    },
+    {
+      "text": "The unanswered retention-policy question is preserved as an open question for the user",
+      "passed": true,
+      "evidence": "Line 45 + next action 4 re-ask"
+    },
+    {
+      "text": "memory/MEMORY.md contains a pointer to the handoff document",
+      "passed": true,
+      "evidence": "Pointer to repo HANDOFF.md present"
+    },
+    {
+      "text": "Next actions are concrete with entry points (file paths and/or commands), not vague statements",
+      "passed": true,
+      "evidence": "Ordered with paths and the retention re-ask"
+    }
+  ]
+}

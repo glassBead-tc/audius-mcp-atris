@@ -1,0 +1,16 @@
+{
+  "eval_id": 1,
+  "eval_name": "chartlab-pipeline-session",
+  "prompt": "End of chartlab session (transcript in session-log.md): hourly collector cron added to USER crontab (untracked by repo), collect.sh once overwrote curated data/history.csv (recovered by luck), parallel research fan-out worked brilliantly, collect.sh + research docs uncommitted, retention policy undecided. User: 'Heading out, pick this up Monday — /handoff'.",
+  "assertions": [
+    {"text": "A dedicated handoff document exists in the repo (ideally repo/.claude/handoffs/)"},
+    {"text": "Doc records the hourly user-crontab entry as external state the repo does not track, including the actual cron line"},
+    {"text": "Doc lists scripts/collect.sh and docs/research/api-map.md as uncommitted work"},
+    {"text": "Doc names both surprises explicitly: parallel research fan-out (positive) and the curated history.csv overwrite (negative)"},
+    {"text": "scripts/collect.sh is actually changed so overwriting curated data is structurally prevented (append to dedicated/timestamped output, refuse to write to tracked curated files, or equivalent guard) — a warning comment alone fails"},
+    {"text": "The parallel research fan-out pattern is encoded somewhere reusable beyond the handoff doc (memory entry, CLAUDE.md, or docs)"},
+    {"text": "The unanswered retention-policy question is preserved as an open question for the user"},
+    {"text": "memory/MEMORY.md contains a pointer to the handoff document"},
+    {"text": "Next actions are concrete with entry points (file paths and/or commands), not vague statements"}
+  ]
+}

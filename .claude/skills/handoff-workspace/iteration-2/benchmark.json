@@ -1,0 +1,63 @@
+{
+  "skill_name": "handoff",
+  "iteration": 2,
+  "configurations": [
+    {
+      "name": "with_skill",
+      "pass_rate": 1.0,
+      "passed": 18,
+      "total": 18,
+      "mean_tokens": 45473,
+      "mean_duration_seconds": 263.8,
+      "evals": [
+        {
+          "eval_name": "fooify-debug-session",
+          "passed": 9,
+          "total": 9,
+          "tokens": 48390,
+          "duration_seconds": 296.0
+        },
+        {
+          "eval_name": "chartlab-pipeline-session",
+          "passed": 9,
+          "total": 9,
+          "tokens": 42555,
+          "duration_seconds": 231.6
+        }
+      ]
+    },
+    {
+      "name": "without_skill",
+      "pass_rate": 0.778,
+      "passed": 14,
+      "total": 18,
+      "mean_tokens": 38918,
+      "mean_duration_seconds": 184.1,
+      "evals": [
+        {
+          "eval_name": "fooify-debug-session",
+          "passed": 6,
+          "total": 9,
+          "tokens": 39573,
+          "duration_seconds": 171.2
+        },
+        {
+          "eval_name": "chartlab-pipeline-session",
+          "passed": 8,
+          "total": 9,
+          "tokens": 38263,
+          "duration_seconds": 196.9
+        }
+      ]
+    }
+  ],
+  "analyst_observations": [
+    "DISCRIMINATION ACHIEVED: with de-labeled transcripts and skill-barred baselines, with_skill 18/18 vs without_skill 15/18.",
+    "The surprise audit is the skill's clearest contribution: 2/2 with-skill docs contain an explicit expectation-vs-outcome audit derived from unlabeled transcripts; 0/2 baselines do (they describe the same events as facts/incidents, never as surprises).",
+    "The environment-change mandate bites on the harder case: the fooify baseline deferred the client.js fix to a TODO and wrote rules into CLAUDE.md (documentation rung); the with-skill run made keyless writes impossible AND wrote the regression test that was blocking the commit. The chartlab baseline did harden the script unprompted \u2014 competent models sometimes reach the right rung anyway; the skill makes it consistent.",
+    "Document placement: skill runs use .claude/handoffs/ with dated filenames (session history convention); one baseline wrote HANDOFF.md OUTSIDE the repo entirely \u2014 it would not survive a fresh clone.",
+    "Residual contamination floor: baselines still see the skill's one-line description in their skill listing; a fully skill-free environment isn't reachable from inside this project. The observed delta is therefore a LOWER BOUND on the skill's effect.",
+    "Cost of the skill: +17% tokens (45.5k vs 38.9k), +43% wall time (264s vs 184s) \u2014 spent on verification depth, tests, and the audit.",
+    "Both with-skill runs marked unverifiable claims as 'unverified as of handoff' (tunnel, crontab) \u2014 honesty behavior the skill asks for explicitly; baselines asserted or omitted."
+  ]
+}

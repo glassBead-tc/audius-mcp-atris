@@ -1,0 +1,49 @@
+{
+  "expectations": [
+    {
+      "text": "A dedicated handoff document exists in the repo (ideally repo/.claude/handoffs/)",
+      "passed": false,
+      "evidence": "HANDOFF.md written at the session root, OUTSIDE the repo \u2014 a fresh clone of the repo would not contain it"
+    },
+    {
+      "text": "Doc records the src/config.js precedence fix as done-but-uncommitted, including WHY it is uncommitted (regression test missing)",
+      "passed": true,
+      "evidence": "Line 17: 'UNCOMMITTED \u2014 the user wanted a regression test first, which was never written'"
+    },
+    {
+      "text": "Doc explicitly flags the background `node src/server.js` process as ephemeral state that will NOT survive the session, with a restart command",
+      "passed": true,
+      "evidence": "Verified nothing listening on :8787 at handoff; restart command given"
+    },
+    {
+      "text": "Doc records 'Fooify 200 does not mean persisted / Idempotency-Key required' as a tripwire or verified fact, with a way to re-verify",
+      "passed": true,
+      "evidence": "Verified facts section lines 21-25 with replay evidence"
+    },
+    {
+      "text": "Doc names both surprises explicitly: /debug/echo endpoint (positive) and silent write drops (negative)",
+      "passed": false,
+      "evidence": "Both phenomena are described as facts/discoveries, but nothing identifies them as the session's surprises \u2014 no audit framing anywhere in the doc"
+    },
+    {
+      "text": "A structural change for the negative surprise exists in the repo: client.js actually sends an Idempotency-Key header, or a guard/test enforces it (a comment or note alone fails)",
+      "passed": false,
+      "evidence": "No code change: client.js grep Idempotency-Key = 0, no tests. Rules written into CLAUDE.md only (documentation rung); code fix deferred to successor as TODO #1"
+    },
+    {
+      "text": "The positive surprise (/debug/echo technique) is encoded somewhere reusable beyond the handoff doc (script, CLAUDE.md, docs, or memory)",
+      "passed": true,
+      "evidence": "repo/CLAUDE.md + memory/fooify-api-quirks.md record the endpoint and technique"
+    },
+    {
+      "text": "memory/MEMORY.md contains a pointer to the handoff document",
+      "passed": true,
+      "evidence": "Pointer line present (points to HANDOFF.md at session root)"
+    },
+    {
+      "text": "Next actions are concrete with entry points (file paths and/or commands), not vague statements",
+      "passed": true,
+      "evidence": "Ordered with file paths and exact assertions to write"
+    }
+  ]
+}

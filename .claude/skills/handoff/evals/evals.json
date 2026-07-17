@@ -1,0 +1,19 @@
+{
+  "skill_name": "handoff",
+  "evals": [
+    {
+      "id": 0,
+      "eval_name": "fooify-debug-session",
+      "prompt": "You are at the end of a work session on the melody-api project. The condensed session transcript is in session-log.md (treat it as your own session memory — everything in it happened to you today). The project repo is ./repo and your auto-memory index for this test is ./memory/MEMORY.md. The user just said: 'That's a wrap for today — /handoff'. Perform the handoff.",
+      "expected_output": "Handoff doc in repo/.claude/handoffs/ covering uncommitted config fix, dying background server, Fooify 200-but-dropped tripwire; surprise audit (echo endpoint / silent drops); structural change for the negative (idempotency key in client.js or test), encoding of the positive; memory pointer updated.",
+      "files": ["session-log.md", "repo/", "memory/"]
+    },
+    {
+      "id": 1,
+      "eval_name": "chartlab-pipeline-session",
+      "prompt": "You are at the end of a work session on the chartlab project. The condensed session transcript is in session-log.md (treat it as your own session memory — everything in it happened to you today). The project repo is ./repo and your auto-memory index for this test is ./memory/MEMORY.md. The user just said: 'Heading out, pick this up Monday — /handoff'. Perform the handoff.",
+      "expected_output": "Handoff doc covering uncommitted collect.sh + research docs, the user-crontab entry as external/ephemeral state nothing in the repo records, retention-policy open question; surprise audit (parallel research fan-out / curated-file overwrite); overwrite made structurally impossible in collect.sh; fan-out pattern encoded; memory pointer updated.",
+      "files": ["session-log.md", "repo/", "memory/"]
+    }
+  ]
+}

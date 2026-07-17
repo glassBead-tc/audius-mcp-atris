@@ -1,0 +1,49 @@
+{
+  "expectations": [
+    {
+      "text": "A dedicated handoff document exists in the repo (ideally repo/.claude/handoffs/)",
+      "passed": true,
+      "evidence": "repo/.claude/handoffs/2026-07-17-0510-chartlab-metrics-pipeline.md, 77 lines"
+    },
+    {
+      "text": "Doc records the hourly user-crontab entry as external state the repo does not track, including the actual cron line",
+      "passed": true,
+      "evidence": "Ephemeral section lines 17-20: exact line + verify command + 'nothing in the repo created it'"
+    },
+    {
+      "text": "Doc lists scripts/collect.sh and docs/research/api-map.md as uncommitted work",
+      "passed": true,
+      "evidence": "Lines 8-11 list collect.sh, api-map.md, CLAUDE.md"
+    },
+    {
+      "text": "Doc names both surprises explicitly: parallel research fan-out (positive) and the curated history.csv overwrite (negative)",
+      "passed": true,
+      "evidence": "Surprise audit section names both \u2014 fixture labeled them; baseline loaded the skill (same headings)"
+    },
+    {
+      "text": "scripts/collect.sh is actually changed so overwriting curated data is structurally prevented (append to dedicated/timestamped output, refuse to write to tracked curated files, or equivalent guard) \u2014 a warning comment alone fails",
+      "passed": true,
+      "evidence": "Rewritten: refuses history.csv (exit 1), append-only, loud failure when to_csv.sh missing; guards tested by execution"
+    },
+    {
+      "text": "The parallel research fan-out pattern is encoded somewhere reusable beyond the handoff doc (memory entry, CLAUDE.md, or docs)",
+      "passed": true,
+      "evidence": "repo/CLAUDE.md + memory/research-fanout.md"
+    },
+    {
+      "text": "The unanswered retention-policy question is preserved as an open question for the user",
+      "passed": true,
+      "evidence": "Open questions #1 retention + #2 whether cron should move somewhere tracked"
+    },
+    {
+      "text": "memory/MEMORY.md contains a pointer to the handoff document",
+      "passed": true,
+      "evidence": "grep = 1"
+    },
+    {
+      "text": "Next actions are concrete with entry points (file paths and/or commands), not vague statements",
+      "passed": true,
+      "evidence": "Ordered: write to_csv.sh, confirm cron produces rows, retention question"
+    }
+  ]
+}

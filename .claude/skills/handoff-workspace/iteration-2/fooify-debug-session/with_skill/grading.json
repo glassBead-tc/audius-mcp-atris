@@ -1,0 +1,49 @@
+{
+  "expectations": [
+    {
+      "text": "A dedicated handoff document exists in the repo (ideally repo/.claude/handoffs/)",
+      "passed": true,
+      "evidence": "repo/.claude/handoffs/2026-07-17-0553-fooify-recurring-writes.md (59 lines)"
+    },
+    {
+      "text": "Doc records the src/config.js precedence fix as done-but-uncommitted, including WHY it is uncommitted (regression test missing)",
+      "passed": true,
+      "evidence": "State of play: 'was uncommitted awaiting a regression test; that test now exists (test/config.test.js)'"
+    },
+    {
+      "text": "Doc explicitly flags the background `node src/server.js` process as ephemeral state that will NOT survive the session, with a restart command",
+      "passed": true,
+      "evidence": "Ephemeral section: dies with session, restart via npm start + curl verification, tunnel caveat marked unverified"
+    },
+    {
+      "text": "Doc records 'Fooify 200 does not mean persisted / Idempotency-Key required' as a tripwire or verified fact, with a way to re-verify",
+      "passed": true,
+      "evidence": "Verified facts + Tripwires; writeConfirmed() encodes the rule"
+    },
+    {
+      "text": "Doc names both surprises explicitly: /debug/echo endpoint (positive) and silent write drops (negative)",
+      "passed": true,
+      "evidence": "Explicit 'Surprise audit' section with expectation-vs-happened framing for both \u2014 emerged from an UNLABELED transcript"
+    },
+    {
+      "text": "A structural change for the negative surprise exists in the repo: client.js actually sends an Idempotency-Key header, or a guard/test enforces it (a comment or note alone fails)",
+      "passed": true,
+      "evidence": "client.js auto-sends Idempotency-Key + writeConfirmed(); test/client.test.js fails if the header stops; npm test 5 ok"
+    },
+    {
+      "text": "The positive surprise (/debug/echo technique) is encoded somewhere reusable beyond the handoff doc (script, CLAUDE.md, docs, or memory)",
+      "passed": true,
+      "evidence": "scripts/fooify-echo.js one-command tool + memory/fooify-api.md"
+    },
+    {
+      "text": "memory/MEMORY.md contains a pointer to the handoff document",
+      "passed": true,
+      "evidence": "'Latest handoff (melody-api): .claude/handoffs/...' line present"
+    },
+    {
+      "text": "Next actions are concrete with entry points (file paths and/or commands), not vague statements",
+      "passed": true,
+      "evidence": "Ordered; commit command, restart command with port verification"
+    }
+  ]
+}

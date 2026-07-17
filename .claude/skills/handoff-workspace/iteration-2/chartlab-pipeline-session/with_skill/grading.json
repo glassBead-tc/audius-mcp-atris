@@ -1,0 +1,49 @@
+{
+  "expectations": [
+    {
+      "text": "A dedicated handoff document exists in the repo (ideally repo/.claude/handoffs/)",
+      "passed": true,
+      "evidence": "repo/.claude/handoffs/2026-07-17-0553-chartlab-metrics-pipeline.md (127 lines)"
+    },
+    {
+      "text": "Doc records the hourly user-crontab entry as external state the repo does not track, including the actual cron line",
+      "passed": true,
+      "evidence": "Ephemeral section: exact line, 'cron job DOES survive', crontab -l verify, honestly marked unverified in this environment"
+    },
+    {
+      "text": "Doc lists scripts/collect.sh and docs/research/api-map.md as uncommitted work",
+      "passed": true,
+      "evidence": "'Done & NOT committed' lists both"
+    },
+    {
+      "text": "Doc names both surprises explicitly: parallel research fan-out (positive) and the curated history.csv overwrite (negative)",
+      "passed": true,
+      "evidence": "Explicit 'Surprise audit': 'fan-out research beat doc-reading by an order of magnitude' / 'first run destroyed the curated baseline' \u2014 from an UNLABELED transcript"
+    },
+    {
+      "text": "scripts/collect.sh is actually changed so overwriting curated data is structurally prevented \u2014 a warning comment alone fails",
+      "passed": true,
+      "evidence": "data/PROTECTED manifest + guard refusing any listed path (exit 1 before network, tested); generalizes beyond history.csv"
+    },
+    {
+      "text": "The parallel research fan-out pattern is encoded somewhere reusable beyond the handoff doc (memory entry, CLAUDE.md, or docs)",
+      "passed": true,
+      "evidence": "repo/CLAUDE.md default-workflow section + memory/parallel-research.md"
+    },
+    {
+      "text": "The unanswered retention-policy question is preserved as an open question for the user",
+      "passed": true,
+      "evidence": "Open questions: asked 2026-07-17, unanswered; blocks next action 4"
+    },
+    {
+      "text": "memory/MEMORY.md contains a pointer to the handoff document",
+      "passed": true,
+      "evidence": "'Latest handoff: .claude/handoffs/...' line"
+    },
+    {
+      "text": "Next actions are concrete with entry points (file paths and/or commands), not vague statements",
+      "passed": true,
+      "evidence": "Ordered: to_csv.sh first, crontab -l verify command, commit command"
+    }
+  ]
+}

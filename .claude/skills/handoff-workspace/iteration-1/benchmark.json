@@ -1,0 +1,61 @@
+{
+  "skill_name": "handoff",
+  "iteration": 1,
+  "configurations": [
+    {
+      "name": "with_skill",
+      "pass_rate": 1.0,
+      "passed": 18,
+      "total": 18,
+      "mean_tokens": 42787,
+      "mean_duration_seconds": 222.3,
+      "evals": [
+        {
+          "eval_name": "fooify-debug-session",
+          "passed": 9,
+          "total": 9,
+          "tokens": 45998,
+          "duration_seconds": 258.3
+        },
+        {
+          "eval_name": "chartlab-pipeline-session",
+          "passed": 9,
+          "total": 9,
+          "tokens": 39575,
+          "duration_seconds": 186.4
+        }
+      ]
+    },
+    {
+      "name": "without_skill",
+      "pass_rate": 1.0,
+      "passed": 18,
+      "total": 18,
+      "mean_tokens": 45506,
+      "mean_duration_seconds": 230.9,
+      "evals": [
+        {
+          "eval_name": "fooify-debug-session",
+          "passed": 9,
+          "total": 9,
+          "tokens": 47825,
+          "duration_seconds": 257.4
+        },
+        {
+          "eval_name": "chartlab-pipeline-session",
+          "passed": 9,
+          "total": 9,
+          "tokens": 43187,
+          "duration_seconds": 204.4
+        }
+      ]
+    }
+  ],
+  "analyst_observations": [
+    "BASELINE CONTAMINATED: the handoff skill is registered project-wide, and both baseline agents loaded it themselves when they saw '/handoff' in the prompt \u2014 their documents use the skill's exact section headings. This iteration measures 'skill vs skill', not 'skill vs nothing'.",
+    "FIXTURES LEAK THE FRAMEWORK: session transcripts label events 'POSITIVE SURPRISE'/'NEGATIVE SURPRISE', handing every agent the audit framing. Real sessions never label their own surprises \u2014 this is the discriminating case and it went untested.",
+    "All 36 assertion checks passed; assertions are non-discriminating at this fixture difficulty.",
+    "Qualitative signal favoring the skill: with_skill runs did deeper ground-truth verification \u2014 fooify/with_skill discovered the fixture's config fix was already in HEAD and src/server.js was absent; both chartlab runs caught the missing to_csv.sh dependency (planted accidentally, caught deliberately).",
+    "Cost parity: ~43k vs ~46k tokens, ~222s vs ~231s \u2014 the skill adds structure at no measurable cost."
+  ]
+}

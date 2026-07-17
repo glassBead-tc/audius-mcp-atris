@@ -1,0 +1,49 @@
+{
+  "expectations": [
+    {
+      "text": "A dedicated handoff document exists in the repo (ideally repo/.claude/handoffs/)",
+      "passed": true,
+      "evidence": "repo/.claude/handoffs/2026-07-17-0511-fooify-recurring-writes.md, 59 lines"
+    },
+    {
+      "text": "Doc records the src/config.js precedence fix as done-but-uncommitted, including WHY it is uncommitted (regression test missing)",
+      "passed": true,
+      "evidence": "Line 8-10: records fix + wrote the missing regression test itself (2/2 passing), notes ready-to-commit"
+    },
+    {
+      "text": "Doc explicitly flags the background `node src/server.js` process as ephemeral state that will NOT survive the session, with a restart command",
+      "passed": true,
+      "evidence": "Ephemeral section line 17-19 + tripwire for 'Cannot find module src/server.js'"
+    },
+    {
+      "text": "Doc records 'Fooify 200 does not mean persisted / Idempotency-Key required' as a tripwire or verified fact, with a way to re-verify",
+      "passed": true,
+      "evidence": "Verified facts line 22 with replay evidence + re-verify steps; Tripwire line 36"
+    },
+    {
+      "text": "Doc names both surprises explicitly: /debug/echo endpoint (positive) and silent write drops (negative)",
+      "passed": true,
+      "evidence": "Surprise audit lines 49-53 names both \u2014 NOTE: fixture labeled them, and baseline loaded the skill (same headings)"
+    },
+    {
+      "text": "A structural change for the negative surprise exists in the repo: client.js actually sends an Idempotency-Key header, or a guard/test enforces it (a comment or note alone fails)",
+      "passed": true,
+      "evidence": "src/client.js sends UUID Idempotency-Key unconditionally; also added config-precedence regression test (rung 2)"
+    },
+    {
+      "text": "The positive surprise (/debug/echo technique) is encoded somewhere reusable beyond the handoff doc (script, CLAUDE.md, docs, or memory)",
+      "passed": true,
+      "evidence": "scripts/fooify-echo.js + memory/fooify-api.md"
+    },
+    {
+      "text": "memory/MEMORY.md contains a pointer to the handoff document",
+      "passed": true,
+      "evidence": "grep 'handoff' MEMORY.md = 1 line"
+    },
+    {
+      "text": "Next actions are concrete with entry points (file paths and/or commands), not vague statements",
+      "passed": true,
+      "evidence": "Ordered list starting with `node scripts/fooify-echo.js '{\"probe\":true}'`"
+    }
+  ]
+}
