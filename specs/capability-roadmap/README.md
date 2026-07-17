@@ -281,7 +281,9 @@ server — with the subgraph tool retired.
   57 coins in 30s, zero errors; 99% of tracks carry BPM, 83% mood — the
   chart-intelligence features are collectable.
 
-*Tier 2 — small code (one spike + one client change): **SHIPPED 2026-07-17***
+*Tier 2 — small code (one spike + one client change): **core SHIPPED 2026-07-17**
+(server instructions now teach the 403→`auth:"signed"` retry; a structured
+error-envelope decoder for gated 403s remains open)*
 
 - **Signed requests** in `AudiusClient` via `{ auth: "signed" }`: eth personal-sign
   with the app key, sent as `user_data`/`user_signature` **query params** — the
