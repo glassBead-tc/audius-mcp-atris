@@ -136,6 +136,15 @@ login tool.` : ""}
   personal-signs the request with its app key and the logged-in user's grant
   authorizes it. Requires an active login.
 
+## Platform norms (from audius.co/agents.md)
+- Host canon: \`api.audius.co\` only — \`discoveryprovider*.audius.co\` is deprecated.
+  This server's client already targets the canonical host.
+- Artwork/image objects carry a \`mirrors\` array — NEVER strip it when passing
+  image URLs onward; if an image fetch fails, retry by swapping the URL's host
+  for one of the mirrors.
+- Default per-key rate limits: 10 requests/second (500k/minute). Batch reads
+  inside one \`execute\` call rather than many small calls; back off on 429.
+
 ## Protocol reads (Open Audio Protocol)
 Inside \`execute\`, a second client \`protocol.request(path, body?)\` queries the OAP
 chain directly (ConnectRPC JSON, read-only). Paths are \`/<pkg>.v1.<Service>/<Method>\`:

@@ -225,7 +225,7 @@ artist coins, agent ecosystem, Solana agent tooling). Findings that shaped the r
 
 Sub-phases ordered by risk; each independently shippable.
 
-#### 5a — `protocol` tool: OAP reads (no signing) *(core SHIPPED 2026-07-17)*
+#### 5a — `protocol` tool: OAP reads (no signing) *(SHIPPED 2026-07-17)*
 
 > Shipped as a sandbox client, not a separate tool: `protocol.request(path, body?)`
 > inside `execute` (read-only allowlist, `src/api/ProtocolClient.ts`), because
@@ -233,7 +233,10 @@ Sub-phases ordered by risk; each independently shippable.
 > Subgraph tool retired (AX-13). Verified live: GetStatus/GetBlock/GetTransaction/
 > EthService registry — including on-chain audit of a silently-discarded write
 > (block 28274560 carries our correctly-signed favorite; ETL drops it).
-> Remaining from this sub-phase: failure-explainer prose + agents.md norms ingestion.
+> Failure explainer shipped (`src/api/ErrorExplainer.ts`): 403s decode to
+> signed-retry vs grant-mismatch hints, write 5xx points at chain-status checks,
+> 429 cites the 10 rps default — verified live on both 403 shapes. agents.md
+> norms (mirrors rule, host canon, rate limits) ingested into server instructions.
 
 - ConnectRPC-JSON client over CoreService / ETLService / EthService / StorageService
   reads: chain status + block height, blocks/txs, StreamBlocks, ERN/MEAD/PIE reads,

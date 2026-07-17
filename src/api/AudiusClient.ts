@@ -11,6 +11,7 @@ import { Context, Effect, Layer } from "effect"
 import { AppConfig } from "../AppConfig.js"
 import { parseJsonPreservingLargeInts } from "./Json.js"
 import { signPersonalMessage } from "./RequestSigner.js"
+import { explainAudiusError } from "./ErrorExplainer.js"
 
 const BASE_URL = process.env["AUDIUS_API_BASE"] ?? "https://api.audius.co/v1"
 
@@ -172,8 +173,12 @@ export const AudiusClientLive: Layer.Layer<AudiusClient, never, AppConfig> = Lay
             try: () => response.text(),
             catch: () => new Error("Failed to read error response")
           })
+          // 5a failure explainer — append the platform semantics the raw
+          // error encodes (signature-vs-bearer 403s, grant mismatches,
+          // chain-halt write failures, rate limits) as an actionable hint.
+          const hint = explainAudiusError(response.status, text, httpMethod)
           return yield* Effect.fail(
-            new Error(`Audius API ${response.status}: ${text}`)
+            new Error(`Audius API ${response.status}: ${text}${hint ? `\n[hint] ${hint}` : ""}`)
           )
         }
 
