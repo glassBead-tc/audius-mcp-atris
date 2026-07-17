@@ -92,3 +92,14 @@ every documented validation — signer correct, grant active, chain healthy and
 producing blocks. This began with (or was exposed by) the chain halt earlier the same
 day and persisted after block production recovered. Same silent failure mode as the
 original report: 200 + mined receipt, no state, no client-visible error.
+
+## Also observed 2026-07-17: Encoded-Data-* headers stripped before the API
+
+`auth_middleware.go recoverAuthorityFromSignatureHeaders` accepts the signature as
+either `Encoded-Data-Message`/`Encoded-Data-Signature` headers or
+`user_data`/`user_signature` query params. In practice the HEADERS never reach the
+middleware on api.audius.co — identical (message, signature) pairs yield
+`authedWallet=` (empty) via headers and a 200 via query params, reproducibly. One
+early probe did pass via headers, suggesting the stripping is gateway-dependent
+rather than universal. Clients should use the query params; the header transport
+is effectively dead on the public host.

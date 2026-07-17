@@ -169,9 +169,10 @@ audius.request("GET", "/tracks/search", { query: "deadmau5" })
 \`\`\`
 
 ## Ready-made recipes
-The \`audius://workflows\` resource holds 13 ready-to-run analysis recipes — genre
-popularity, rising stars, artist comparison, BPM landscape and more — each a single
-\`execute\` call that reduces data correctly. Read it and adapt.
+The \`audius://workflows\` resource holds 15 ready-to-run analysis recipes — genre
+popularity, rising stars, artist comparison, BPM landscape, protocol health,
+on-chain write audit and more — each a single \`execute\` call that reduces data
+correctly. Read it and adapt.
 `.trim()
 
 // ---------------------------------------------------------------------------

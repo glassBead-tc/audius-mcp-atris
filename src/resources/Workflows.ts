@@ -494,4 +494,56 @@ return {
   worstHoursUTC: bestHours.slice(-3)
 }
 \`\`\`
+
+---
+
+## Protocol Health Check
+
+Answers "how is the protocol doing?" from the OAP chain itself — block production,
+sync, mempool, validator set, and the Ethereum L1 staking registry. Run this FIRST
+when writes fail: a frozen currentHeight means block production halted and every
+write on the platform fails, regardless of your request.
+
+\`\`\`javascript
+const st = await protocol.request('/core.v1.CoreService/GetStatus')
+if (st.error) return { error: st.error }
+const h1 = Number(st.chainInfo.currentHeight)
+await audius.sleep(10000)
+const st2 = await protocol.request('/core.v1.CoreService/GetNodeInfo')
+const h2 = Number(st2.currentHeight)
+const eth = await protocol.request('/eth.v1.EthService/GetRegisteredEndpoints')
+const byType = {}
+for (const e of (eth.endpoints || [])) byType[e.serviceType] = (byType[e.serviceType] || 0) + 1
+return {
+  chainId: st.chainInfo.chainId,
+  height: h2,
+  producing: h2 > h1,           // false = chain halt: ALL writes fail platform-wide
+  synced: st.syncInfo.synced,
+  mempoolTxs: st.mempoolInfo.txCount,
+  peerValidators: (st.peers.peers || []).filter(p => p.nodeType === 'validator').length,
+  l1Registry: byType
+}
+\`\`\`
+
+## Audit a Write On-Chain
+
+Audius writes are two-phase: a 200 receipt means mined, NOT indexed. This recipe
+checks what actually landed in the receipt's block — the definitive discriminator
+between "my request was wrong" (tx absent or wrong signer) and "the indexer dropped
+a valid write" (tx present, correctly signed, but the read-back never shows it).
+
+\`\`\`javascript
+const RECEIPT_BLOCK = 28274560            // block_number from the write's 200 response
+const b = await protocol.request('/core.v1.CoreService/GetBlock', { height: RECEIPT_BLOCK })
+if (b.error) return { error: b.error }
+return (b.block.transactions || []).map(t => {
+  const me = t.transaction && t.transaction.manageEntity
+  return me
+    ? { hash: t.hash.slice(0, 16), userId: me.userId, entityType: me.entityType,
+        entityId: me.entityId, action: me.action, signer: me.signer }
+    : { hash: t.hash.slice(0, 16), type: Object.keys(t.transaction || {}).join(',') }
+})
+// signer should be YOUR app wallet; then verify the effect indexed with a REST
+// read — if the tx is here but the read never shows it, the discard is upstream.
+\`\`\`
 `
