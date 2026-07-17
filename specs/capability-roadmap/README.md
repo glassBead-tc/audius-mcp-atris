@@ -126,7 +126,16 @@ use Audius directly, and the server brokers instead:
 **Exit criterion**: an agent connected through a compliant MCP client completes
 `GET /me` and reads its own library without any out-of-band token plumbing.
 
-### Phase 3 — Prove writes *(status: PROVEN + IMPLEMENTED 2026-07-10; final in-sandbox round-trip pending restart)*
+### Phase 3 — Prove writes *(status: PROVEN 2026-07-10; MCP-OAuth bearer path verified end-to-end 2026-07-17; round-trip re-proof pending mainnet chain recovery)*
+
+**2026-07-17 update**: `BearerIdentity` (verify request bearer via `GET /me`, cached) now
+sets `authContext.userId` on the MCP-native OAuth path, and app-signing was proven live
+(403 discriminator shows `authedWallet=0x028b…`). The final favorite→verify→unfavorite→
+verify round-trip is blocked only by an upstream event: **OAP mainnet halted block
+production at 28272228 (~03:28 UTC)** — all write paths (REST, SDK, legacy relay) fail
+until the chain recovers. Also confirmed: `@audius/sdk` 15.3.1's Node bundle still sends
+no Authorization header on REST writes, and its `*WithEntityManager` methods exist only
+in the type declarations (browser/native bundles have them; Node doesn't).
 
 **RESOLVED.** The full round-trip (favorite → verify-indexed → unfavorite →
 verify-indexed) succeeded against the authenticated account using
@@ -196,21 +205,120 @@ favorite → verify-indexed → unfavorite → verify-indexed as the authenticat
 **Exit criterion**: an agent uploads a track to a test account; commerce reads are
 first-class workflow recipes.
 
-### Phase 5 — OAP protocol layer
+### Phase 5 — OAP protocol layer & platform economy *(reshaped 2026-07-17)*
 
-- Working subgraph. **Note (2026-07-09)**: with a valid `GRAPH_API_KEY` the gateway
-  authenticates, but the pinned deployment (`F8TjrYuTLohz64J8uuDke9htSR1aY9TGCuEjJVVjUJaD`)
-  fails every query with `bad indexers: BadResponse(400)` — its lone indexer is broken
-  or the subgraph was deprecated in the OAP rebrand. First task: locate the current
-  Audius/OAP subgraph (or replace with the protocol dashboard / go-openaudio APIs).
-- Evaluate `grpc.audius.co:443` as a second client surface for protocol data.
-- Artist coins as first-class workflows (insights, members, volume leaders).
-- Teach the server to *explain* Programmable Distribution 403s (`access_authorities`).
-- Ingest `agents.md` / `llms-full.txt` into the discovery surface so search matches
-  Audius's own canonical LLM docs.
+Restructured after a four-track research sweep (full findings with source URLs in
+[`docs/research/`](../../docs/research/): go-openaudio surface, Solana programs +
+artist coins, agent ecosystem, Solana agent tooling). Findings that shaped the reshape:
 
-**Exit criterion**: an agent can answer "how is the protocol doing?" (staking, validators,
-top artist coins) and diagnose a gated-stream 403 without leaving the server.
+- **go-openaudio's APIs are ConnectRPC** — every service speaks plain HTTP+JSON, so the
+  protocol layer is reachable from TypeScript with no Go and no gRPC codegen
+  (`rpc.audius.co` is public). OAP txs sign with Ethereum secp256k1/EIP-712 — the same
+  key type as `AUDIUS_API_SECRET`.
+- **Audius's Solana Relay builds the transactions** for the whole launchpad and commerce
+  surface (`launchCoin`, `swapCoin`, `claimFees`, `claimVestedCoins`, `purchaseTrack`,
+  `sendTip`) — a client only signs. Agents need a *signer seam*, not Solana engineering.
+- **No official MCP server exists**; `agents.md`/`skill.md` tell agents to ingest
+  swagger.yaml raw. Atris is the productized version of Audius's own agent guidance.
+- `ProgrammableDistributionEnabled` is ON for dev/stage/testnet, **OFF in prod** — direct
+  protocol publishing can be proven on testnet today and lights up when the flag flips.
+
+Sub-phases ordered by risk; each independently shippable.
+
+#### 5a — `protocol` tool: OAP reads (no signing)
+
+- ConnectRPC-JSON client over CoreService / ETLService / EthService / StorageService
+  reads: chain status + block height, blocks/txs, StreamBlocks, ERN/MEAD/PIE reads,
+  rewards + reward pools, validators, staking registry. (A chain-status read would have
+  natively diagnosed the 2026-07-17 mainnet halt that blocked Phase 3's round-trip.)
+- **Retires the dead Graph subgraph**: the pinned deployment fails `bad indexers`
+  permanently; EthService + ETL cover the same staking/governance questions.
+- Teach the server to *explain* protocol-flavored failures: empty-`authedWallet=` 403s,
+  two-phase write semantics, and "writes are failing because block production halted."
+- Ingest `agents.md` / `llms-full.txt` norms into the discovery surface (image `mirrors`
+  retry rule, `api.audius.co` host canon, default rps=10 rate limit).
+
+**Exit criterion**: an agent answers "how is the protocol doing?" (block height,
+validators, staking, top coins) and diagnoses a gated-stream 403 without leaving the
+server — with the subgraph tool retired.
+
+#### 5b — Platform-economy surface (REST riches) — three tiers
+
+*Tier 1 — recipes only; verified live 2026-07-17, works today with no new code:*
+
+- **Coin market intelligence**: `/coins` (sort/filter), `/coins/{mint}/insights`
+  (~50 Birdeye-style fields: 24h buy/sell counts + USD volumes, unique-wallet deltas,
+  price history, liquidity, DBC state), `/coins/{mint}/members` (+`/count`) — the holder
+  roster *as Audius users* — and `/coins/volume-leaders`.
+- **Rewards hygiene**: `/challenges/undisbursed[/{user_id}]` + attest reads. Live probe
+  found 200 unclaimed $AUDIO on the operator account from 2024 "tut" challenges —
+  the "sweep my unclaimed rewards" recipe writes itself (`POST /rewards/claim` is
+  REST-shaped; relay handles Solana disbursement).
+- **AI-attribution discovery** (`allow_ai_attribution`, attributed-tracks endpoints) and
+  **prizes browse** (`/prizes`, `/wallet/{wallet}/prizes`).
+- **North-star workflow — chart intelligence**: trending analysis → "what should I
+  (statistically) produce right now": genre/mood/BPM/feature distribution of what's
+  charting, deltas vs. prior windows, breakout detection. Grounding test case: the
+  operator (TRICK CHENEY.) charted two #1s in 2024 ("What You Want",
+  "115 SECONDS OF CLAMS") — the workflow should be able to explain *why* those worked
+  and what today's equivalent looks like.
+- **Trending time-series collector** — *(SHIPPED 2026-07-17)*: Supabase-native, in the
+  operator's dedicated **Atris** project (`tojrygfoipeltannhufw`). `charts` schema
+  (separate from the dormant alpha chat tables): `captures`/`entries`/`tracks` dim +
+  `playlists`/`playlist_entries` + `coin_snapshots` + `collector_runs`, RLS'd, written
+  through service-role-only SECURITY DEFINER RPCs. `collect-charts` edge function
+  captures trending top-100, underground top-50, all 51 genre slices (top-25),
+  trending playlists, and all coin market rows; pg_cron invokes it every 6h
+  (`15 */6 * * *`, anon key in Vault). First run: 54 captures / 1,428 entries /
+  57 coins in 30s, zero errors; 99% of tracks carry BPM, 83% mood — the
+  chart-intelligence features are collectable.
+
+*Tier 2 — small code (one spike + one client change):*
+
+- **Signed-request headers** (`Encoded-Data-Message`/`Encoded-Data-Signature`,
+  eth personal-sign) in `AudiusClient` for gated reads: fan-club feed
+  (`/fan_club/feed` 403s with empty `authedWallet=` on bearer — verified 2026-07-17),
+  private purchase/sales history. **Spike question**: does an app-key signature +
+  user grant satisfy gated reads, or do they demand the user's own wallet key?
+- Decode gated 403s into actionable error envelopes ("coin-gated: hold ≥N of {mint}").
+
+*Tier 3 — named here for honesty, executed under 5c (needs an Ed25519 signer):*
+
+- `POST /rewards/code` (creator reward codes — Solana wallet signature),
+  prize claims (require *making* an exact coin payment), launchpad operations.
+
+**Exit criterion**: Tier-1 recipes shipped in the Workflows resource + the collector
+capturing snapshots on schedule; Tier-2 spike answered with gated reads either working
+or documented as user-wallet-only.
+
+#### 5c — Solana signer seam (policy-guarded commerce)
+
+- Opt-in, pluggable signer; **relay-built transactions only** (the server never
+  constructs raw Solana txs): tips, USDC purchases, coin swaps
+  (`getSwapCoinQuote`/`swapCoin`), `claimFees`, `claimVestedCoins`, reward-code
+  creation, prize claims.
+- Policy layer before any signature: spend caps, program allowlists, per-session
+  limits — Turnkey/Privy (TEE policy engines) or Swig session keys (Solana-native,
+  agent-oriented). **Env-var hot keys are prohibited** — the community MCP servers'
+  `SOLANA_PRIVATE_KEY` pattern is the anti-pattern this design exists to avoid.
+- Confirm-guard semantics extended: every value-moving call shows a quote first and
+  requires explicit confirmation; autonomous value movement impossible by construction.
+
+**Exit criterion**: a user-approved tip and coin swap execute end-to-end under a spend
+cap; the 5b Tier-3 items unlock.
+
+#### 5d — Protocol publishing (testnet-first)
+
+- ERN publish pipeline in TypeScript: ConnectRPC JSON + EIP-712 signing (viem) + a
+  `ComputeFileCID` port + mediorum TUS upload — the Go SDK's `UploadAndRelease`
+  re-expressed for the sandbox.
+- Programmable-distribution recipe: publish with `access_authorities`, run a signing
+  worker with example policies (geo-gate, coin-gate, follower-gate).
+- Prod is flag-gated (`ProgrammableDistributionEnabled` OFF as of 2026-07); prove the
+  lane on stage/testnet so it is ready the day the flag flips.
+
+**Exit criterion**: an agent publishes a track end-to-end on testnet and streams it
+through a policy-gated URL it controls.
 
 ### Phase 6 — AX completion (ongoing)
 
@@ -226,7 +334,7 @@ cheap for agents to actually use.
 | 2 | P2 | AX-17/21 (auth docs) |
 | 3 | P3 | AX-15 (guard semantics) |
 | 4 | P4 | — |
-| 5 | P5 | AX-13 (subgraph), AX-20 (workflows) |
+| 5 | P5a (protocol tool), P5b-T1/T2/T3 (economy tiers), P5c (signer seam), P5d (publishing) | AX-13 (subgraph retirement), AX-20 (workflows) |
 | 6 | — | all remaining |
 
 ## Known upstream issues (not ours to fix)
@@ -238,3 +346,12 @@ cheap for agents to actually use.
   2026-07-09). The server passes them through faithfully.
 - The swagger duplicates a few endpoints under hyphen/underscore aliases
   (`fan_club`/`fan-club`, `follow_state`/`follow-state`), slightly inflating counts.
+- **2026-07-17: OAP mainnet halted block production** at block 28272228 (~03:28 UTC);
+  all write paths failed (`tx waiting timeout` from the relay) and one boundary write
+  was receipted-then-discarded. Chain status reads (`/health_check` →
+  `core_indexer.last_indexed_block`) diagnose this — motivation for Phase 5a.
+- `@audius/sdk` 15.3.1 Node bundle: REST writes send no Authorization header
+  (500 "missing Authorization header"); `*WithEntityManager` methods are declared in
+  the types but absent from the Node runtime bundle (browser/native only).
+- Coin API casing is inconsistent (`market_cap` in `/coins` list vs `marketCap` in
+  `/coins/{mint}/insights`); a projection-layer smoothing item for Phase 6.
