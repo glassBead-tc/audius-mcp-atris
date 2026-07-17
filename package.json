@@ -44,6 +44,8 @@
     "@effect/platform": "^0.94.5",
     "@effect/platform-node": "^0.104.1",
     "@effect/rpc": "^0.73.0",
+    "@noble/hashes": "^2.2.0",
+    "@noble/secp256k1": "^3.1.0",
     "effect": "^3.19.18",
     "quickjs-emscripten": "^0.31.0",
     "yaml": "^2.7.0"

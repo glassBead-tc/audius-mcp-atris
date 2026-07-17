@@ -28,6 +28,8 @@ export const executeToolDefinition = Tool.make({
     "Use the search tool first to discover available endpoints. " +
     "Failed API calls do NOT throw — they resolve to `{ error: \"...\" }`, so check `res.error` " +
     "before reading `res.data`. " +
+    "Gated reads (fan club feed, private history) that 403 with `authedWallet=` need " +
+    "`{ auth: 'signed' }` in options — the server signs the request and the user's grant authorizes it. " +
     "POST/PUT/DELETE perform REAL mutations when a user is authenticated (MCP OAuth or login tool). " +
     "Writes are TWO-PHASE: a 200 with { block_number, transaction_hash } is a receipt, NOT proof of " +
     "effect — the change only exists once indexed (~seconds). Verify with a follow-up read after " +

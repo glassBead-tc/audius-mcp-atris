@@ -281,13 +281,18 @@ server — with the subgraph tool retired.
   57 coins in 30s, zero errors; 99% of tracks carry BPM, 83% mood — the
   chart-intelligence features are collectable.
 
-*Tier 2 — small code (one spike + one client change):*
+*Tier 2 — small code (one spike + one client change): **SHIPPED 2026-07-17***
 
-- **Signed-request headers** (`Encoded-Data-Message`/`Encoded-Data-Signature`,
-  eth personal-sign) in `AudiusClient` for gated reads: fan-club feed
-  (`/fan_club/feed` 403s with empty `authedWallet=` on bearer — verified 2026-07-17),
-  private purchase/sales history. **Spike question**: does an app-key signature +
-  user grant satisfy gated reads, or do they demand the user's own wallet key?
+- **Signed requests** in `AudiusClient` via `{ auth: "signed" }`: eth personal-sign
+  with the app key, sent as `user_data`/`user_signature` **query params** — the
+  `Encoded-Data-*` headers are stripped upstream of api.audius.co and never reach
+  the middleware (`auth_middleware.go` accepts both; only query params survive).
+  **Spike answer**: an app-key signature + user grant DOES satisfy gated reads
+  (`/fan_club/feed` 200 with no bearer and no coin held); the user's own wallet key
+  is NOT needed. Message content is arbitrary (no timestamp check server-side).
+  Note: post-BearerIdentity, a valid MCP OAuth bearer also passes these reads via
+  the PKCE path — `auth: "signed"` is the bearer-independent fallback. Routes that
+  match on `myWallet` path params still need the user's own wallet; out of scope.
 - Decode gated 403s into actionable error envelopes ("coin-gated: hold ≥N of {mint}").
 
 *Tier 3 — named here for honesty, executed under 5c (needs an Ed25519 signer):*

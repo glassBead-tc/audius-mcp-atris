@@ -10,6 +10,7 @@
 import { Context, Effect, Layer } from "effect"
 import { AppConfig } from "../AppConfig.js"
 import { parseJsonPreservingLargeInts } from "./Json.js"
+import { signPersonalMessage } from "./RequestSigner.js"
 
 const BASE_URL = process.env["AUDIUS_API_BASE"] ?? "https://api.audius.co/v1"
 
@@ -23,9 +24,12 @@ export interface RequestOptions {
    * Force a specific auth scheme. Default: writes are app-signed (Basic) when
    * possible, everything else uses the user bearer. "bearer" forces the user
    * token even on writes — needed for endpoints that authenticate the user
-   * rather than the app (e.g. developer-app management).
+   * rather than the app (e.g. developer-app management). "signed" attaches
+   * user_data/user_signature query params (eth personal-sign with the app
+   * secret) — the shape gated reads (fan club feed, private history) accept;
+   * requires an active user login for the grant to resolve.
    */
-  readonly auth?: "bearer" | "app"
+  readonly auth?: "bearer" | "app" | "signed"
 }
 
 export interface AuthContext {
@@ -108,13 +112,34 @@ export const AudiusClientLive: Layer.Layer<AudiusClient, never, AppConfig> = Lay
           headers["x-api-key"] = config.apiKey
         }
 
+        // Signed reads (auth: "signed"): gated endpoints authenticate via
+        // user_data/user_signature QUERY PARAMS — an eth personal-sign the
+        // API recovers to a wallet and authorizes through the user's grant.
+        // (The equivalent Encoded-Data-* headers are stripped upstream of
+        // api.audius.co; query params are the reliable transport.) Gated on
+        // an active login, same as write signing.
+        if (options?.auth === "signed") {
+          if (config.apiSecret === undefined || authContext?.userId === undefined) {
+            return yield* Effect.fail(new Error(
+              "auth: 'signed' requires the server's app secret and an active user login " +
+              "(MCP OAuth or login tool) — the signature is authorized via the user's grant."
+            ))
+          }
+          const message = `Atris signed read: ${Math.round(Date.now() / 1000)}`
+          url.searchParams.set("user_data", message)
+          url.searchParams.set("user_signature", signPersonalMessage(message, config.apiSecret))
+          if (!url.searchParams.has("user_id")) {
+            url.searchParams.set("user_id", authContext.userId)
+          }
+        }
+
         // Auth. Writes: sign with the app secret (HTTP Basic; password = app
         // private key) — the shape the Audius indexer honors — and inject the
         // logged-in user's id, which the write endpoints require. Gated on an
         // active session login (authContext.userId) so the secret never acts
         // without a user having authenticated. Reads: bearer for viewer
         // context (/me, has_current_user_* flags).
-        if (!headers["Authorization"]) {
+        if (!headers["Authorization"] && options?.auth !== "signed") {
           const appSigned = options?.auth !== "bearer" &&
             (isWrite || options?.auth === "app") &&
             config.apiSecret !== undefined && authContext?.userId !== undefined

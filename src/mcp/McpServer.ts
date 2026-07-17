@@ -130,6 +130,11 @@ login tool.` : ""}
   arrive as strings to preserve precision — don't coerce them back to Number.
 - Binary endpoints (e.g. \`/tracks/{id}/stream\`) don't return audio bytes; they
   resolve to \`{ url }\` — the final signed CDN URL.
+- **Gated reads**: a 403 whose error shows an empty \`authedWallet=\` means the
+  endpoint wants a signed request, not a bearer. Retry with
+  \`{ auth: "signed" }\` in options (e.g. \`/fan_club/feed?mint=...\`) — the server
+  personal-signs the request with its app key and the logged-in user's grant
+  authorizes it. Requires an active login.
 
 ## Protocol reads (Open Audio Protocol)
 Inside \`execute\`, a second client \`protocol.request(path, body?)\` queries the OAP
